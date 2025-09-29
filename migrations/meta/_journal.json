@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1759149795305,
+      "tag": "0000_windy_killer_shrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1759156821059,
+      "tag": "0001_dashing_mordo",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1759160759463,
+      "tag": "0002_organic_rogue",
+      "breakpoints": true
+    }
+  ]
+}
