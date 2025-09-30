@@ -29,4 +29,4 @@ vite.config.ts.timestamp-*
 !.dev.vars.example
 .env*
 .idea
-wrangler.jsonc
+/wrangler.jsonc
