@@ -25,7 +25,7 @@ export const load: PageServerLoad = async ({ params, fetch, locals, cookies, pla
 			note: expense.note!,
 			amount: expense.amount,
 			categoryId: expense.category?.id,
-			date: new Date(expense.date).toISOString()
+			date: expense.date
 		};
 
 		const form = await superValidate(formData, valibot(expenseSchema));

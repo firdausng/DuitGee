@@ -4,14 +4,66 @@ import { vaults, vaultMembers, users } from "$lib/server/db/schema";
 import { and, eq, or, desc, sql } from "drizzle-orm";
 import { createId } from '@paralleldrive/cuid2';
 import type {Vault} from "$lib/server/api/vaults/schema";
-import type { GetUserVaultsResponse } from "$lib/types/vaults";
+import type {UserVault} from "$lib/types/vaults";
 import {formatISO} from "date-fns";
 
-// Get all vaults for a user (owned + member of)
-export const getUserVaults = async (userId: string, db: D1Database): Promise<GetUserVaultsResponse> => {
+// Get all vaults for a user by email (owned + member of)
+export const getUserVaultsByEmail = async (userEmail: string, db: D1Database): Promise<UserVault[]> => {
     const client = drizzle(db, { schema });
 
-    const userVaults = await client
+    // First, find the user by email
+    const user = await client
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, userEmail))
+        .limit(1);
+
+    if (user.length === 0) {
+        throw new Error('User not found');
+    }
+
+    // Then get their vaults using the existing function
+    return getUserVaults(user[0].id, db);
+};
+
+// Get all vaults for a user (owned + member of)
+export const getUserVaults = async (userId: string, db: D1Database): Promise<UserVault[]> => {
+    const client = drizzle(db, { schema });
+
+    // Get owned vaults
+    const ownedVaults = await client
+        .select({
+            vault: {
+                id: vaults.id,
+                name: vaults.name,
+                description: vaults.description,
+                color: vaults.color,
+                icon: vaults.icon,
+                iconType: vaults.iconType,
+                isPersonal: vaults.isPersonal,
+                ownerId: vaults.ownerId,
+                createdAt: vaults.createdAt
+            },
+            owner: {
+                id: users.id,
+                firstName: users.firstName,
+                lastName: users.lastName,
+                email: users.email
+            },
+            membership: {
+                role: sql`'owner'`.as('role'),
+                permissions: sql`'admin'`.as('permissions'),
+                status: sql`'active'`.as('status'),
+                joinedAt: vaults.createdAt
+            }
+        })
+        .from(vaults)
+        .leftJoin(users, eq(vaults.ownerId, users.id))
+        .where(eq(vaults.ownerId, userId))
+        .orderBy(desc(vaults.createdAt));
+
+    // Get member vaults (where user is not the owner)
+    const memberVaults = await client
         .select({
             vault: {
                 id: vaults.id,
@@ -41,21 +93,43 @@ export const getUserVaults = async (userId: string, db: D1Database): Promise<Get
         .leftJoin(users, eq(vaults.ownerId, users.id))
         .leftJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
         .where(
-            or(
-                eq(vaults.ownerId, userId), // Vaults owned by user
-                and(
-                    eq(vaultMembers.userId, userId),
-                    eq(vaultMembers.status, 'active')
-                )
+            and(
+                eq(vaultMembers.userId, userId),
+                eq(vaultMembers.status, 'active'),
+                sql`${vaults.ownerId} != ${userId}` // Exclude vaults where user is owner
             )
         )
         .orderBy(desc(vaults.createdAt));
 
-    return userVaults;
+    // Combine and sort all vaults
+    const allVaults = [...ownedVaults, ...memberVaults];
+    allVaults.sort((a, b) => new Date(b.vault.createdAt).getTime() - new Date(a.vault.createdAt).getTime());
+
+    return allVaults;
+};
+
+// Get a specific vault with member details by email
+export const getVaultByEmail = async (userEmail: string, vaultId: string, db: D1Database) => {
+    const client = drizzle(db, { schema });
+
+    // First, find the user by email
+    const user = await client
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, userEmail))
+        .limit(1);
+
+    if (user.length === 0) {
+        throw new Error('User not found');
+    }
+
+    // Then get the vault using the existing function
+    return getVault(user[0].id, vaultId, db);
 };
 
 // Get a specific vault with member details
 export const getVault = async (userId: string, vaultId: string, db: D1Database) => {
+    console.log(`[getVault] Called with userId: ${userId}, vaultId: ${vaultId}`);
     const client = drizzle(db, { schema });
 
     // First check if user has access to this vault
@@ -77,6 +151,7 @@ export const getVault = async (userId: string, vaultId: string, db: D1Database) 
         )
         .limit(1);
 
+    console.log(`[getVault] Access check result:`, hasAccess);
     if (hasAccess.length === 0) {
         throw new Error('Vault not found or access denied');
     }
@@ -88,7 +163,9 @@ export const getVault = async (userId: string, vaultId: string, db: D1Database) 
         .where(eq(vaults.id, vaultId))
         .limit(1);
 
-    // Get vault members
+    console.log(`[getVault] Vault found:`, vault[0]);
+
+    // Get vault members from vaultMembers table
     const members = await client
         .select({
             id: vaultMembers.id,
@@ -109,10 +186,132 @@ export const getVault = async (userId: string, vaultId: string, db: D1Database) 
         .where(eq(vaultMembers.vaultId, vaultId))
         .orderBy(vaultMembers.joinedAt);
 
+    console.log(`[getVault] Members found:`, members);
+
+    // Get vault owner details
+    const owner = await client
+        .select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            email: users.email
+        })
+        .from(users)
+        .where(eq(users.id, vault[0].ownerId))
+        .limit(1);
+
+    if (owner.length === 0) {
+        throw new Error('Vault owner not found');
+    }
+
+    // Create owner member object
+    const ownerMember = {
+        id: `owner_${vault[0].id}`, // Unique ID for owner
+        role: 'owner',
+        permissions: 'admin',
+        status: 'active',
+        invitedAt: vault[0].createdAt,
+        joinedAt: vault[0].createdAt,
+        user: owner[0]
+    };
+
+    // Check if owner is already in members list (for non-personal vaults)
+    const ownerInMembers = members.find(member => member.user?.id === vault[0].ownerId);
+
+    // Build final members list
+    let allMembers = [];
+    if (!ownerInMembers) {
+        // Owner not in members list (personal vault), add them first
+        allMembers = [ownerMember, ...members];
+    } else {
+        // Owner in members list (non-personal vault), update their role
+        allMembers = members.map(member =>
+            member.user?.id === vault[0].ownerId
+                ? { ...member, role: 'owner', permissions: 'admin' }
+                : member
+        );
+    }
+
     return {
         vault: vault[0],
-        members
+        members: allMembers
     };
+};
+
+// Create a new vault by email
+export const createVaultByEmail = async (userEmail: string, data: Vault, db: D1Database) => {
+    const client = drizzle(db, { schema });
+
+    // First, find the user by email
+    const user = await client
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, userEmail))
+        .limit(1);
+
+    if (user.length === 0) {
+        throw new Error('User not found');
+    }
+
+    // Then create the vault using the existing function
+    return createVault(user[0].id, data, db);
+};
+
+// Update vault by email
+export const updateVaultByEmail = async (userEmail: string, vaultId: string, data: any, db: D1Database) => {
+    const client = drizzle(db, { schema });
+
+    // First, find the user by email
+    const user = await client
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, userEmail))
+        .limit(1);
+
+    if (user.length === 0) {
+        throw new Error('User not found');
+    }
+
+    // Then update the vault using the existing function
+    return updateVault(user[0].id, vaultId, data, db);
+};
+
+// Delete vault by email
+export const deleteVaultByEmail = async (userEmail: string, vaultId: string, db: D1Database) => {
+    const client = drizzle(db, { schema });
+
+    // First, find the user by email
+    const user = await client
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, userEmail))
+        .limit(1);
+
+    if (user.length === 0) {
+        throw new Error('User not found');
+    }
+
+    // Then delete the vault using the existing function
+    return deleteVault(user[0].id, vaultId, db);
+};
+
+// Get vault stats by email
+export const getVaultStatsByEmail = async (userEmail: string, vaultId: string, db: D1Database) => {
+    const client = drizzle(db, { schema });
+
+    // First, find the user by email
+    const user = await client
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, userEmail))
+        .limit(1);
+
+    if (user.length === 0) {
+        throw new Error('User not found');
+    }
+
+    // Then get stats using the existing function
+    return getVaultStats(user[0].id, vaultId, db);
 };
 
 // Create a new vault

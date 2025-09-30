@@ -2,12 +2,17 @@
 	import '../../app.css';
 	import Button from '$lib/components/ui/Button.svelte';
 	import ThemeToggle from '$lib/components/ui/ThemeToggle.svelte';
-	import { House, Receipt, Tag, ChartPie, User, Stool, CaretRight, Gear, Bell, CaretDown } from 'phosphor-svelte';
+	import UserDropdown from '$lib/components/UserDropdown.svelte';
+	import NotificationDropdown from '$lib/components/NotificationDropdown.svelte';
+	import InvitationIndicator from '$lib/components/InvitationIndicator.svelte';
+	import { House, Receipt, Tag, ChartPie, User, Stool, CaretRight, Gear, Bell, CaretDown, List, Moon, Sun, Plus, UserPlus } from 'phosphor-svelte';
 	import { goto } from '$app/navigation';
 	import { theme } from '$lib/stores/theme.svelte.js';
+    import {authManager} from "$lib/stores/current-session.svelte";
 
 	let { children, data } = $props();
 
+    authManager.setAuthenticationResponse(data.currentSession);
 	// Main navigation sections
 	const mainNavigation = [
 		{ name: 'Vaults', href: '/vaults', icon: Stool, key: 'vaults' },
@@ -23,6 +28,7 @@
 				{ name: 'Dashboard', href: `/vaults/${vaultId}`, icon: House, key: 'dashboard' },
 				{ name: 'Expenses', href: `/vaults/${vaultId}/expenses`, icon: Receipt, key: 'expenses' },
 				{ name: 'Categories', href: `/vaults/${vaultId}/categories`, icon: Tag, key: 'categories' },
+				{ name: 'Members', href: `/vaults/${vaultId}/members`, icon: User, key: 'members' },
 			];
 		}
 		return [];
@@ -74,6 +80,9 @@
 							break;
 						case 'members':
 							breadcrumbs.push({ name: 'Members', href: `/vaults/${vaultId}/members`, isHome: false });
+							if (segments[3] === 'invite') {
+								breadcrumbs.push({ name: 'Invite User', href: `/vaults/${vaultId}/members/invite`, isHome: false });
+							}
 							break;
 					}
 				}
@@ -83,6 +92,9 @@
 		}
         else if (segments[0] === 'users' && data.isAdmin) {
 			breadcrumbs.push({ name: 'Users', href: '/users', isHome: false });
+		}
+		else if (segments[0] === 'profile') {
+			breadcrumbs.push({ name: 'Profile', href: '/profile', isHome: false });
 		}
 
 		return breadcrumbs;
@@ -99,6 +111,12 @@
 	// Quick Add dropdown state
 	let showQuickAddDropdown = $state(false);
 
+	// Mobile menu dropdown state
+	let showMobileMenu = $state(false);
+
+	// FAB dropdown state
+	let showFabDropdown = $state(false);
+
 	// Favorite vault tracking
 	let favoriteVaultId = $state(typeof window !== 'undefined' ? localStorage.getItem('favoriteVaultId') : null);
 
@@ -108,6 +126,8 @@
 		if (!dropdown) {
 			showVaultDropdown = false;
 			showQuickAddDropdown = false;
+			showMobileMenu = false;
+			showFabDropdown = false;
 		}
 	}
 
@@ -127,6 +147,7 @@
 	function handleQuickAdd(vaultId: string) {
 		// Close dropdown and navigate
 		showQuickAddDropdown = false;
+		showFabDropdown = false;
 		goto(`/vaults/${vaultId}/expenses/new`);
 	}
 
@@ -176,40 +197,36 @@
 					<!-- Global Actions -->
 					<div class="flex items-center space-x-1">
 						<!-- Mobile Navigation -->
-						<div class="flex items-center space-x-1 sm:hidden">
-							<!-- Mobile Quick Add -->
+						<div class="flex items-center space-x-2 lg:hidden">
+							<!-- Quick Add Button -->
 							<div class="relative">
 								<button
 									onclick={() => showQuickAddDropdown = !showQuickAddDropdown}
-									class="inline-flex items-center p-2 rounded-md transition-colors bg-primary text-primary-foreground"
+									class="inline-flex items-center justify-center w-10 h-10 rounded-lg transition-colors bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
 									title="Quick Add Expense"
 								>
-									<span class="text-xs font-bold">+</span>
+									<span class="text-lg font-bold">+</span>
 								</button>
 
 								{#if showQuickAddDropdown}
-									<div class="absolute left-0 mt-2 w-56 bg-background border border-border rounded-lg shadow-lg z-50">
+									<div class="absolute left-0 mt-2 w-64 bg-background border border-border rounded-lg shadow-xl z-50">
 										<div class="py-2">
-											<div class="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border">
-												Select Vault
+											<div class="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">
+												Quick Add Expense
 											</div>
 											{#each suggestedVaults as vault, index}
 												<button
 													onclick={() => handleQuickAdd(vault.vault.id)}
-													class="w-full flex items-center px-3 py-2 text-sm transition-colors hover:bg-accent"
+													class="w-full flex items-center px-4 py-3 text-sm transition-colors hover:bg-accent"
 												>
-													<div class="w-5 h-5 rounded-full flex items-center justify-center mr-3 text-xs" style="background-color: {vault.vault.color}20; border: 1px solid {vault.vault.color}">
+													<div class="w-6 h-6 rounded-full flex items-center justify-center mr-3 text-sm" style="background-color: {vault.vault.color}20; border: 1px solid {vault.vault.color}">
 														{vault.vault.icon}
 													</div>
 													<div class="flex-1 text-left">
 														<div class="font-medium text-foreground">{vault.vault.name}</div>
-														{#if index === 0 && vault.vault.id === favoriteVaultId}
-															<div class="text-xs text-muted-foreground">⭐ Favorite</div>
-														{:else if vault.vault.isPersonal}
-															<div class="text-xs text-muted-foreground">Personal</div>
-														{:else}
-															<div class="text-xs text-muted-foreground">Shared</div>
-														{/if}
+														<div class="text-xs text-muted-foreground">
+															{vault.vault.isPersonal ? 'Personal' : 'Shared'} vault
+														</div>
 													</div>
 												</button>
 											{/each}
@@ -218,38 +235,129 @@
 								{/if}
 							</div>
 
-							<a
-								href="/vaults"
-								class="inline-flex items-center p-2 rounded-md transition-colors {isActive('vaults')
-									? 'bg-primary text-primary-foreground'
-									: 'text-muted-foreground hover:text-foreground hover:bg-accent'}"
-							>
-								<Stool class="w-4 h-4" />
-							</a>
-
-							{#if data.isAdmin}
-								<a
-									href="/users"
-									class="inline-flex items-center p-2 rounded-md transition-colors {isActive('users')
-										? 'bg-primary text-primary-foreground'
-										: 'text-muted-foreground hover:text-foreground hover:bg-accent'}"
-								>
-									<User class="w-4 h-4" />
-								</a>
-							{/if}
-
-							{#if isInVault}
+							<!-- Mobile Menu Button -->
+							<div class="relative">
 								<button
-									onclick={() => showVaultDropdown = !showVaultDropdown}
-									class="inline-flex items-center p-2 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
+									onclick={() => showMobileMenu = !showMobileMenu}
+									class="inline-flex items-center justify-center w-10 h-10 rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
+									title="Menu"
 								>
-									<Gear class="w-4 h-4" />
+									<List class="w-5 h-5" />
 								</button>
-							{/if}
+
+								{#if showMobileMenu}
+									<div class="absolute right-0 mt-2 w-64 bg-background border border-border rounded-lg shadow-xl z-50">
+										<div class="py-2">
+											<!-- Navigation Items -->
+											<div class="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">
+												Navigation
+											</div>
+
+											<a
+												href="/vaults"
+												class="flex items-center px-4 py-3 text-sm transition-colors hover:bg-accent {isActive('vaults') ? 'bg-accent/50 text-foreground' : 'text-muted-foreground'}"
+												onclick={() => showMobileMenu = false}
+											>
+												<Stool class="w-4 h-4 mr-3" />
+												<span>Vaults</span>
+											</a>
+
+											{#if data.isAdmin}
+												<a
+													href="/users"
+													class="flex items-center px-4 py-3 text-sm transition-colors hover:bg-accent {isActive('users') ? 'bg-accent/50 text-foreground' : 'text-muted-foreground'}"
+													onclick={() => showMobileMenu = false}
+												>
+													<User class="w-4 h-4 mr-3" />
+													<span>Users</span>
+												</a>
+											{/if}
+
+											<!-- Vault Navigation (when in vault) -->
+											{#if isInVault && vaultNavigation.length > 0}
+												<div class="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border border-t border-border mt-2">
+													Vault Menu
+												</div>
+												{#each vaultNavigation as item}
+													<a
+														href={item.href}
+														class="flex items-center px-4 py-3 text-sm transition-colors hover:bg-accent {isActive(item.key) ? 'bg-accent/50 text-foreground' : 'text-muted-foreground'}"
+														onclick={() => showMobileMenu = false}
+													>
+														<svelte:component this={item.icon} class="w-4 h-4 mr-3" />
+														<span>{item.name}</span>
+													</a>
+												{/each}
+											{/if}
+
+											<!-- Settings Section -->
+											<div class="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border border-t border-border mt-2">
+												Settings
+											</div>
+
+											<!-- Invitations Link -->
+											<a
+												href="/invitations"
+												class="flex items-center px-4 py-3 text-sm transition-colors hover:bg-accent text-muted-foreground"
+												onclick={() => showMobileMenu = false}
+											>
+												<UserPlus class="w-4 h-4 mr-3" />
+												<span>Invitations</span>
+											</a>
+
+											<!-- Notifications Link -->
+											<a
+												href="/notifications"
+												class="flex items-center px-4 py-3 text-sm transition-colors hover:bg-accent text-muted-foreground"
+												onclick={() => showMobileMenu = false}
+											>
+												<Bell class="w-4 h-4 mr-3" />
+												<span>Notifications</span>
+											</a>
+
+											<!-- Dark Mode Toggle -->
+											<button
+												onclick={() => { theme.toggle(); showMobileMenu = false; }}
+												class="w-full flex items-center px-4 py-3 text-sm transition-colors hover:bg-accent text-muted-foreground"
+											>
+												{#if theme.current === 'dark'}
+													<Sun class="w-4 h-4 mr-3" />
+													<span>Light Mode</span>
+												{:else}
+													<Moon class="w-4 h-4 mr-3" />
+													<span>Dark Mode</span>
+												{/if}
+											</button>
+
+											<!-- Profile Link -->
+											<a
+												href="/profile"
+												class="flex items-center px-4 py-3 text-sm transition-colors hover:bg-accent text-muted-foreground"
+												onclick={() => showMobileMenu = false}
+											>
+												<User class="w-4 h-4 mr-3" />
+												<span>Profile</span>
+											</a>
+
+											<!-- Logout -->
+											<a
+												href="/logout"
+												class="flex items-center px-4 py-3 text-sm transition-colors hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+												onclick={() => showMobileMenu = false}
+											>
+												<svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+												</svg>
+												<span>Sign Out</span>
+											</a>
+										</div>
+									</div>
+								{/if}
+							</div>
 						</div>
 
 						<!-- Desktop Navigation -->
-						<div class="hidden sm:flex items-center space-x-2">
+						<div class="hidden lg:flex items-center space-x-2">
 							<!-- Quick Add -->
 							<div class="relative">
 								<Button
@@ -370,19 +478,16 @@
 							<!-- Theme Toggle -->
 							<ThemeToggle />
 
-							<!-- Notifications -->
-							<Button variant="ghost" size="sm" class="relative">
-								<Bell class="w-4 h-4" />
-								<span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-							</Button>
+							<!-- Invitation Indicator -->
+							<InvitationIndicator />
 
-							<!-- Profile Menu -->
-							<Button variant="ghost" size="sm" class="hidden sm:flex">
-								<div class="w-6 h-6 bg-muted rounded-full flex items-center justify-center">
-									<User class="w-3.5 h-3.5" />
-								</div>
-								<span class="ml-2 text-sm hidden md:inline">Profile</span>
-							</Button>
+							<!-- Notifications -->
+<!--							<NotificationDropdown />-->
+
+							<!-- User Dropdown -->
+							<div class="hidden lg:block">
+								<UserDropdown activeUser={data.activeUser} />
+							</div>
 						</div>
 					</div>
 				</div>
@@ -421,4 +526,65 @@
 	<main class="theme-transition">
 		{@render children?.()}
 	</main>
+
+	<!-- Floating Action Button -->
+	<div class="fixed bottom-6 right-6 z-40">
+		<div class="relative">
+			<!-- FAB Button -->
+			<button
+				onclick={() => showFabDropdown = !showFabDropdown}
+				class="w-14 h-14 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center group hover:from-orange-600 hover:to-red-600"
+				title="Add Expense"
+			>
+				<Plus class="w-6 h-6 transition-transform duration-300 {showFabDropdown ? 'rotate-45' : ''}" weight="bold" />
+			</button>
+
+			<!-- FAB Dropdown -->
+			{#if showFabDropdown}
+				<div class="absolute bottom-full right-0 mb-4 w-72 bg-background border border-border rounded-lg shadow-xl z-50 animate-in slide-in-from-bottom-2 duration-200">
+					<div class="py-3">
+						<div class="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">
+							Add Expense To
+						</div>
+						{#each suggestedVaults as vault, index}
+							<button
+								onclick={() => handleQuickAdd(vault.vault.id)}
+								class="w-full flex items-center px-4 py-3 text-sm transition-colors hover:bg-accent group"
+							>
+								<div class="w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm transition-transform group-hover:scale-105" style="background-color: {vault.vault.color}20; border: 1px solid {vault.vault.color}">
+									{vault.vault.icon}
+								</div>
+								<div class="flex-1 text-left">
+									<div class="font-medium text-foreground">{vault.vault.name}</div>
+									<div class="text-xs text-muted-foreground">
+										{vault.vault.isPersonal ? 'Personal' : 'Shared'} vault
+										{#if index === 0}
+											• Suggested
+										{/if}
+									</div>
+								</div>
+								<div class="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+									<CaretRight class="w-4 h-4" />
+								</div>
+							</button>
+						{/each}
+
+						{#if data.vaults.length > 5}
+							<div class="border-t border-border mt-2 pt-2">
+								<button
+									onclick={() => { showFabDropdown = false; goto('/vaults'); }}
+									class="w-full flex items-center px-4 py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+								>
+									<div class="w-8 h-8 rounded-full bg-muted flex items-center justify-center mr-3 text-xs">
+										⋯
+									</div>
+									<span>View all vaults ({data.vaults.length})</span>
+								</button>
+							</div>
+						{/if}
+					</div>
+				</div>
+			{/if}
+		</div>
+	</div>
 </div>

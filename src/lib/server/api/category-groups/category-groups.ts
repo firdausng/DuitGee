@@ -21,7 +21,7 @@ const updateCategoryGroupSchema = v.partial(categoryGroupSchema);
 
 export const categoryGroupsApi = new Hono<App.Api>()
 	.get('/vaults/:vaultId/category-groups', async (c) => {
-		const userId = c.get('userId') as string;
+		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		console.log('userId', userId);
 		const groupsList = await getCategoryGroups(userId, vaultId, c.env.DB);
@@ -29,14 +29,14 @@ export const categoryGroupsApi = new Hono<App.Api>()
 		return c.json(groupsList);
 	})
 	.get('/vaults/:vaultId/category-groups/with-categories', async (c) => {
-		const userId = c.get('userId') as string;
+		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const groupsWithCategories = await getCategoryGroupsWithCategories(userId, vaultId, c.env.DB);
 
 		return c.json(groupsWithCategories);
 	})
 	.post('/vaults/:vaultId/category-groups', vValidator('json', categoryGroupSchema), async (c) => {
-		const userId = c.get('userId') as string;
+		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const data = c.req.valid('json');
 
@@ -49,7 +49,7 @@ export const categoryGroupsApi = new Hono<App.Api>()
 		return c.json(group, 201);
 	})
 	.get('/vaults/:vaultId/category-groups/:id', async (c) => {
-		const userId = c.get('userId') as string;
+		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
 
@@ -62,7 +62,7 @@ export const categoryGroupsApi = new Hono<App.Api>()
 		return c.json(group);
 	})
 	.put('/vaults/:vaultId/category-groups/:id', vValidator('json', updateCategoryGroupSchema), async (c) => {
-		const userId = c.get('userId') as string;
+		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
 		const data = c.req.valid('json');
@@ -76,7 +76,7 @@ export const categoryGroupsApi = new Hono<App.Api>()
 		return c.json(group);
 	})
 	.delete('/vaults/:vaultId/category-groups/:id', async (c) => {
-		const userId = c.get('userId') as string;
+		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
 

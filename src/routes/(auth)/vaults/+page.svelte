@@ -18,88 +18,7 @@
 		favoriteVaultId = localStorage.getItem('favoriteVaultId');
 	}
 
-	// Mock data - will be replaced with actual data from load function
-	// let mockVaults = [
-	// 	{
-	// 		vault: {
-	// 			id: '1',
-	// 			name: 'Personal Expenses',
-	// 			description: 'My personal day-to-day expenses',
-	// 			color: '#3B82F6',
-	// 			icon: '💰',
-	// 			iconType: 'emoji' as const,
-	// 			isPersonal: true,
-	// 			ownerId: 'user1',
-	// 			createdAt: '2024-01-15T10:00:00Z'
-	// 		},
-	// 		owner: {
-	// 			id: 'user1',
-	// 			name: 'John Doe',
-	// 			email: 'john@example.com'
-	// 		},
-	// 		membership: null,
-	// 		stats: {
-	// 			totalExpenses: 45,
-	// 			totalAmount: 2456.78,
-	// 			avgAmount: 54.59
-	// 		}
-	// 	},
-	// 	{
-	// 		vault: {
-	// 			id: '2',
-	// 			name: 'Family Budget',
-	// 			description: 'Shared family expenses and budget tracking',
-	// 			color: '#10B981',
-	// 			icon: 'users',
-	// 			iconType: 'phosphor' as const,
-	// 			isPersonal: false,
-	// 			ownerId: 'user1',
-	// 			createdAt: '2024-01-10T15:30:00Z'
-	// 		},
-	// 		owner: {
-	// 			id: 'user1',
-	// 			name: 'John Doe',
-	// 			email: 'john@example.com'
-	// 		},
-	// 		membership: null,
-	// 		stats: {
-	// 			totalExpenses: 78,
-	// 			totalAmount: 5432.10,
-	// 			avgAmount: 69.64
-	// 		}
-	// 	},
-	// 	{
-	// 		vault: {
-	// 			id: '3',
-	// 			name: 'Work Travel',
-	// 			description: 'Business trip expenses for reimbursement',
-	// 			color: '#8B5CF6',
-	// 			icon: '✈️',
-	// 			iconType: 'emoji' as const,
-	// 			isPersonal: false,
-	// 			ownerId: 'user2',
-	// 			createdAt: '2024-01-20T09:15:00Z'
-	// 		},
-	// 		owner: {
-	// 			id: 'user2',
-	// 			name: 'Jane Smith',
-	// 			email: 'jane@example.com'
-	// 		},
-	// 		membership: {
-	// 			role: 'member',
-	// 			permissions: 'write',
-	// 			status: 'active',
-	// 			joinedAt: '2024-01-21T10:00:00Z'
-	// 		},
-	// 		stats: {
-	// 			totalExpenses: 23,
-	// 			totalAmount: 1234.56,
-	// 			avgAmount: 53.68
-	// 		}
-	// 	}
-	// ];
-
-	const currentUserId = 'user1'; // Will come from auth context
+	const currentUserId = data.activeUser.id;
 
 	// Debug data
 	console.log('[vaults/+page.svelte] Data received:', {
@@ -212,9 +131,6 @@
 							<tr>
 								<th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Vault</th>
 								<th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Owner</th>
-								<th class="py-3 px-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Expenses</th>
-								<th class="py-3 px-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Total</th>
-								<th class="py-3 px-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Average</th>
 								<th class="py-3 px-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
 							</tr>
 						</thead>
@@ -265,9 +181,6 @@
 							<tr>
 								<th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Vault</th>
 								<th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Owner</th>
-								<th class="py-3 px-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Expenses</th>
-								<th class="py-3 px-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Total</th>
-								<th class="py-3 px-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Average</th>
 								<th class="py-3 px-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
 							</tr>
 						</thead>
@@ -325,37 +238,4 @@
 		</div>
 	{/if}
 
-	<!-- Quick Actions -->
-	<div class="mt-8 border-t border-border pt-6">
-		<h3 class="text-sm font-medium text-muted-foreground mb-3">Quick Actions</h3>
-		<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-			<Button
-				variant="outline"
-				onclick={() => goto('/vaults/new')}
-				size="sm"
-				class="flex items-center justify-center py-3"
-			>
-				<Plus class="w-4 h-4 mr-2" />
-				Create New Vault
-			</Button>
-			<Button
-				variant="outline"
-				onclick={() => goto('/vault-invitations')}
-				size="sm"
-				class="flex items-center justify-center py-3"
-			>
-				<Users class="w-4 h-4 mr-2" />
-				View Invitations
-			</Button>
-			<Button
-				variant="outline"
-				onclick={() => goto('/expenses')}
-				size="sm"
-				class="flex items-center justify-center py-3"
-			>
-				<Vault class="w-4 h-4 mr-2" />
-				View All Expenses
-			</Button>
-		</div>
-	</div>
 </div>

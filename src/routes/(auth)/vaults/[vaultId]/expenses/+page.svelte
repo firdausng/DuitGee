@@ -6,6 +6,7 @@
 	import IconDisplay from '$lib/components/IconDisplay.svelte';
 	import { Plus, Pencil, Trash, MagnifyingGlass } from 'phosphor-svelte';
     import {goto} from "$app/navigation";
+	import { page, navigating } from '$app/stores';
 
 	let { data } = $props();
 
@@ -14,20 +15,26 @@
 		{ id: 'daily', label: 'Daily', icon: '📅' },
 		{ id: 'weekly', label: 'Weekly', icon: '📊' },
 		{ id: 'monthly', label: 'Monthly', icon: '📈' },
-		{ id: 'yearly', label: 'Yearly', icon: '📆' }
+		{ id: 'yearly', label: 'Yearly', icon: '📆' },
+		{ id: 'all', label: 'All Time', icon: '🌍' }
 	];
 
 	let currentPeriod = $state(data.currentPeriod);
-	let isLoading = $state(false);
+
+	// Update currentPeriod when data changes (after navigation)
+	$effect(() => {
+		currentPeriod = data.currentPeriod;
+	});
+
+	// Use SvelteKit's built-in navigation loading state
+	let isLoading = $derived(!!$navigating);
 
 	function switchPeriod(period: string) {
 		if (period === currentPeriod) return; // Don't reload if same period
 
-		isLoading = true;
-		currentPeriod = period;
-		const url = new URL(window.location.href);
-		url.searchParams.set('period', period);
-		window.location.href = url.toString();
+		const newUrl = new URL($page.url);
+		newUrl.searchParams.set('period', period);
+		goto(newUrl.pathname + newUrl.search);
 	}
 
 	// Mock data - replace with actual data from load function
@@ -87,15 +94,15 @@
 	let filteredExpenses = $derived.by(()=>{
         return data.expenses.expenses
             .filter((expense) => {
-                const matchesSearch = expense.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    expense.description?.toLowerCase().includes(searchTerm.toLowerCase());
+                // If no search term, show all expenses; otherwise filter by note content
+                const matchesSearch = !searchTerm || expense.note?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
                 const matchesCategory = !selectedCategory || expense.category?.id === selectedCategory;
                 return matchesSearch && matchesCategory;
             })
             .sort((a, b) => {
-                if (sortBy === 'date') return new Date(b.date).getTime() - new Date(a.date).getTime();
+                if (sortBy === 'date') return b.date.localeCompare(a.date); // ISO strings can be compared directly
                 if (sortBy === 'amount') return b.amount - a.amount;
-                if (sortBy === 'title') return a.title.localeCompare(b.title);
+                if (sortBy === 'title') return (a.note || '').localeCompare(b.note || '');
                 return 0;
             });
     });
@@ -125,6 +132,8 @@
 				return `${now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
 			case 'yearly':
 				return `${now.getFullYear()}`;
+			case 'all':
+				return 'All Time';
 			default:
 				return 'All Time';
 		}
@@ -230,7 +239,7 @@
 			<Select bind:value={sortBy} disabled={isLoading}>
 				<option value="date">Sort by Date</option>
 				<option value="amount">Sort by Amount</option>
-				<option value="title">Sort by Title</option>
+				<option value="title">Sort by Note</option>
 			</Select>
 		</div>
 	</div>
@@ -274,7 +283,7 @@
 								<div class="flex-1 min-w-0">
 									<div class="flex items-center space-x-2">
 										<h3 class="text-sm font-medium text-foreground truncate">
-											{expense.title}
+											{expense.note || ''}
 										</h3>
 										{#if expense.category?.group}
 											<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary space-x-1">
@@ -286,10 +295,13 @@
 											{expense.category?.name}
 										</span>
 									</div>
-									{#if expense.description}
-										<p class="text-sm text-muted-foreground truncate">{expense.description}</p>
-									{/if}
-									<p class="text-xs text-muted-foreground">{formatDateTime(expense.date)}</p>
+									<div class="flex items-center space-x-2 text-xs text-muted-foreground">
+										<span>{formatDateTime(expense.date)}</span>
+										{#if expense.creator}
+											<span>•</span>
+											<span>by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName}` : expense.creator.email}</span>
+										{/if}
+									</div>
 								</div>
 							</div>
 							<div class="flex items-center space-x-4">
@@ -300,7 +312,7 @@
 									<Button
 										variant="ghost"
 										size="sm"
-										onclick={() => (window.location.href = `/expenses/${expense.id}/edit`)}
+										onclick={() => goto(`/vaults/${data.vaultId}/expenses/${expense.id}/edit`)}
 									>
 										<Pencil class="w-4 h-4" />
 									</Button>

@@ -17,8 +17,6 @@ export const setupServicesHandler: Handle = async ({ event, resolve }) => {
     }
 
     event.locals.authService = new AuthService(event.platform.env.WORKOS_API_KEY, event.platform.env.WORKOS_CLIENT_ID, event.platform.env.BASE_PATH, event.platform.env.WORKOS_COOKIE_PASSWORD);
-
-
     return resolve(event);
 };
 
@@ -105,6 +103,11 @@ export const checkSessionHandler: Handle = async ({ event, resolve }) => {
 export const setupPersonalVaultHandler: Handle = async ({ event, resolve }) => {
     if(event.platform === undefined){
         throw new Error("No Platform")
+    }
+
+    const pathname = event.url.pathname;
+    if (publicRoutes.some(route => pathname.startsWith(route))) {
+        return resolve(event);
     }
 
     const db = event.platform.env.DB;

@@ -20,6 +20,16 @@ html {
     overflow-y: scroll;
 }
 
+/* Ensure dropdowns don't cause horizontal scroll */
+body {
+    overflow-x: hidden;
+}
+
+/* Ensure proper stacking context for dropdowns */
+[data-radix-popper-content-wrapper] {
+    z-index: 9999 !important;
+}
+
 @font-face {
     font-family: "Raleway";
     font-style: normal;

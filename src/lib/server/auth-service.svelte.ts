@@ -79,8 +79,11 @@ export class AuthService {
     }
     
     public getJwksUrl(){
-        
         return this.workos.userManagement.getJwksUrl(this.clientId);
+    }
+
+    public getUser(workOsUserId: string){
+        return this.workos.userManagement.getUser(workOsUserId);
     }
 
     public async verifiedSession(accessToken: string){

@@ -1,0 +1,203 @@
+import { Hono } from 'hono';
+import * as v from "valibot";
+import { vValidator } from "@hono/valibot-validator";
+import {
+    inviteUserToVault,
+    acceptVaultInvitation,
+    declineVaultInvitation,
+    removeUserFromVault,
+    updateVaultMember,
+    getUserVaultInvitations,
+    getUserVaultInvitationsByEmail
+} from "$lib/server/api/vault-members/handlers";
+
+// Schema for inviting a user to a vault
+const inviteUserSchema = v.object({
+    email: v.pipe(v.string(), v.email()),
+    role: v.picklist(['member', 'admin']),
+    permissions: v.picklist(['read', 'write', 'admin'])
+});
+
+// Schema for updating member role/permissions
+const updateMemberSchema = v.object({
+    role: v.optional(v.picklist(['member', 'admin'])),
+    permissions: v.optional(v.picklist(['read', 'write', 'admin']))
+});
+
+// Query schema for getUserVaultInvitationsByEmail
+const getInvitationsByEmailSchema = v.object({
+    email: v.pipe(v.string(), v.email())
+});
+
+export const vaultMembersApi = new Hono<App.Api>()
+    // POST /vault-members/invite/:vaultId - Invite user to vault
+    .post('/invite/:vaultId', vValidator('json', inviteUserSchema), async (c) => {
+        const userId = c.get('userEmail') as string;
+        const vaultId = c.req.param('vaultId');
+        const data = c.req.valid('json');
+
+        try {
+            const result = await inviteUserToVault(
+                userId,
+                vaultId,
+                data.email,
+                data.role,
+                data.permissions,
+                c.env.DB
+            );
+            return c.json({
+                success: true,
+                data: result,
+                message: 'User invited successfully'
+            }, 201);
+        } catch (error) {
+            console.error('Error inviting user:', error);
+            let status = 500;
+            if (error instanceof Error) {
+                if (error.message.includes('Permission denied')) status = 403;
+                else if (error.message.includes('User not found')) status = 404;
+                else if (error.message.includes('already')) status = 409;
+            }
+            return c.json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to invite user'
+            }, status);
+        }
+    })
+
+    // PUT /vault-members/invitations/:invitationId/accept - Accept invitation
+    .put('/invitations/:invitationId/accept', async (c) => {
+        const userId = c.get('userEmail') as string;
+        const invitationId = c.req.param('invitationId');
+
+        try {
+            const membership = await acceptVaultInvitation(userId, invitationId, c.env.DB);
+            return c.json({
+                success: true,
+                data: membership,
+                message: 'Invitation accepted successfully'
+            });
+        } catch (error) {
+            console.error('Error accepting invitation:', error);
+            const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
+            return c.json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to accept invitation'
+            }, status);
+        }
+    })
+
+    // PUT /vault-members/invitations/:invitationId/decline - Decline invitation
+    .put('/invitations/:invitationId/decline', async (c) => {
+        const userId = c.get('userEmail') as string;
+        const invitationId = c.req.param('invitationId');
+
+        try {
+            const membership = await declineVaultInvitation(userId, invitationId, c.env.DB);
+            return c.json({
+                success: true,
+                data: membership,
+                message: 'Invitation declined successfully'
+            });
+        } catch (error) {
+            console.error('Error declining invitation:', error);
+            const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
+            return c.json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to decline invitation'
+            }, status);
+        }
+    })
+
+    // DELETE /vault-members/:vaultId/members/:userId - Remove user from vault
+    .delete('/:vaultId/members/:userId', async (c) => {
+        const removerId = c.get('userEmail') as string;
+        const vaultId = c.req.param('vaultId');
+        const userId = c.req.param('userId');
+
+        try {
+            const membership = await removeUserFromVault(removerId, vaultId, userId, c.env.DB);
+            return c.json({
+                success: true,
+                data: membership,
+                message: 'User removed from vault successfully'
+            });
+        } catch (error) {
+            console.error('Error removing user from vault:', error);
+            let status = 500;
+            if (error instanceof Error) {
+                if (error.message.includes('Permission denied')) status = 403;
+                else if (error.message.includes('Cannot remove vault owner')) status = 400;
+            }
+            return c.json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to remove user from vault'
+            }, status);
+        }
+    })
+
+    // PUT /vault-members/:vaultId/members/:userId - Update member role/permissions
+    .put('/:vaultId/members/:userId', vValidator('json', updateMemberSchema), async (c) => {
+        const updaterId = c.get('userEmail') as string;
+        const vaultId = c.req.param('vaultId');
+        const userId = c.req.param('userId');
+        const updates = c.req.valid('json');
+
+        try {
+            const membership = await updateVaultMember(updaterId, vaultId, userId, updates, c.env.DB);
+            return c.json({
+                success: true,
+                data: membership,
+                message: 'Member updated successfully'
+            });
+        } catch (error) {
+            console.error('Error updating member:', error);
+            let status = 500;
+            if (error instanceof Error) {
+                if (error.message.includes('Permission denied')) status = 403;
+                else if (error.message.includes('Cannot update vault owner')) status = 400;
+            }
+            return c.json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to update member'
+            }, status);
+        }
+    })
+
+    // GET /vault-members/invitations - Get user's vault invitations
+    .get('/invitations', async (c) => {
+        const userId = c.get('userEmail') as string;
+
+        try {
+            const invitations = await getUserVaultInvitationsByEmail(userId, c.env.DB);
+            return c.json({
+                success: true,
+                data: invitations
+            });
+        } catch (error) {
+            console.error('Error fetching invitations:', error);
+            return c.json({
+                success: false,
+                error: 'Failed to fetch invitations'
+            }, 500);
+        }
+    })
+
+    // GET /vault-members/invitations/by-email?email=user@example.com - Get invitations by email
+    .get('/invitations/by-email', vValidator('query', getInvitationsByEmailSchema), async (c) => {
+        const query = c.req.valid('query');
+
+        try {
+            const invitations = await getUserVaultInvitationsByEmail(query.email, c.env.DB);
+            return c.json({
+                success: true,
+                data: invitations
+            });
+        } catch (error) {
+            console.error('Error fetching invitations by email:', error);
+            return c.json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to fetch invitations'
+            }, error instanceof Error && error.message === 'User not found' ? 404 : 500);
+        }
+    });

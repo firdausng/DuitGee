@@ -14,11 +14,11 @@
 	// ];
 
 	function handleSuccess() {
-		goto('/expenses');
+		goto(`/vaults/${data.vaultId}/expenses`);
 	}
 
 	function handleCancel() {
-		goto('/expenses');
+		goto(`/vaults/${data.vaultId}/expenses`);
 	}
 </script>
 

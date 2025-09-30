@@ -22,7 +22,7 @@
 			group?: { name: string; color?: string }
 		}>;
 		isEdit?: boolean;
-		vaultId?: string;
+		vaultId: string;
 	}
 
 	let { data, categories, isEdit = false, vaultId }: Props = $props();
@@ -32,28 +32,32 @@
 	let searchableCategories = $state(categories);
 	let isSearching = $state(false);
 
-	const { form, errors, enhance, submitting } = superForm(data, {
-		validators: valibotClient(expenseSchema),
-		resetForm: !isEdit,
-		onUpdated: ({ form }) => {
-			if (form.valid) {
-				// dispatch('success');
-			}
-		}
-	});
+	const { form, errors, enhance, submitting } = superForm(data);
 
 	function handleCancel() {
 		// dispatch('cancel');
 	}
 
-	function formatDateForInput(date: Date): string {
-		// Set to today at current time
-		return date.toISOString().slice(0, 16);
+	function formatDateForInput(date: Date | string): string {
+		// Handle both Date objects and ISO strings
+		const dateObj = typeof date === 'string' ? new Date(date) : date;
+
+		// Format for datetime-local input (YYYY-MM-DDTHH:MM)
+		const year = dateObj.getFullYear();
+		const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+		const day = String(dateObj.getDate()).padStart(2, '0');
+		const hours = String(dateObj.getHours()).padStart(2, '0');
+		const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+
+		return `${year}-${month}-${day}T${hours}:${minutes}`;
 	}
 
-	// Set default date to current date and time
+	// Set default date to current date and time, or format existing date
 	if (!$form.date) {
 		$form.date = formatDateForInput(new Date());
+	} else {
+		// Ensure existing date is in the correct format for datetime-local input
+		$form.date = formatDateForInput($form.date);
 	}
 
 	// Client-side search function
@@ -158,20 +162,19 @@
 	</div>
 
     <div>
-        <label for="description" class="block text-xs font-medium text-muted-foreground mb-1">
+        <label for="note" class="block text-xs font-medium text-muted-foreground mb-1">
             What did you spend on?
         </label>
         <Textarea
-                id="description"
-                name="description"
-                bind:value={$form.description}
+                id="note"
+                name="note"
+                bind:value={$form.note}
                 placeholder="e.g., Grocery shopping at Whole Foods, Gas station fill-up, Coffee with friends..."
                 class="w-full text-sm leading-tight"
                 rows={2}
-                aria-invalid={$errors.description ? 'true' : undefined}
         />
-        {#if $errors.description}
-            <p class="mt-0.5 text-xs text-destructive">{$errors.description}</p>
+        {#if $errors.note}
+            <p class="mt-0.5 text-xs text-destructive">{$errors.note}</p>
         {/if}
     </div>
 

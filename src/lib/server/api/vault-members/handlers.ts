@@ -285,6 +285,25 @@ export const updateVaultMember = async (
     return updatedMembership[0];
 };
 
+// Get user's vault invitations by email
+export const getUserVaultInvitationsByEmail = async (userEmail: string, db: D1Database) => {
+    const client = drizzle(db, { schema });
+
+    // First, find the user by email
+    const user = await client
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, userEmail))
+        .limit(1);
+
+    if (user.length === 0) {
+        throw new Error('User not found');
+    }
+
+    // Then get their invitations using the existing function
+    return getUserVaultInvitations(user[0].id, db);
+};
+
 // Get user's vault invitations
 export const getUserVaultInvitations = async (userId: string, db: D1Database) => {
     const client = drizzle(db, { schema });

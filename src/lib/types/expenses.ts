@@ -30,11 +30,17 @@ export interface Expense {
 	id: string;
     note: string|null;
 	amount: number;
-	date: Date;
+	date: string; // ISO string format like other audit fields
 	createdAt: string | null;
 	vaultId?: string;
 	vault?: Vault | null;
 	category?: Category | null;
+	creator?: {
+		id: string;
+		firstName?: string;
+		lastName?: string;
+		email: string;
+	} | null;
 }
 
 export interface ExpensesResponse {

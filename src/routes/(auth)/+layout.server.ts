@@ -8,6 +8,7 @@ export const load: LayoutServerLoad = async ({locals, url, platform}) => {
         activeUser: locals.currentUser,
         pathname: url.pathname,
         vaults: locals.currentUserVaults,
-        isAdmin: locals.isAdmin
+        isAdmin: locals.isAdmin,
+        currentSession: locals.currentSession,
     };
 }

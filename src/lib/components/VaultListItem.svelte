@@ -27,11 +27,6 @@
 			status: string;
 			joinedAt?: string;
 		};
-		stats?: {
-			totalExpenses: number;
-			totalAmount: number;
-			avgAmount: number;
-		};
 		currentUserId: string;
 		isFavorite?: boolean;
 		onEdit?: () => void;
@@ -44,7 +39,6 @@
 		vault,
 		owner,
 		membership,
-		stats,
 		currentUserId,
 		isFavorite = false,
 		onEdit,
@@ -55,13 +49,6 @@
 
 	let isOwner = $derived(vault.ownerId === currentUserId);
 	let canEdit = $derived(isOwner || membership?.permissions === 'admin');
-
-	function formatCurrency(amount: number): string {
-		return new Intl.NumberFormat('en-US', {
-			style: 'currency',
-			currency: 'USD'
-		}).format(amount);
-	}
 </script>
 
 <tr class="hover:bg-accent/5 cursor-pointer transition-colors border-b border-border" onclick={() => goto(`/vaults/${vault.id}`)}>
@@ -101,21 +88,6 @@
 				{membership.role}
 			</span>
 		{/if}
-	</td>
-
-	<!-- Expenses Count -->
-	<td class="py-3 px-4 text-sm text-foreground text-right">
-		{stats?.totalExpenses || 0}
-	</td>
-
-	<!-- Total Amount -->
-	<td class="py-3 px-4 text-sm text-foreground text-right">
-		{stats ? formatCurrency(stats.totalAmount) : '$0.00'}
-	</td>
-
-	<!-- Average -->
-	<td class="py-3 px-4 text-sm text-foreground text-right">
-		{stats ? formatCurrency(stats.avgAmount) : '$0.00'}
 	</td>
 
 	<!-- Actions -->

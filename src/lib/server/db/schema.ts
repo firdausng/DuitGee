@@ -96,7 +96,7 @@ export const expenses = sqliteTable('expenses', {
 	categoryId: text('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
 	userId: text('user_id').notNull(), // User ID as string, no FK constraint for microservice compatibility
 	vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }), // required vault
-	date: integer('date', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+	date: text('date').notNull().$defaultFn(() => formatISO(new Date())), // ISO string format like audit fields
     // Audit fields
     createdAt: text('created_at').$defaultFn(() => formatISO(new Date())),
     createdBy: text('created_by').notNull(), // User ID as string, no FK constraint

@@ -14,11 +14,11 @@
 	// ];
 
 	function handleSuccess() {
-		goto('/expenses');
+		goto(`/vaults/${data.vaultId}/expenses`);
 	}
 
 	function handleCancel() {
-		goto('/expenses');
+		goto(`/vaults/${data.vaultId}/expenses`);
 	}
 </script>
 
@@ -29,15 +29,17 @@
 <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 	<!-- Header -->
 	<div class="mb-8">
-		<h1 class="text-3xl font-bold text-gray-900">Edit Expense</h1>
-		<p class="mt-2 text-gray-600">Update your expense details</p>
+		<h1 class="text-3xl font-bold text-foreground font-display">Edit Expense</h1>
+		<p class="mt-2 text-muted-foreground">Update your expense details</p>
 	</div>
 
 	<!-- Form -->
-	<div class="bg-white rounded-lg shadow p-6">
+	<div class="bg-background rounded-lg border border-border shadow-sm p-6">
 		<ExpenseForm
 			data={data.form}
 			categories={data.categories}
+			isEdit={true}
+			vaultId={data.vaultId}
 		/>
 	</div>
 </div>

@@ -4,7 +4,7 @@ export const expenseSchema = v.object({
 	note: v.optional(v.string()),
 	amount: v.pipe(v.number(), v.minValue(0.01, 'Amount must be positive')),
 	categoryId: v.pipe(v.string(), v.minLength(1, 'Category is required')),
-	vaultId: v.pipe(v.string(), v.minLength(1, 'Vault is required')), // Required vault
+	//vaultId: v.pipe(v.string(), v.minLength(1, 'Vault is required')), // Required vault
 	date: v.pipe(v.string(), v.isoDateTime())
 });
 

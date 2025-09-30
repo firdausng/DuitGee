@@ -43,7 +43,7 @@ export const getCategories = async (vaultId: string, db: D1Database) => {
                 : eq(categories.isPublic, true) // Only public categories if no vault specified
         );
 
-    console.log(categoriesList)
+    // console.log(categoriesList)
 
     return categoriesList;
 }

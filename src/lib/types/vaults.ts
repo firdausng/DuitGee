@@ -32,9 +32,6 @@ export interface UserVault {
 	membership: VaultMembership;
 }
 
-// Return type for getUserVaults function
-export type GetUserVaultsResponse = UserVault[];
-
 // Statistics for vaults (if needed)
 export interface VaultStats {
 	totalExpenses: number;

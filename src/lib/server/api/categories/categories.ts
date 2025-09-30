@@ -20,7 +20,7 @@ const updateCategorySchema = v.partial(categorySchema);
 
 export const categoriesApi = new Hono<App.Api>()
 	.get('/vaults/:vaultId/categories', async (c) => {
-		const userId = c.get('userId') as string;
+		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
         console.log('userId', userId)
         const categoriesList = await getCategories(vaultId, c.env.DB)
@@ -28,7 +28,7 @@ export const categoriesApi = new Hono<App.Api>()
 		return c.json(categoriesList);
 	})
 	.get('/vaults/:vaultId/categories/search', async (c) => {
-		const userId = c.get('userId') as string;
+		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const searchTerm = c.req.query('q');
 
@@ -40,7 +40,7 @@ export const categoriesApi = new Hono<App.Api>()
 		return c.json(categoriesList);
 	})
 	.post('/vaults/:vaultId/categories', vValidator('json', categorySchema), async (c) => {
-		const userId = c.get('userId') as string;
+		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const data = c.req.valid('json');
 
@@ -49,7 +49,7 @@ export const categoriesApi = new Hono<App.Api>()
 		return c.json(category, 201);
 	})
 	.get('/vaults/:vaultId/categories/:id', async (c) => {
-		const userId = c.get('userId') as string;
+		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
 
@@ -62,7 +62,7 @@ export const categoriesApi = new Hono<App.Api>()
 		return c.json(category);
 	})
 	.put('/vaults/:vaultId/categories/:id', vValidator('json', updateCategorySchema), async (c) => {
-		const userId = c.get('userId') as string;
+		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
 		const data = c.req.valid('json');
@@ -76,7 +76,7 @@ export const categoriesApi = new Hono<App.Api>()
 		return c.json(category);
 	})
 	.delete('/vaults/:vaultId/categories/:id', async (c) => {
-		const userId = c.get('userId') as string;
+		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
 

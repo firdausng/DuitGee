@@ -31,7 +31,7 @@ declare global {
         interface Api {
             Bindings: Cloudflare.Env,
             Variables: RequestIdVariables & {
-                userId: string
+                userEmail: string
             }
         }
     }

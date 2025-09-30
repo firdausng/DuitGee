@@ -7,7 +7,12 @@ import {
 	getExpenses,
 	getExpense,
 	updateExpense,
-	getExpensesSummary
+	getExpensesSummary,
+	createExpenseByEmail,
+	deleteExpenseByEmail,
+	getExpensesByEmail,
+	updateExpenseByEmail,
+	getExpensesSummaryByEmail
 } from "$lib/server/api/expenses/handlers";
 
 const expenseSchema = v.object({
@@ -21,33 +26,36 @@ const updateExpenseSchema = v.partial(expenseSchema);
 
 export const expensesApi = new Hono<App.Api>()
 	.get('/vaults/:vaultId/expenses', async (c) => {
-		const userId = c.get('userId') as string;
+		const userEmail = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const page = parseInt(c.req.query('page') || '1');
 		const limit = parseInt(c.req.query('limit') || '10');
 		const categoryId = c.req.query('categoryId');
+		const startDate = c.req.query('startDate');
+		const endDate = c.req.query('endDate');
 
-		console.log('userId', userId);
-		const result = await getExpenses(userId, c.env.DB, {
+		const result = await getExpensesByEmail(userEmail, c.env.DB, {
 			page,
 			limit,
 			categoryId,
+			startDate,
+			endDate,
 			vaultId
 		});
 
 		return c.json(result);
 	})
 	.post('/vaults/:vaultId/expenses', vValidator('json', expenseSchema), async (c) => {
-		const userId = c.get('userId') as string;
+		const userEmail = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const data = c.req.valid('json');
 
-		const expense = await createExpense(userId, { ...data, vaultId }, c.env.DB);
+		const expense = await createExpenseByEmail(userEmail, { ...data, vaultId }, c.env.DB);
 
 		return c.json(expense, 201);
 	})
 	.get('/vaults/:vaultId/expenses/:id', async (c) => {
-		const userId = c.get('userId') as string;
+		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
 
@@ -60,12 +68,12 @@ export const expensesApi = new Hono<App.Api>()
 		return c.json(expense);
 	})
 	.put('/vaults/:vaultId/expenses/:id', vValidator('json', updateExpenseSchema), async (c) => {
-		const userId = c.get('userId') as string;
+		const userEmail = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
 		const data = c.req.valid('json');
 
-		const expense = await updateExpense(userId, vaultId, id, data, c.env.DB);
+		const expense = await updateExpenseByEmail(userEmail, vaultId, id, data, c.env.DB);
 
 		if (!expense) {
 			return c.json({ error: 'Expense not found' }, 404);
@@ -74,11 +82,11 @@ export const expensesApi = new Hono<App.Api>()
 		return c.json(expense);
 	})
 	.delete('/vaults/:vaultId/expenses/:id', async (c) => {
-		const userId = c.get('userId') as string;
+		const userEmail = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
 
-		const isDeleted = await deleteExpense(userId, vaultId, id, c.env.DB);
+		const isDeleted = await deleteExpenseByEmail(userEmail, vaultId, id, c.env.DB);
 
 		if (!isDeleted) {
 			return c.json({ error: 'Expense not found' }, 404);
@@ -87,12 +95,12 @@ export const expensesApi = new Hono<App.Api>()
 		return c.json({ message: 'Expense deleted successfully' });
 	})
 	.get('/vaults/:vaultId/expenses/stats/summary', async (c) => {
-		const userId = c.get('userId') as string;
+		const userEmail = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const startDate = c.req.query('startDate');
 		const endDate = c.req.query('endDate');
 
-		const result = await getExpensesSummary(userId, c.env.DB, {
+		const result = await getExpensesSummaryByEmail(userEmail, c.env.DB, {
 			startDate,
 			endDate,
 			vaultId
