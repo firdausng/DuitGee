@@ -7,7 +7,6 @@ import {
     declineVaultInvitation,
     removeUserFromVault,
     updateVaultMember,
-    getUserVaultInvitations,
     getUserVaultInvitationsByEmail
 } from "$lib/server/api/vault-members/handlers";
 
@@ -61,7 +60,7 @@ export const vaultMembersApi = new Hono<App.Api>()
             return c.json({
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to invite user'
-            }, status);
+            },  status);
         }
     })
 

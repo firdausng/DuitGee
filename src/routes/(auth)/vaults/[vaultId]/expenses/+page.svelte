@@ -9,6 +9,7 @@
 	import { Plus, Pencil, Trash, MagnifyingGlass, Funnel } from 'phosphor-svelte';
     import {goto} from "$app/navigation";
 	import { page, navigating } from '$app/state';
+	import { fade, slide } from 'svelte/transition';
 
 	let { data } = $props();
 
@@ -38,10 +39,7 @@
 	// Track loading state - use navigating for navigation-based loading
 	let isLoading = $state(false);
 
-	// Update loading state based on navigation
-	// $effect(() => {
-	// 	isLoading = !!navigating;
-	// });
+
 
 	function switchPeriod(period: string) {
 		if (period === currentPeriod) return; // Don't reload if same period
@@ -49,6 +47,40 @@
 		const newUrl = new URL(page.url);
 		newUrl.searchParams.set('period', period);
 		goto(newUrl.pathname + newUrl.search);
+	}
+
+	// Generate consistent background color for each member
+	function getMemberColor(userId: string): string {
+		const colors = [
+			'bg-blue-50 dark:bg-blue-950/20',
+			'bg-green-50 dark:bg-green-950/20',
+			'bg-purple-50 dark:bg-purple-950/20',
+			'bg-orange-50 dark:bg-orange-950/20',
+			'bg-pink-50 dark:bg-pink-950/20',
+			'bg-cyan-50 dark:bg-cyan-950/20',
+			'bg-yellow-50 dark:bg-yellow-950/20',
+			'bg-indigo-50 dark:bg-indigo-950/20',
+			'bg-red-50 dark:bg-red-950/20',
+			'bg-teal-50 dark:bg-teal-950/20',
+			'bg-lime-50 dark:bg-lime-950/20',
+			'bg-violet-50 dark:bg-violet-950/20',
+			'bg-fuchsia-50 dark:bg-fuchsia-950/20',
+			'bg-rose-50 dark:bg-rose-950/20',
+			'bg-sky-50 dark:bg-sky-950/20',
+			'bg-emerald-50 dark:bg-emerald-950/20',
+			'bg-amber-50 dark:bg-amber-950/20',
+			'bg-slate-50 dark:bg-slate-950/20',
+			'bg-zinc-50 dark:bg-zinc-950/20',
+			'bg-stone-50 dark:bg-stone-950/20',
+		];
+
+		// Simple hash function to map user ID to color index
+		let hash = 0;
+		for (let i = 0; i < userId.length; i++) {
+			hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+			hash = hash & hash;
+		}
+		return colors[Math.abs(hash) % colors.length];
 	}
 
 	let searchTerm = $state('');
@@ -100,7 +132,7 @@
 				// Reload the page to refresh the expense list
 				window.location.reload();
 			} else {
-				const error = await response.json();
+				const error = await response.json() as { error: string };
 				alert(`Failed to delete expense: ${error.error || 'Unknown error'}`);
 			}
 		} catch (error) {
@@ -194,7 +226,7 @@
 								currentPeriod === period.id
 									? 'border-primary text-primary'
 									: 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
-							} {isLoading ? 'opacity-50 cursor-not-allowed' : ''}"
+							} {isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}"
 						>
 							{#if isLoading && currentPeriod === period.id}
 								<div class="absolute inset-0 flex items-center justify-center">
@@ -220,7 +252,7 @@
 	{#if isSidebarOpen}
 		<div class="fixed inset-0 z-50 lg:static lg:z-0">
 			<!-- Backdrop for mobile -->
-			<div class="fixed inset-0 bg-black/50 lg:hidden" onclick={() => isSidebarOpen = false}></div>
+			<div class="fixed inset-0 bg-black/50 lg:hidden cursor-pointer" onclick={() => isSidebarOpen = false}></div>
 
 			<!-- Sidebar -->
 			<div class="fixed right-0 top-0 h-full w-80 bg-background border-l border-border shadow-lg lg:relative lg:w-auto lg:shadow-none transform transition-transform duration-300 ease-in-out">
@@ -332,8 +364,8 @@
 				</div>
 			{:else}
 				<div class="divide-y divide-border">
-				{#each filteredExpenses as expense}
-					<div class="px-4 sm:px-6 py-3 sm:py-4 hover:bg-accent/50 transition-colors">
+				{#each filteredExpenses as expense (expense.id)}
+					<div class="px-4 sm:px-6 py-3 sm:py-4 transition-colors rounded-md {expense.creator ? getMemberColor(expense.creator.id) : 'bg-background'}" transition:slide={{ duration: 200 }}>
 						<!-- Desktop Layout -->
 						<div class="hidden sm:flex items-center justify-between">
 							<div class="flex items-center space-x-4 flex-1">

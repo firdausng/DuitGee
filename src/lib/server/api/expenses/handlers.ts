@@ -287,24 +287,31 @@ export const getExpensesSummary = async (
 	let whereClause;
 
 	if (vaultId) {
-		// For specific vault, show ALL expenses in the vault if user has access
-		const hasAccess = or(
-			// User is the vault owner
-			eq(vaults.ownerId, userId),
-			// User is an active member of the vault
-			sql`EXISTS (
-				SELECT 1 FROM vault_members vm
-				WHERE vm.vault_id = ${vaultId}
-				AND vm.user_id = ${userId}
-				AND vm.status = 'active'
-			)`
-		);
+		// For specific vault, verify user has access first, then show ALL expenses in the vault
+		const vaultAccess = await client
+			.select({ id: vaults.id })
+			.from(vaults)
+			.leftJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
+			.where(
+				and(
+					eq(vaults.id, vaultId),
+					or(
+						eq(vaults.ownerId, userId),
+						and(
+							eq(vaultMembers.userId, userId),
+							eq(vaultMembers.status, 'active')
+						)
+					)
+				)
+			)
+			.limit(1);
 
-		// Show all expenses in this vault if user has access
-		whereClause = and(
-			eq(expenses.vaultId, vaultId),
-			hasAccess
-		);
+		if (vaultAccess.length === 0) {
+			throw new Error('Access denied to this vault');
+		}
+
+		// Show all expenses in this vault (from any member)
+		whereClause = eq(expenses.vaultId, vaultId);
 	} else {
 		// For all expenses accessible to the user
 		whereClause = or(

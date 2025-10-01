@@ -1,35 +1,18 @@
 <script lang="ts">
-	import { onMount, untrack } from 'svelte';
 	import { page, navigating } from '$app/state';
-	import { useVaultStore } from '$lib/stores/vault.svelte.js';
 	import { authManager } from '$lib/stores/current-session.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import AlertDialog from '$lib/components/ui/AlertDialog.svelte';
 	import IconDisplay from '$lib/components/IconDisplay.svelte';
 	import { Plus, Receipt, Tag, TrendUp, Calendar, Vault, Users, Gear, Lock, Globe, Pencil, Trash } from 'phosphor-svelte';
     import {goto} from "$app/navigation";
-	import type { Expense } from '$lib/types/expenses';
+	import { fade, slide } from 'svelte/transition';
 
 	let { data } = $props();
 
 	// Delete dialog state
 	let showDeleteDialog = $state(false);
 	let expenseToDelete = $state<string | null>(null);
-
-	// const vaultStore = useVaultStore();
-
-	let stats = $state({
-		totalExpenses: 0,
-		totalAmount: 0,
-		avgAmount: 0,
-		recentExpenses: [] as Expense[],
-		memberSpending: [] as Array<{
-			userId: string;
-			userName: string;
-			totalAmount: number;
-			expenseCount: number;
-		}>
-	});
 
 	// Time period management
 	const timePeriods = [
@@ -40,17 +23,18 @@
 		{ id: 'all', label: 'All Time', icon: '🌍' }
 	];
 
-	// Get period from URL or default to daily
-	let currentPeriod = $state(page.url.searchParams.get('period') || 'daily');
-
-	// Get member filter from URL
+	// Get period and member filter from data (server-loaded)
+	let currentPeriod = $state(data.currentPeriod);
 	let selectedMemberIds = $state<string[]>(page.url.searchParams.get('memberIds')?.split(',').filter(Boolean) || []);
 
-	// Track loading state for stats API calls
-	let isLoading = $state(false);
+	// Update state when data changes (after navigation)
+	$effect(() => {
+		currentPeriod = data.currentPeriod;
+		selectedMemberIds = page.url.searchParams.get('memberIds')?.split(',').filter(Boolean) || [];
+	});
 
-	// Track if stats have been loaded to prevent duplicate calls
-	let statsLoaded = $state(false);
+	// Track loading state - use navigating for navigation-based loading
+	let isLoading = $derived(false);
 
 	// Get all vault members (owner + active members)
 	let allMembers = $derived.by(() => {
@@ -86,185 +70,57 @@
 		return members;
 	});
 
-	// Single effect to handle both URL changes and initial load
-	$effect(() => {
-		// React to URL changes - access the URL to create dependency
-		const url = page.url;
-		const urlPeriod = url.searchParams.get('period') || 'daily';
-		const urlMemberIds = url.searchParams.get('memberIds')?.split(',').filter(Boolean) || [];
+	// Generate consistent background color for each member
+	function getMemberColor(userId: string): string {
+		const colors = [
+			'bg-blue-50 dark:bg-blue-950/20',
+			'bg-green-50 dark:bg-green-950/20',
+			'bg-purple-50 dark:bg-purple-950/20',
+			'bg-orange-50 dark:bg-orange-950/20',
+			'bg-pink-50 dark:bg-pink-950/20',
+			'bg-cyan-50 dark:bg-cyan-950/20',
+			'bg-yellow-50 dark:bg-yellow-950/20',
+			'bg-indigo-50 dark:bg-indigo-950/20',
+			'bg-red-50 dark:bg-red-950/20',
+			'bg-teal-50 dark:bg-teal-950/20',
+			'bg-lime-50 dark:bg-lime-950/20',
+			'bg-violet-50 dark:bg-violet-950/20',
+			'bg-fuchsia-50 dark:bg-fuchsia-950/20',
+			'bg-rose-50 dark:bg-rose-950/20',
+			'bg-sky-50 dark:bg-sky-950/20',
+			'bg-emerald-50 dark:bg-emerald-950/20',
+			'bg-amber-50 dark:bg-amber-950/20',
+			'bg-slate-50 dark:bg-slate-950/20',
+			'bg-zinc-50 dark:bg-zinc-950/20',
+			'bg-stone-50 dark:bg-stone-950/20',
+		];
 
-		// Use untrack to read current state without creating dependency
-		untrack(() => {
-			console.log('[effect] triggered - urlPeriod:', urlPeriod, 'currentPeriod:', currentPeriod);
-			console.log('[effect] triggered - urlMemberIds:', urlMemberIds, 'selectedMemberIds:', selectedMemberIds);
-			console.log('[effect] statsLoaded:', statsLoaded);
-
-			// Only update and reload if period or member filter actually changed or first load
-			const periodChanged = urlPeriod !== currentPeriod;
-			const membersChanged = JSON.stringify(urlMemberIds.sort()) !== JSON.stringify(selectedMemberIds.sort());
-
-			if (periodChanged || membersChanged || !statsLoaded) {
-				console.log('[effect] loading stats - periodChanged:', periodChanged, 'membersChanged:', membersChanged, 'statsLoaded:', statsLoaded);
-				currentPeriod = urlPeriod;
-				selectedMemberIds = urlMemberIds;
-				loadVaultStats();
-				statsLoaded = true;
-			}
-		});
-	});
-
-	// Calculate date range based on time period
-	function calculateDateRange(period: string) {
-		const now = new Date();
-		let startDate: string | undefined;
-		let endDate: string | undefined;
-
-		switch (period) {
-			case 'daily':
-				const startOfDay = new Date(now);
-				startOfDay.setHours(0, 0, 0, 0);
-				const endOfDay = new Date(now);
-				endOfDay.setHours(23, 59, 59, 999);
-				startDate = startOfDay.toISOString();
-				endDate = endOfDay.toISOString();
-				break;
-			case 'weekly':
-				const startOfWeek = new Date(now);
-				startOfWeek.setDate(now.getDate() - now.getDay());
-				startOfWeek.setHours(0, 0, 0, 0);
-				const endOfWeek = new Date(startOfWeek);
-				endOfWeek.setDate(startOfWeek.getDate() + 6);
-				endOfWeek.setHours(23, 59, 59, 999);
-				startDate = startOfWeek.toISOString();
-				endDate = endOfWeek.toISOString();
-				break;
-			case 'monthly':
-				const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-				const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-				endOfMonth.setHours(23, 59, 59, 999);
-				startDate = startOfMonth.toISOString();
-				endDate = endOfMonth.toISOString();
-				break;
-			case 'yearly':
-				const startOfYear = new Date(now.getFullYear(), 0, 1);
-				const endOfYear = new Date(now.getFullYear(), 11, 31);
-				endOfYear.setHours(23, 59, 59, 999);
-				startDate = startOfYear.toISOString();
-				endDate = endOfYear.toISOString();
-				break;
-			case 'all':
-				// No date filtering for "All Time"
-				startDate = undefined;
-				endDate = undefined;
-				break;
-			default:
-				// Default to daily
-				const defaultStartOfDay = new Date(now);
-				defaultStartOfDay.setHours(0, 0, 0, 0);
-				const defaultEndOfDay = new Date(now);
-				defaultEndOfDay.setHours(23, 59, 59, 999);
-				startDate = defaultStartOfDay.toISOString();
-				endDate = defaultEndOfDay.toISOString();
+		// Simple hash function to map user ID to color index
+		let hash = 0;
+		for (let i = 0; i < userId.length; i++) {
+			hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+			hash = hash & hash;
 		}
-
-		return { startDate, endDate };
-	}
-
-	async function loadVaultStats() {
-		isLoading = true;
-		try {
-			// Get date range for current period
-			const { startDate, endDate } = calculateDateRange(currentPeriod);
-
-			console.log('[loadVaultStats] currentPeriod:', currentPeriod);
-			console.log('[loadVaultStats] startDate:', startDate);
-			console.log('[loadVaultStats] endDate:', endDate);
-			console.log('[loadVaultStats] selectedMemberIds:', selectedMemberIds);
-
-			// Build query parameters
-			const queryParams = new URLSearchParams();
-			if (startDate && endDate) {
-				queryParams.set('startDate', startDate);
-				queryParams.set('endDate', endDate);
-			}
-			if (selectedMemberIds.length > 0) {
-				queryParams.set('memberIds', selectedMemberIds.join(','));
-			}
-
-			console.log('[loadVaultStats] queryParams:', queryParams.toString());
-
-			// Make parallel API calls for better performance
-			const [summaryResponse, expensesResponse, memberStatsResponse] = await Promise.all([
-				// Get summary statistics
-				fetch(`/api/expenses/vaults/${data.vaultId}/expenses/stats/summary?${queryParams}`, {
-					headers: { 'Authorization': `Bearer ${authManager.authState?.accessToken}` }
-				}),
-				// Get recent expenses with pagination info (contains total count)
-				fetch(`/api/expenses/vaults/${data.vaultId}/expenses?limit=5&${queryParams}`, {
-					headers: { 'Authorization': `Bearer ${authManager.authState?.accessToken}` }
-				}),
-				// Get member spending stats
-				fetch(`/api/expenses/vaults/${data.vaultId}/expenses/stats/members?${queryParams}`, {
-					headers: { 'Authorization': `Bearer ${authManager.authState?.accessToken}` }
-				})
-			]);
-
-			// Process summary data
-			if (summaryResponse.ok) {
-				const summaryResult = await summaryResponse.json();
-				stats.totalAmount = summaryResult.totalAmount || 0;
-			}
-
-			// Process expenses data (contains both expenses and count)
-			if (expensesResponse.ok) {
-				const expensesResult = await expensesResponse.json();
-				stats.recentExpenses = expensesResult.expenses || [];
-				stats.totalExpenses = expensesResult.pagination?.total || 0;
-				stats.avgAmount = stats.totalExpenses > 0 ? stats.totalAmount / stats.totalExpenses : 0;
-			}
-
-			// Process member spending data
-			if (memberStatsResponse.ok) {
-				const memberStatsResult = await memberStatsResponse.json();
-				stats.memberSpending = memberStatsResult || [];
-			}
-
-		} catch (error) {
-			console.error('Failed to load vault stats:', error);
-		} finally {
-			isLoading = false;
-		}
+		return colors[Math.abs(hash) % colors.length];
 	}
 
 	function switchPeriod(period: string) {
-		console.log('[switchPeriod] switching to period:', period, 'current:', currentPeriod);
-		if (period === currentPeriod) {
-			console.log('[switchPeriod] same period, skipping');
-			return; // Don't reload if same period
-		}
+		if (period === currentPeriod) return;
 
 		const newUrl = new URL(page.url);
 		newUrl.searchParams.set('period', period);
-		console.log('[switchPeriod] navigating to:', newUrl.pathname + newUrl.search);
 		goto(newUrl.pathname + newUrl.search);
 	}
 
 	function toggleMemberFilter(memberId: string) {
 		const newUrl = new URL(page.url);
-		let newSelectedIds: string[];
 
-		if (selectedMemberIds.includes(memberId)) {
-			// Remove member
-			newSelectedIds = selectedMemberIds.filter(id => id !== memberId);
-		} else {
-			// Add member
-			newSelectedIds = [...selectedMemberIds, memberId];
-		}
-
-		if (newSelectedIds.length > 0) {
-			newUrl.searchParams.set('memberIds', newSelectedIds.join(','));
-		} else {
+		// If clicking the same member, deselect it (clear filter)
+		if (selectedMemberIds.length === 1 && selectedMemberIds.includes(memberId)) {
 			newUrl.searchParams.delete('memberIds');
+		} else {
+			// Replace selection with this member (single selection only)
+			newUrl.searchParams.set('memberIds', memberId);
 		}
 
 		goto(newUrl.pathname + newUrl.search);
@@ -293,10 +149,10 @@
 			if (response.ok) {
 				showDeleteDialog = false;
 				expenseToDelete = null;
-				// Reload the expenses list
-				await loadVaultStats();
+				// Reload the page to refresh the expense list
+				window.location.reload();
 			} else {
-				const error = await response.json();
+				const error = await response.json() as { error: string };
 				alert(`Failed to delete expense: ${error.error || 'Unknown error'}`);
 			}
 		} catch (error) {
@@ -393,7 +249,7 @@
 								currentPeriod === period.id
 									? 'border-primary text-primary'
 									: 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
-							} {isLoading ? 'opacity-50 cursor-not-allowed' : ''}"
+							} {isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}"
 						>
 							{#if isLoading && currentPeriod === period.id}
 								<div class="absolute inset-0 flex items-center justify-center">
@@ -414,42 +270,6 @@
 		</div>
 	</div>
 
-	<!-- Member Filter -->
-	{#if allMembers.length > 1}
-		<div class="mb-6">
-			<div class="flex items-center justify-between mb-3">
-				<h3 class="text-sm font-medium text-foreground">Filter by Member</h3>
-				{#if selectedMemberIds.length > 0}
-					<Button variant="ghost" size="sm" onclick={clearMemberFilter} class="h-7 text-xs">
-						Clear
-					</Button>
-				{/if}
-			</div>
-			<div class="flex flex-wrap gap-2">
-				{#each allMembers as member}
-					<button
-						onclick={() => toggleMemberFilter(member.id)}
-						disabled={isLoading}
-						class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all {
-							selectedMemberIds.includes(member.id)
-								? 'bg-primary text-primary-foreground'
-								: 'bg-muted text-muted-foreground hover:bg-muted/80'
-						} {isLoading ? 'opacity-50 cursor-not-allowed' : ''}"
-					>
-						<span class="truncate max-w-[200px]">{member.name}</span>
-						{#if member.isOwner}
-							<span class="text-xs opacity-70">(Owner)</span>
-						{/if}
-					</button>
-				{/each}
-			</div>
-			{#if selectedMemberIds.length > 0}
-				<p class="text-xs text-muted-foreground mt-2">
-					Showing expenses from {selectedMemberIds.length} {selectedMemberIds.length === 1 ? 'member' : 'members'}
-				</p>
-			{/if}
-		</div>
-	{/if}
 
 	{#if isLoading}
 		<div class="flex items-center justify-center py-12">
@@ -458,39 +278,61 @@
 				<span class="text-sm font-medium">Loading expenses...</span>
 			</div>
 		</div>
-	{:else}
+	{:else if data.stats}
 		<!-- Period Summary Header -->
 		<div class="bg-gradient-to-r from-primary to-accent rounded-lg p-4 sm:p-6 mb-6 text-primary-foreground shadow-lg">
 			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 				<div>
 					<h2 class="text-base sm:text-lg font-semibold">Expenses for {getPeriodLabel(currentPeriod)}</h2>
 					<p class="text-primary-foreground/80 mt-1 text-sm">
-						{stats.totalExpenses} {stats.totalExpenses === 1 ? 'expense' : 'expenses'}
+						{data.stats.totalExpenses} {data.stats.totalExpenses === 1 ? 'expense' : 'expenses'}
 					</p>
 				</div>
 				<div class="text-left sm:text-right">
-					<p class="text-xl sm:text-2xl font-bold">{formatCurrency(stats.totalAmount)}</p>
+					<p class="text-xl sm:text-2xl font-bold">{formatCurrency(data.stats.totalAmount)}</p>
 					<p class="text-primary-foreground/80 text-sm">Total spent</p>
 				</div>
 			</div>
 
 			<!-- Member Spending Breakdown -->
-			{#if stats.memberSpending.length > 0}
+			{#if data.stats.memberSpending.length > 0}
 				<div class="mt-4 pt-4 border-t border-primary-foreground/20">
-					<h3 class="text-sm font-medium mb-3 text-primary-foreground/90">Spending by Member</h3>
+					<div class="flex items-center justify-between mb-3">
+						<h3 class="text-sm font-medium text-primary-foreground/90">Spending by Member</h3>
+						{#if selectedMemberIds.length > 0}
+							<button
+								onclick={clearMemberFilter}
+								class="text-xs text-primary-foreground/70 hover:text-primary-foreground underline cursor-pointer"
+							>
+								Clear filter
+							</button>
+						{/if}
+					</div>
 					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-						{#each stats.memberSpending as member}
-							<div class="bg-primary-foreground/10 rounded-lg p-3 backdrop-blur-sm border border-primary-foreground/20">
+						{#each data.stats.memberSpending as member}
+							<button
+								onclick={() => toggleMemberFilter(member.userId)}
+								class="bg-primary-foreground/10 rounded-lg p-3 backdrop-blur-sm border-2 transition-all cursor-pointer {
+									selectedMemberIds.includes(member.userId)
+										? 'border-primary-foreground ring-4 ring-primary-foreground/30 bg-primary-foreground/20'
+										: 'border-primary-foreground/20 hover:border-primary-foreground/40 hover:bg-primary-foreground/15'
+								}"
+							>
 								<div class="flex justify-between items-start">
-									<div class="min-w-0 flex-1">
+									<div class="min-w-0 flex-1 text-left">
 										<p class="text-sm font-medium text-primary-foreground truncate">{member.userName}</p>
 										<p class="text-xs text-primary-foreground/70 mt-0.5">{member.expenseCount} {member.expenseCount === 1 ? 'expense' : 'expenses'}</p>
 									</div>
 									<p class="text-sm font-semibold text-primary-foreground ml-2">{formatCurrency(member.totalAmount)}</p>
 								</div>
-							</div>
+							</button>
 						{/each}
 					</div>
+					{#if selectedMemberIds.length > 0}
+						<p class="text-xs text-primary-foreground/70 mt-3">
+							Filtering by 1 member
+						</p>
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -506,7 +348,7 @@
 					</Button>
 				</div>
 
-				{#if stats.recentExpenses.length === 0}
+				{#if data.stats.recentExpenses.length === 0}
 					<div class="text-center py-8">
 						<Receipt class="mx-auto h-12 w-12 text-muted-foreground" />
 						<h3 class="mt-2 text-sm font-medium text-foreground">No expenses yet</h3>
@@ -522,8 +364,8 @@
 					</div>
 				{:else}
 					<div class="divide-y divide-border">
-						{#each stats.recentExpenses as expense}
-							<div class="py-2 hover:bg-accent/50 transition-colors">
+						{#each data.stats.recentExpenses as expense (expense.id)}
+							<div class="py-2 px-3 -mx-3 rounded-md transition-colors {expense.creator ? getMemberColor(expense.creator.id) : 'bg-background'}" transition:slide={{ duration: 200 }}>
 								<!-- Desktop Layout -->
 								<div class="hidden sm:flex items-center justify-between gap-3">
 									<div class="flex items-center gap-2 flex-1 min-w-0">

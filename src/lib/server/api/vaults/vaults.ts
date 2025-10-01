@@ -2,17 +2,11 @@ import { Hono } from 'hono';
 import * as v from "valibot";
 import { vValidator } from "@hono/valibot-validator";
 import {
-    getUserVaults,
     getUserVaultsByEmail,
-    getVault,
     getVaultByEmail,
-    createVault,
     createVaultByEmail,
-    updateVault,
     updateVaultByEmail,
-    deleteVault,
     deleteVaultByEmail,
-    getVaultStats,
     getVaultStatsByEmail
 } from "$lib/server/api/vaults/handlers";
 import { vaultSchema } from "$lib/server/api/vaults/schema";
