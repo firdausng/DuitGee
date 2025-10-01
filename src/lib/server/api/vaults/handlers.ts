@@ -163,7 +163,6 @@ export const getVault = async (userId: string, vaultId: string, db: D1Database) 
         .where(eq(vaults.id, vaultId))
         .limit(1);
 
-    console.log(`[getVault] Vault found:`, vault[0]);
 
     // Get vault members from vaultMembers table
     const members = await client
@@ -185,8 +184,6 @@ export const getVault = async (userId: string, vaultId: string, db: D1Database) 
         .leftJoin(users, eq(vaultMembers.userId, users.id))
         .where(eq(vaultMembers.vaultId, vaultId))
         .orderBy(vaultMembers.joinedAt);
-
-    console.log(`[getVault] Members found:`, members);
 
     // Get vault owner details
     const owner = await client

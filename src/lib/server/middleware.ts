@@ -55,8 +55,12 @@ export const checkSessionHandler: Handle = async ({ event, resolve }) => {
         const sessionCookie = await event.locals.authService.getSessionFromCookie(sessionData);
         if(sessionCookie){
             const refreshedSession = await event.locals.authService.authenticateWithRefreshToken(sessionCookie.refreshToken);
-            // user = refreshedSession.user;
-            session = await event.locals.authService.authenticate(sessionData);
+            if(!refreshedSession.sealedSession){
+                console.warn("[checkApiHandler] cannot obtain sealedSession, redirect to login");
+                return redirect(307, "/login");
+            }
+
+            session = await event.locals.authService.authenticate(refreshedSession.sealedSession);
             if(!session.authenticated){
                 console.warn("[checkSessionHandler] cannot obtain user auth, redirect to login");
                 return redirect(307, "/login");
@@ -118,7 +122,7 @@ export const setupPersonalVaultHandler: Handle = async ({ event, resolve }) => {
     if(!event.locals.currentSession){
         return resolve(event);
     }
-    console.log(`[setupPersonalVaultHandler] getUserByEmail data by ${JSON.stringify(event.locals.currentSession)} for ${event.url.pathname}`);
+    console.log(`[setupPersonalVaultHandler] ensureUserPersonalVault data by ${event.locals.currentUser.email} for ${event.url.pathname}`);
 
     const vault = await ensureUserPersonalVault(event.locals.currentUser.id, event.platform.env.DB);
 
@@ -146,100 +150,6 @@ export const adminOnlyHandler: Handle = async ({ event, resolve }) => {
     }
 
     event.locals.isAdmin = true;
-
-    return resolve(event);
-};
-
-//TODO: this temporary handler is for api, need to figure out what to do to ensure third party caller handle refresh token themselve
-export const checkApiHandler: Handle = async ({ event, resolve }) => {
-    if(event.platform === undefined){
-        throw new Error("No Platform")
-    }
-    const pathname = event.url.pathname;
-    if ( !pathname.startsWith("/api")) {
-        return resolve(event);
-    }
-
-    // Reuse session from checkSessionHandler if available (to avoid rate limits)
-    if (event.locals.currentSession && event.locals.currentUser) {
-        console.log(`[checkApiHandler] reusing existing session for ${event.url.pathname}`);
-        return resolve(event);
-    }
-
-    // Fallback: authenticate if session not already checked (shouldn't happen in normal flow)
-    console.warn("[checkApiHandler] session not pre-authenticated, authenticating now");
-
-    const sessionData = event.cookies.get(COOKIE_SESSION);
-    if(!sessionData){
-        console.warn("[checkApiHandler] cannot found auth cookie, redirect to login");
-        return redirect(307, "/login");
-    }
-
-    let session = await event.locals.authService.authenticate(sessionData);
-
-    let successSession : AuthenticateWithSessionCookieSuccessResponse | null = null;
-    if(!session.authenticated){
-        console.warn("[checkApiHandler] user not authenticated", session);
-
-        const sessionCookie = await event.locals.authService.getSessionFromCookie(sessionData);
-        if(sessionCookie){
-            const refreshedSession = await event.locals.authService.authenticateWithRefreshToken(sessionCookie.refreshToken);
-            // user = refreshedSession.user;
-            session = await event.locals.authService.authenticate(sessionData);
-            if(!session.authenticated){
-                console.warn("[checkApiHandler] cannot obtain user auth, redirect to login");
-                return redirect(307, "/login");
-            }
-            successSession = session;
-            console.log("[checkApiHandler] session refreshed", refreshedSession);
-            if(!refreshedSession.sealedSession){
-                console.warn("[checkApiHandler] cannot obtain sealedSession, redirect to login");
-                return redirect(307, "/login");
-            }
-
-            event.cookies.set(COOKIE_SESSION, refreshedSession.sealedSession, {
-                path: '/',
-            })
-        }else{
-            console.warn("[checkApiHandler] no session cookie, redirect to login");
-            return redirect(307, "/login");
-        }
-    }else{
-        successSession = session;
-    }
-
-    let appUser = await getUserByEmail(successSession.user.email, event.platform.env.DB);
-    if(!appUser){
-        console.warn(`[checkApiHandler] user with ${successSession.user.email} not exist, creating user with default personal vault`);
-        await createUserWithDefaultVault({
-                firstName: successSession.user.firstName,
-                lastName: successSession.user.lastName,
-                email: successSession.user.email
-            },
-            event.platform.env.DB);
-        appUser = await getUserByEmail(successSession.user.email, event.platform.env.DB);
-    } else {
-        // Check if WorkOS user data differs from database and update if needed
-        const workosFirstName = successSession.user.firstName;
-        const workosLastName = successSession.user.lastName;
-
-        if (appUser.firstName !== workosFirstName || appUser.lastName !== workosLastName) {
-            console.log(`[checkApiHandler] updating user ${appUser.email} - firstName: "${appUser.firstName}" -> "${workosFirstName}", lastName: "${appUser.lastName}" -> "${workosLastName}"`);
-            await updateUser(appUser.id, {
-                firstName: workosFirstName,
-                lastName: workosLastName
-            }, event.platform.env.DB);
-            // Refresh user data after update
-            appUser = await getUserByEmail(successSession.user.email, event.platform.env.DB);
-        }
-    }
-
-    const vaults = await getUserVaults(appUser.id, event.platform.env.DB);
-
-    console.log(`[checkApiHandler] setting active user to the local data for ${event.url.pathname}`);
-    event.locals.currentSession = successSession;
-    event.locals.currentUser = appUser;
-    event.locals.currentUserVaults = vaults;
 
     return resolve(event);
 };

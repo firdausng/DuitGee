@@ -134,9 +134,6 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
                 memberIds
             })
         ]);
-        console.log('expensesResult', expensesResult);
-        console.log('summaryResult', summaryResult);
-        console.log('memberSpendingResult', memberSpendingResult);
 
         return {
             currentVault,

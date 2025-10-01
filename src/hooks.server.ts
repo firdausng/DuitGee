@@ -3,7 +3,7 @@ import {
     setupServicesHandler,
     checkSessionHandler,
     setupPersonalVaultHandler,
-    adminOnlyHandler, checkApiHandler
+    adminOnlyHandler
 } from "$lib/server/middleware";
 
 export const handle = sequence(setupServicesHandler, checkSessionHandler, setupPersonalVaultHandler, adminOnlyHandler);
