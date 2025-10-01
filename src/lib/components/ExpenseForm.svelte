@@ -9,6 +9,7 @@
 	import Textarea from '$lib/components/ui/Textarea.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
 	interface Props {
 		data: SuperValidated<Infer<ExpenseSchema>>;
@@ -35,7 +36,7 @@
 	const { form, errors, enhance, submitting } = superForm(data);
 
 	function handleCancel() {
-		// dispatch('cancel');
+		goto(`/vaults/${vaultId}/expenses`);
 	}
 
 	function formatDateForInput(date: Date | string): string {

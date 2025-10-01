@@ -1,6 +1,7 @@
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { updateUserSchema } from '$lib/server/api/users/schema';
+import { updateUser } from '$lib/server/api/users/handlers';
 import type { PageServerLoad, Actions } from './$types.js';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -33,12 +34,20 @@ export const actions: Actions = {
         }
 
         try {
-            // For now, we'll just return the form as we don't have an update user API yet
-            // In a real implementation, you would call an updateUser function here
             console.log('Profile update requested:', form.data);
 
-            // TODO: Implement user update in the database
-            // const updatedUser = await updateUser(locals.currentUser.id, form.data, platform.env.DB);
+            // Update user in the database
+            const updatedUser = await updateUser(locals.currentUser.id, form.data, platform.env.DB);
+
+            if (!updatedUser) {
+                form.errors._errors = ['Failed to update profile. User not found.'];
+                return { form };
+            }
+
+            console.log('Profile updated successfully:', updatedUser);
+
+            // Update the session with new user data
+            locals.currentUser = updatedUser;
 
             return { form };
         } catch (error) {

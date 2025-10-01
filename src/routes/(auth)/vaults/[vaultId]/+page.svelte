@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { page, navigating } from '$app/stores';
+	import { onMount, untrack } from 'svelte';
+	import { page, navigating } from '$app/state';
 	import { useVaultStore } from '$lib/stores/vault.svelte.js';
 	import { authManager } from '$lib/stores/current-session.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import AlertDialog from '$lib/components/ui/AlertDialog.svelte';
 	import IconDisplay from '$lib/components/IconDisplay.svelte';
 	import { Plus, Receipt, Tag, TrendUp, Calendar, Vault, Users, Gear, Lock, Globe, Pencil, Trash } from 'phosphor-svelte';
     import {goto} from "$app/navigation";
@@ -11,13 +12,23 @@
 
 	let { data } = $props();
 
+	// Delete dialog state
+	let showDeleteDialog = $state(false);
+	let expenseToDelete = $state<string | null>(null);
+
 	// const vaultStore = useVaultStore();
 
 	let stats = $state({
 		totalExpenses: 0,
 		totalAmount: 0,
 		avgAmount: 0,
-		recentExpenses: [] as Expense[]
+		recentExpenses: [] as Expense[],
+		memberSpending: [] as Array<{
+			userId: string;
+			userName: string;
+			totalAmount: number;
+			expenseCount: number;
+		}>
 	});
 
 	// Time period management
@@ -30,27 +41,76 @@
 	];
 
 	// Get period from URL or default to daily
-	let currentPeriod = $state($page.url.searchParams.get('period') || 'daily');
+	let currentPeriod = $state(page.url.searchParams.get('period') || 'daily');
 
-	// Update currentPeriod when URL changes (after navigation)
-	$effect(() => {
-		currentPeriod = $page.url.searchParams.get('period') || 'daily';
-	});
+	// Get member filter from URL
+	let selectedMemberIds = $state<string[]>(page.url.searchParams.get('memberIds')?.split(',').filter(Boolean) || []);
 
-	// Use SvelteKit's built-in navigation loading state
-	let isLoading = $derived(!!$navigating);
+	// Track loading state for stats API calls
+	let isLoading = $state(false);
 
-	onMount(async () => {
-		// Load vault statistics with period from URL
-		await loadVaultStats();
-	});
+	// Track if stats have been loaded to prevent duplicate calls
+	let statsLoaded = $state(false);
 
-	// Reload stats when period changes
-	$effect(async () => {
-		// Watch for currentPeriod changes and reload stats
-		if (currentPeriod) {
-			await loadVaultStats();
+	// Get all vault members (owner + active members)
+	let allMembers = $derived.by(() => {
+		if (!data.currentVault) return [];
+
+		const members = [];
+		// Add owner
+		if (data.currentVault.owner) {
+			members.push({
+				id: data.currentVault.owner.id,
+				name: data.currentVault.owner.firstName && data.currentVault.owner.lastName
+					? `${data.currentVault.owner.firstName} ${data.currentVault.owner.lastName}`
+					: data.currentVault.owner.email,
+				email: data.currentVault.owner.email,
+				isOwner: true
+			});
 		}
+		// Add active members
+		if (data.currentVault.members) {
+			data.currentVault.members.forEach(member => {
+				if (member.status === 'active' && member.user) {
+					members.push({
+						id: member.user.id,
+						name: member.user.firstName && member.user.lastName
+							? `${member.user.firstName} ${member.user.lastName}`
+							: member.user.email,
+						email: member.user.email,
+						isOwner: false
+					});
+				}
+			});
+		}
+		return members;
+	});
+
+	// Single effect to handle both URL changes and initial load
+	$effect(() => {
+		// React to URL changes - access the URL to create dependency
+		const url = page.url;
+		const urlPeriod = url.searchParams.get('period') || 'daily';
+		const urlMemberIds = url.searchParams.get('memberIds')?.split(',').filter(Boolean) || [];
+
+		// Use untrack to read current state without creating dependency
+		untrack(() => {
+			console.log('[effect] triggered - urlPeriod:', urlPeriod, 'currentPeriod:', currentPeriod);
+			console.log('[effect] triggered - urlMemberIds:', urlMemberIds, 'selectedMemberIds:', selectedMemberIds);
+			console.log('[effect] statsLoaded:', statsLoaded);
+
+			// Only update and reload if period or member filter actually changed or first load
+			const periodChanged = urlPeriod !== currentPeriod;
+			const membersChanged = JSON.stringify(urlMemberIds.sort()) !== JSON.stringify(selectedMemberIds.sort());
+
+			if (periodChanged || membersChanged || !statsLoaded) {
+				console.log('[effect] loading stats - periodChanged:', periodChanged, 'membersChanged:', membersChanged, 'statsLoaded:', statsLoaded);
+				currentPeriod = urlPeriod;
+				selectedMemberIds = urlMemberIds;
+				loadVaultStats();
+				statsLoaded = true;
+			}
+		});
 	});
 
 	// Calculate date range based on time period
@@ -63,25 +123,34 @@
 			case 'daily':
 				const startOfDay = new Date(now);
 				startOfDay.setHours(0, 0, 0, 0);
+				const endOfDay = new Date(now);
+				endOfDay.setHours(23, 59, 59, 999);
 				startDate = startOfDay.toISOString();
-				endDate = now.toISOString();
+				endDate = endOfDay.toISOString();
 				break;
 			case 'weekly':
 				const startOfWeek = new Date(now);
 				startOfWeek.setDate(now.getDate() - now.getDay());
 				startOfWeek.setHours(0, 0, 0, 0);
+				const endOfWeek = new Date(startOfWeek);
+				endOfWeek.setDate(startOfWeek.getDate() + 6);
+				endOfWeek.setHours(23, 59, 59, 999);
 				startDate = startOfWeek.toISOString();
-				endDate = now.toISOString();
+				endDate = endOfWeek.toISOString();
 				break;
 			case 'monthly':
 				const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+				const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+				endOfMonth.setHours(23, 59, 59, 999);
 				startDate = startOfMonth.toISOString();
-				endDate = now.toISOString();
+				endDate = endOfMonth.toISOString();
 				break;
 			case 'yearly':
 				const startOfYear = new Date(now.getFullYear(), 0, 1);
+				const endOfYear = new Date(now.getFullYear(), 11, 31);
+				endOfYear.setHours(23, 59, 59, 999);
 				startDate = startOfYear.toISOString();
-				endDate = now.toISOString();
+				endDate = endOfYear.toISOString();
 				break;
 			case 'all':
 				// No date filtering for "All Time"
@@ -92,73 +161,148 @@
 				// Default to daily
 				const defaultStartOfDay = new Date(now);
 				defaultStartOfDay.setHours(0, 0, 0, 0);
+				const defaultEndOfDay = new Date(now);
+				defaultEndOfDay.setHours(23, 59, 59, 999);
 				startDate = defaultStartOfDay.toISOString();
-				endDate = now.toISOString();
+				endDate = defaultEndOfDay.toISOString();
 		}
 
 		return { startDate, endDate };
 	}
 
 	async function loadVaultStats() {
+		isLoading = true;
 		try {
 			// Get date range for current period
 			const { startDate, endDate } = calculateDateRange(currentPeriod);
 
-			// Load vault statistics with time period
-			let statsUrl = `/api/expenses/vaults/${data.vaultId}/expenses/stats/summary`;
+			console.log('[loadVaultStats] currentPeriod:', currentPeriod);
+			console.log('[loadVaultStats] startDate:', startDate);
+			console.log('[loadVaultStats] endDate:', endDate);
+			console.log('[loadVaultStats] selectedMemberIds:', selectedMemberIds);
+
+			// Build query parameters
+			const queryParams = new URLSearchParams();
 			if (startDate && endDate) {
-				statsUrl += `?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+				queryParams.set('startDate', startDate);
+				queryParams.set('endDate', endDate);
 			}
-			const statsResponse = await fetch(statsUrl, {
-				headers: {
-					'Authorization': `Bearer ${authManager.authState?.accessToken}`
-				}
-			});
-			if (statsResponse.ok) {
-				const statsResult = await statsResponse.json();
-				stats.totalAmount = statsResult.totalAmount || 0;
-				// Get actual expense count from the expenses endpoint
-				let expenseCountUrl = `/api/expenses/vaults/${data.vaultId}/expenses?limit=1`;
-				if (startDate && endDate) {
-					expenseCountUrl += `&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
-				}
-				const expenseCountResponse = await fetch(expenseCountUrl, {
-					headers: {
-						'Authorization': `Bearer ${authManager.authState?.accessToken}`
-					}
-				});
-				if (expenseCountResponse.ok) {
-					const expenseCountResult = await expenseCountResponse.json();
-					stats.totalExpenses = expenseCountResult.pagination?.total || 0;
-					stats.avgAmount = stats.totalExpenses > 0 ? stats.totalAmount / stats.totalExpenses : 0;
-				}
+			if (selectedMemberIds.length > 0) {
+				queryParams.set('memberIds', selectedMemberIds.join(','));
 			}
 
-			// Load recent expenses with time period
-			let expensesUrl = `/api/expenses/vaults/${data.vaultId}/expenses?limit=5`;
-			if (startDate && endDate) {
-				expensesUrl += `&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+			console.log('[loadVaultStats] queryParams:', queryParams.toString());
+
+			// Make parallel API calls for better performance
+			const [summaryResponse, expensesResponse, memberStatsResponse] = await Promise.all([
+				// Get summary statistics
+				fetch(`/api/expenses/vaults/${data.vaultId}/expenses/stats/summary?${queryParams}`, {
+					headers: { 'Authorization': `Bearer ${authManager.authState?.accessToken}` }
+				}),
+				// Get recent expenses with pagination info (contains total count)
+				fetch(`/api/expenses/vaults/${data.vaultId}/expenses?limit=5&${queryParams}`, {
+					headers: { 'Authorization': `Bearer ${authManager.authState?.accessToken}` }
+				}),
+				// Get member spending stats
+				fetch(`/api/expenses/vaults/${data.vaultId}/expenses/stats/members?${queryParams}`, {
+					headers: { 'Authorization': `Bearer ${authManager.authState?.accessToken}` }
+				})
+			]);
+
+			// Process summary data
+			if (summaryResponse.ok) {
+				const summaryResult = await summaryResponse.json();
+				stats.totalAmount = summaryResult.totalAmount || 0;
 			}
-			const expensesResponse = await fetch(expensesUrl, {
-				headers: {
-					'Authorization': `Bearer ${authManager.authState?.accessToken}`
-				}
-			});
+
+			// Process expenses data (contains both expenses and count)
 			if (expensesResponse.ok) {
 				const expensesResult = await expensesResponse.json();
 				stats.recentExpenses = expensesResult.expenses || [];
+				stats.totalExpenses = expensesResult.pagination?.total || 0;
+				stats.avgAmount = stats.totalExpenses > 0 ? stats.totalAmount / stats.totalExpenses : 0;
 			}
+
+			// Process member spending data
+			if (memberStatsResponse.ok) {
+				const memberStatsResult = await memberStatsResponse.json();
+				stats.memberSpending = memberStatsResult || [];
+			}
+
 		} catch (error) {
 			console.error('Failed to load vault stats:', error);
+		} finally {
+			isLoading = false;
 		}
 	}
 
 	function switchPeriod(period: string) {
-		if (period === currentPeriod) return; // Don't reload if same period
+		console.log('[switchPeriod] switching to period:', period, 'current:', currentPeriod);
+		if (period === currentPeriod) {
+			console.log('[switchPeriod] same period, skipping');
+			return; // Don't reload if same period
+		}
 
-		const newUrl = new URL($page.url);
+		const newUrl = new URL(page.url);
 		newUrl.searchParams.set('period', period);
+		console.log('[switchPeriod] navigating to:', newUrl.pathname + newUrl.search);
 		goto(newUrl.pathname + newUrl.search);
+	}
+
+	function toggleMemberFilter(memberId: string) {
+		const newUrl = new URL(page.url);
+		let newSelectedIds: string[];
+
+		if (selectedMemberIds.includes(memberId)) {
+			// Remove member
+			newSelectedIds = selectedMemberIds.filter(id => id !== memberId);
+		} else {
+			// Add member
+			newSelectedIds = [...selectedMemberIds, memberId];
+		}
+
+		if (newSelectedIds.length > 0) {
+			newUrl.searchParams.set('memberIds', newSelectedIds.join(','));
+		} else {
+			newUrl.searchParams.delete('memberIds');
+		}
+
+		goto(newUrl.pathname + newUrl.search);
+	}
+
+	function clearMemberFilter() {
+		const newUrl = new URL(page.url);
+		newUrl.searchParams.delete('memberIds');
+		goto(newUrl.pathname + newUrl.search);
+	}
+
+	function confirmDeleteExpense(expenseId: string) {
+		expenseToDelete = expenseId;
+		showDeleteDialog = true;
+	}
+
+	async function deleteExpense() {
+		if (!expenseToDelete) return;
+
+		try {
+			const response = await fetch(`/api/expenses/vaults/${data.vaultId}/expenses/${expenseToDelete}`, {
+				method: 'DELETE',
+				headers: { 'Authorization': `Bearer ${authManager.authState?.accessToken}` }
+			});
+
+			if (response.ok) {
+				showDeleteDialog = false;
+				expenseToDelete = null;
+				// Reload the expenses list
+				await loadVaultStats();
+			} else {
+				const error = await response.json();
+				alert(`Failed to delete expense: ${error.error || 'Unknown error'}`);
+			}
+		} catch (error) {
+			console.error('Failed to delete expense:', error);
+			alert('Failed to delete expense. Please try again.');
+		}
 	}
 
 	function getPeriodLabel(period: string) {
@@ -215,64 +359,13 @@
 </svelte:head>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 theme-transition">
-	<!-- Vault Header -->
-	{#if data.currentVault}
-		<div class="mb-8">
-			<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 space-y-4 lg:space-y-0">
-				<div class="flex items-center space-x-4">
-					<div class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" style="background-color: {data.currentVault.color || '#3B82F6'}20; border: 2px solid {data.currentVault.color || '#3B82F6'}">
-						{#if data.currentVault.icon}
-							<IconDisplay icon={data.currentVault.icon} iconType={data.currentVault.iconType} size="lg" />
-						{:else}
-							<Vault class="w-6 h-6" style="color: {data.currentVault.color || '#3B82F6'}" />
-						{/if}
-					</div>
-					<div class="min-w-0 flex-1">
-						<h1 class="text-2xl lg:text-3xl font-bold text-foreground flex items-center space-x-2 flex-wrap font-display">
-							<span class="break-words">{data.currentVault.name}</span>
-							{#if data.currentVault.isPersonal}
-								<Lock size={20} class="text-muted-foreground flex-shrink-0" title="Personal vault" />
-							{:else}
-								<Globe size={20} class="text-dark flex-shrink-0" title="Shared vault" />
-							{/if}
-						</h1>
-						{#if data.currentVault.description}
-							<p class="text-muted-foreground mt-1 break-words">{data.currentVault.description}</p>
-						{/if}
-						<div class="flex flex-wrap items-center gap-2 lg:gap-4 mt-2 text-sm text-muted-foreground">
-							{#if data.currentVault.role}
-								<span class="inline-flex items-center px-2 py-1 rounded-9px text-xs font-medium bg-accent text-accent-foreground">
-									{data.currentVault.role}
-								</span>
-							{/if}
-						</div>
-					</div>
-				</div>
-				<div class="flex flex-wrap gap-2 lg:flex-nowrap">
-					{#if data.currentVault.role === 'owner' || data.currentVault.role === 'admin'}
-						{#if !data.currentVault.isPersonal}
-							<Button variant="outline" size="sm" onclick={() => goto(`/vaults/${data.vaultId}/members`)}>
-								<Users size={16} class="mr-2" />
-								Members
-							</Button>
-						{/if}
-						<Button variant="outline" size="sm" onclick={() => goto(`/vaults/${data.vaultId}/edit`)}>
-							<Gear size={16} class="mr-2" />
-							Edit Vault
-						</Button>
-					{/if}
-				</div>
-			</div>
-		</div>
-	{/if}
-
 	<!-- Time Period Selector -->
-	<div class="mb-8">
+	<div class="mb-6">
 		<!-- Mobile Dropdown -->
 		<div class="sm:hidden">
 			<label for="period-select" class="sr-only">Select time period</label>
 			<select
-				bind:value={currentPeriod}
+				value={currentPeriod}
 				onchange={(e) => switchPeriod(e.target.value)}
 				disabled={isLoading}
 				class="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
@@ -291,7 +384,10 @@
 				<nav class="-mb-px flex space-x-8">
 					{#each timePeriods as period}
 						<button
-							onclick={() => switchPeriod(period.id)}
+							onclick={() => {
+								console.log('[tab click] period.id:', period.id, 'period.label:', period.label);
+								switchPeriod(period.id);
+							}}
 							disabled={isLoading}
 							class="py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-all duration-200 relative {
 								currentPeriod === period.id
@@ -318,41 +414,93 @@
 		</div>
 	</div>
 
-
-	<!-- Period Summary Header -->
-	<div class="bg-gradient-to-r from-primary to-accent rounded-lg p-6 mb-6 text-primary-foreground relative overflow-hidden shadow-lg">
-		{#if isLoading}
-			<div class="absolute inset-0 bg-primary/50 flex items-center justify-center backdrop-blur-sm">
-				<div class="flex items-center space-x-2 text-primary-foreground">
-					<div class="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
-					<span class="text-sm font-medium">Loading expenses...</span>
-				</div>
+	<!-- Member Filter -->
+	{#if allMembers.length > 1}
+		<div class="mb-6">
+			<div class="flex items-center justify-between mb-3">
+				<h3 class="text-sm font-medium text-foreground">Filter by Member</h3>
+				{#if selectedMemberIds.length > 0}
+					<Button variant="ghost" size="sm" onclick={clearMemberFilter} class="h-7 text-xs">
+						Clear
+					</Button>
+				{/if}
 			</div>
-		{/if}
-		<div class="flex items-center justify-between {isLoading ? 'opacity-50' : ''}">
-			<div>
-				<h2 class="text-lg font-semibold">Expenses for {getPeriodLabel(currentPeriod)}</h2>
-				<p class="text-primary-foreground/80 mt-1">
-					{stats.totalExpenses} {stats.totalExpenses === 1 ? 'expense' : 'expenses'}
+			<div class="flex flex-wrap gap-2">
+				{#each allMembers as member}
+					<button
+						onclick={() => toggleMemberFilter(member.id)}
+						disabled={isLoading}
+						class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all {
+							selectedMemberIds.includes(member.id)
+								? 'bg-primary text-primary-foreground'
+								: 'bg-muted text-muted-foreground hover:bg-muted/80'
+						} {isLoading ? 'opacity-50 cursor-not-allowed' : ''}"
+					>
+						<span class="truncate max-w-[200px]">{member.name}</span>
+						{#if member.isOwner}
+							<span class="text-xs opacity-70">(Owner)</span>
+						{/if}
+					</button>
+				{/each}
+			</div>
+			{#if selectedMemberIds.length > 0}
+				<p class="text-xs text-muted-foreground mt-2">
+					Showing expenses from {selectedMemberIds.length} {selectedMemberIds.length === 1 ? 'member' : 'members'}
 				</p>
-			</div>
-			<div class="text-right">
-				<p class="text-2xl font-bold">{formatCurrency(stats.totalAmount)}</p>
-				<p class="text-primary-foreground/80">Total spent</p>
-			</div>
+			{/if}
 		</div>
-	</div>
+	{/if}
 
 	{#if isLoading}
 		<div class="flex items-center justify-center py-12">
-			<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+			<div class="flex items-center space-x-3 text-muted-foreground">
+				<div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+				<span class="text-sm font-medium">Loading expenses...</span>
+			</div>
 		</div>
 	{:else}
+		<!-- Period Summary Header -->
+		<div class="bg-gradient-to-r from-primary to-accent rounded-lg p-4 sm:p-6 mb-6 text-primary-foreground shadow-lg">
+			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+				<div>
+					<h2 class="text-base sm:text-lg font-semibold">Expenses for {getPeriodLabel(currentPeriod)}</h2>
+					<p class="text-primary-foreground/80 mt-1 text-sm">
+						{stats.totalExpenses} {stats.totalExpenses === 1 ? 'expense' : 'expenses'}
+					</p>
+				</div>
+				<div class="text-left sm:text-right">
+					<p class="text-xl sm:text-2xl font-bold">{formatCurrency(stats.totalAmount)}</p>
+					<p class="text-primary-foreground/80 text-sm">Total spent</p>
+				</div>
+			</div>
+
+			<!-- Member Spending Breakdown -->
+			{#if stats.memberSpending.length > 0}
+				<div class="mt-4 pt-4 border-t border-primary-foreground/20">
+					<h3 class="text-sm font-medium mb-3 text-primary-foreground/90">Spending by Member</h3>
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+						{#each stats.memberSpending as member}
+							<div class="bg-primary-foreground/10 rounded-lg p-3 backdrop-blur-sm border border-primary-foreground/20">
+								<div class="flex justify-between items-start">
+									<div class="min-w-0 flex-1">
+										<p class="text-sm font-medium text-primary-foreground truncate">{member.userName}</p>
+										<p class="text-xs text-primary-foreground/70 mt-0.5">{member.expenseCount} {member.expenseCount === 1 ? 'expense' : 'expenses'}</p>
+									</div>
+									<p class="text-sm font-semibold text-primary-foreground ml-2">{formatCurrency(member.totalAmount)}</p>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<!-- Recent Expenses -->
 		<!-- Recent Expenses -->
 		<div class="bg-background shadow-card rounded-card border theme-transition mb-8">
-			<div class="px-4 py-5 sm:p-6">
-				<div class="flex items-center justify-between mb-4">
-					<h3 class="text-lg leading-6 font-medium text-foreground">Recent Expenses {currentPeriod === 'daily' ? 'Today' : currentPeriod === 'weekly' ? 'This Week' : currentPeriod === 'monthly' ? 'This Month' : 'This Year'}</h3>
+			<div class="px-4 py-3 sm:px-6 sm:py-4">
+				<div class="flex items-center justify-between mb-3">
+					<h3 class="text-base font-medium text-foreground">Recent Expenses</h3>
 					<Button variant="ghost" size="sm" onclick={() => goto(`/vaults/${data.vaultId}/expenses`) }>
 						View All
 					</Button>
@@ -375,108 +523,102 @@
 				{:else}
 					<div class="divide-y divide-border">
 						{#each stats.recentExpenses as expense}
-							<div class="px-4 sm:px-6 py-3 sm:py-4 hover:bg-accent/50 transition-colors">
+							<div class="py-2 hover:bg-accent/50 transition-colors">
 								<!-- Desktop Layout -->
-								<div class="hidden sm:flex items-center justify-between">
-									<div class="flex items-center space-x-4 flex-1">
-										<div class="flex items-center space-x-2 flex-shrink-0">
-											<div
-												class="w-4 h-4 rounded-full"
-												style="background-color: {expense.category?.color}"
-											></div>
+								<div class="hidden sm:flex items-center justify-between gap-3">
+									<div class="flex items-center gap-2 flex-1 min-w-0">
+										<div class="flex items-center gap-1.5 flex-shrink-0">
+											<div class="w-3 h-3 rounded-full" style="background-color: {expense.category?.color}"></div>
 											{#if expense.category?.icon}
-												<IconDisplay icon={expense.category.icon} iconType={expense.category.iconType} size="sm" />
+												<IconDisplay icon={expense.category.icon} iconType={expense.category.iconType} size="xs" />
 											{/if}
 										</div>
 										<div class="flex-1 min-w-0">
-											<div class="flex items-center space-x-2">
-												<h3 class="text-sm font-medium text-foreground truncate">
-													{expense.note || 'Untitled Expense'}
-												</h3>
-												{#if expense.category?.group}
-													<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary space-x-1">
-														<IconDisplay icon={expense.category.group.icon || '📂'} iconType={expense.category.group.iconType || 'emoji'} size="sm" />
-														<span>{expense.category.group.name}</span>
-													</span>
-												{/if}
-												<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+											<div class="flex items-center gap-2">
+												<span class="text-sm font-medium text-foreground truncate">
+													{expense.note || ''}
+												</span>
+												<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-muted text-muted-foreground flex-shrink-0">
 													{expense.category?.name}
 												</span>
 											</div>
-											<div class="flex items-center space-x-2 text-xs text-muted-foreground">
+											<div class="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
 												<span>{formatDate(expense.date)}</span>
 												{#if expense.creator}
 													<span>•</span>
-													<span>by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName} (${expense.creator.email})` : expense.creator.email}</span>
+													<span class="truncate">by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName} (${expense.creator.email})` : expense.creator.email}</span>
 												{/if}
 											</div>
 										</div>
 									</div>
-									<div class="flex items-center space-x-4">
-										<p class="text-lg font-semibold text-foreground">
+									<div class="flex items-center gap-2 flex-shrink-0">
+										<p class="text-sm font-semibold text-foreground">
 											{formatCurrency(expense.amount)}
 										</p>
-										<div class="flex space-x-2">
-											<Button
-												variant="ghost"
-												size="sm"
-												onclick={() => goto(`/vaults/${data.vaultId}/expenses/${expense.id}/edit`)}
-											>
-												<Pencil class="w-4 h-4" />
-											</Button>
-											<Button
-												variant="ghost"
-												size="sm"
-												onclick={() => {
-													// You can implement delete functionality here
-													console.log('Delete expense:', expense.id);
-												}}
-											>
-												<Trash class="w-4 h-4 text-destructive" />
-											</Button>
-										</div>
+										<Button
+											variant="ghost"
+											size="sm"
+											onclick={() => goto(`/vaults/${data.vaultId}/expenses/${expense.id}/edit`)}
+											class="h-7 w-7 p-0"
+										>
+											<Pencil class="w-3.5 h-3.5" />
+										</Button>
+										<Button
+											variant="ghost"
+											size="sm"
+											onclick={() => confirmDeleteExpense(expense.id)}
+											class="h-7 w-7 p-0"
+										>
+											<Trash class="w-3.5 h-3.5 text-destructive" />
+										</Button>
 									</div>
 								</div>
 
 								<!-- Mobile Layout -->
 								<div class="sm:hidden">
-									<div class="flex items-start justify-between">
-										<div class="flex items-start space-x-3 flex-1 min-w-0">
-											<div class="flex items-center space-x-1 flex-shrink-0 mt-0.5">
-												<div
-													class="w-3 h-3 rounded-full"
-													style="background-color: {expense.category?.color}"
-												></div>
+									<div class="flex items-start justify-between gap-2">
+										<div class="flex items-start gap-2 flex-1 min-w-0">
+											<div class="flex items-center gap-1 flex-shrink-0 mt-0.5">
+												<div class="w-2.5 h-2.5 rounded-full" style="background-color: {expense.category?.color}"></div>
 												{#if expense.category?.icon}
 													<IconDisplay icon={expense.category.icon} iconType={expense.category.iconType} size="xs" />
 												{/if}
 											</div>
 											<div class="flex-1 min-w-0">
 												<h3 class="text-sm font-medium text-foreground truncate leading-tight">
-													{expense.note || 'Untitled Expense'}
+													{expense.note || ''}
 												</h3>
-												<div class="flex items-center space-x-1 mt-1">
-													<span class="text-xs text-muted-foreground">
-														{expense.category?.name}
-													</span>
-													<span class="text-xs text-muted-foreground">•</span>
-													<span class="text-xs text-muted-foreground">
-														{new Date(expense.date).toLocaleDateString()}
-													</span>
+												<div class="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+													<span>{expense.category?.name}</span>
+													<span>•</span>
+													<span>{new Date(expense.date).toLocaleDateString()}</span>
 												</div>
+												{#if expense.creator}
+													<div class="text-xs text-muted-foreground mt-0.5 truncate">
+														by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName} (${expense.creator.email})` : expense.creator.email}
+													</div>
+												{/if}
 											</div>
 										</div>
-										<div class="flex items-center space-x-2 flex-shrink-0">
-											<p class="text-base font-semibold text-foreground">
+										<div class="flex items-center gap-1.5 flex-shrink-0">
+											<p class="text-sm font-semibold text-foreground">
 												{formatCurrency(expense.amount)}
 											</p>
 											<Button
 												variant="ghost"
 												size="sm"
 												onclick={() => goto(`/vaults/${data.vaultId}/expenses/${expense.id}/edit`)}
-												class="p-1.5"
+												class="h-7 w-7 p-0"
 											>
-												<Pencil class="w-3.5 h-3.5" />
+												<Pencil class="w-3 h-3" />
+											</Button>
+											<Button
+												variant="ghost"
+												size="sm"
+												onclick={() => confirmDeleteExpense(expense.id)}
+												class="h-7 w-7 p-0"
+											>
+												<Trash class="w-3 h-3 text-destructive" />
 											</Button>
 										</div>
 									</div>
@@ -487,57 +629,16 @@
 				{/if}
 			</div>
 		</div>
-
-		<!-- Stats Cards -->
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-			<div class="bg-background overflow-hidden shadow-card rounded-card border theme-transition">
-				<div class="p-5">
-					<div class="flex items-center">
-						<div class="flex-shrink-0">
-							<Receipt class="h-6 w-6 text-muted-foreground" />
-						</div>
-						<div class="ml-5 w-0 flex-1">
-							<dl>
-								<dt class="text-sm font-medium text-muted-foreground truncate">Total Expenses</dt>
-								<dd class="text-lg font-medium text-foreground">{stats.totalExpenses}</dd>
-							</dl>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<div class="bg-background overflow-hidden shadow-card rounded-card border theme-transition">
-				<div class="p-5">
-					<div class="flex items-center">
-						<div class="flex-shrink-0">
-							<TrendUp class="h-6 w-6 text-muted-foreground" />
-						</div>
-						<div class="ml-5 w-0 flex-1">
-							<dl>
-								<dt class="text-sm font-medium text-muted-foreground truncate">Total Amount</dt>
-								<dd class="text-lg font-medium text-foreground">{formatCurrency(stats.totalAmount)}</dd>
-							</dl>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<div class="bg-background overflow-hidden shadow-card rounded-card border theme-transition">
-				<div class="p-5">
-					<div class="flex items-center">
-						<div class="flex-shrink-0">
-							<Calendar class="h-6 w-6 text-muted-foreground" />
-						</div>
-						<div class="ml-5 w-0 flex-1">
-							<dl>
-								<dt class="text-sm font-medium text-muted-foreground truncate">Average Amount</dt>
-								<dd class="text-lg font-medium text-foreground">{formatCurrency(stats.avgAmount)}</dd>
-							</dl>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-
 	{/if}
 </div>
+
+<!-- Delete Confirmation Dialog -->
+<AlertDialog
+	bind:open={showDeleteDialog}
+	title="Delete Expense"
+	description="Are you sure you want to delete this expense? This action cannot be undone."
+	confirmText="Delete"
+	cancelText="Cancel"
+	variant="destructive"
+	onConfirm={deleteExpense}
+/>

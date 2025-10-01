@@ -71,9 +71,11 @@ export interface GetExpensesOptions {
 	startDate?: string;
 	endDate?: string;
 	vaultId?: string;
+	memberIds?: string[];
 }
 
 export interface GetExpensesSummaryOptions {
 	startDate?: string;
 	endDate?: string;
+	memberIds?: string[];
 }

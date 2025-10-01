@@ -14,7 +14,6 @@ import { vaultMembersApi } from './vault-members/vault-members';
 import {AuthService} from "$lib/server/auth-service.svelte";
 import {jwk} from "hono/jwk";
 import {notificationApi} from "$lib/server/api/notifications/notifications";
-import {createRemoteJWKSet, jwtVerify} from "jose";
 
 const router = new Hono<App.Api>()
 	// .use('*', cors())
@@ -30,6 +29,23 @@ const router = new Hono<App.Api>()
 
 		const accessToken = authHeader.substring(7); // Remove "Bearer " prefix
 
+		// Create a hash of the token for KV key (tokens can be long)
+
+        const tokenHash = await hashSHA256(accessToken);
+		const cacheKey = `token:${tokenHash}`;
+
+		// Check KV cache first
+		try {
+			const cached = await c.env.KV.get(cacheKey);
+			if (cached) {
+				c.set('userEmail', cached);
+				await next();
+				return;
+			}
+		} catch (kvError) {
+			console.warn('KV cache read failed, continuing with verification:', kvError);
+		}
+
 		try {
 			const authService = new AuthService(
 				c.env.WORKOS_API_KEY,
@@ -40,7 +56,6 @@ const router = new Hono<App.Api>()
 
 			// Verify the JWT token
 			const verifiedToken = await authService.verifiedSession(accessToken);
-            console.log('verifiedToken', verifiedToken)
 			// Extract user ID from the token payload
 			const workOsUserId = verifiedToken.payload.sub as string; // 'sub' (subject) typically contains the user ID
 
@@ -52,7 +67,16 @@ const router = new Hono<App.Api>()
             if (!user) {
                 return c.json({ error: 'Not authenticated' }, 401);
             }
-            console.log('verified user', user)
+
+			// Cache the result in KV for 5 minutes (300 seconds)
+			try {
+				await c.env.KV.put(cacheKey, user.email, {
+					expirationTtl: 300 // 5 minutes
+				});
+			} catch (kvError) {
+				console.warn('KV cache write failed, continuing without caching:', kvError);
+			}
+
 			// Set the user ID in the context
 			c.set('userEmail', user.email);
 			await next();
@@ -70,3 +94,13 @@ const router = new Hono<App.Api>()
 	.route('/vault-members', vaultMembersApi);
 
 export const api = new Hono<App.Api>().route('/api', router);
+
+async function hashSHA256(data: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const dataBuffer = encoder.encode(data);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+
+    // Convert to hex string
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}

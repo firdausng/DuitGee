@@ -12,7 +12,8 @@ import {
 	deleteExpenseByEmail,
 	getExpensesByEmail,
 	updateExpenseByEmail,
-	getExpensesSummaryByEmail
+	getExpensesSummaryByEmail,
+	getMemberSpendingByEmail
 } from "$lib/server/api/expenses/handlers";
 
 const expenseSchema = v.object({
@@ -33,6 +34,8 @@ export const expensesApi = new Hono<App.Api>()
 		const categoryId = c.req.query('categoryId');
 		const startDate = c.req.query('startDate');
 		const endDate = c.req.query('endDate');
+		const memberIdsParam = c.req.query('memberIds');
+		const memberIds = memberIdsParam ? memberIdsParam.split(',') : undefined;
 
 		const result = await getExpensesByEmail(userEmail, c.env.DB, {
 			page,
@@ -40,7 +43,8 @@ export const expensesApi = new Hono<App.Api>()
 			categoryId,
 			startDate,
 			endDate,
-			vaultId
+			vaultId,
+			memberIds
 		});
 
 		return c.json(result);
@@ -99,11 +103,31 @@ export const expensesApi = new Hono<App.Api>()
 		const vaultId = c.req.param('vaultId');
 		const startDate = c.req.query('startDate');
 		const endDate = c.req.query('endDate');
+		const memberIdsParam = c.req.query('memberIds');
+		const memberIds = memberIdsParam ? memberIdsParam.split(',') : undefined;
 
 		const result = await getExpensesSummaryByEmail(userEmail, c.env.DB, {
 			startDate,
 			endDate,
-			vaultId
+			vaultId,
+			memberIds
+		});
+
+		return c.json(result);
+	})
+	.get('/vaults/:vaultId/expenses/stats/members', async (c) => {
+		const userEmail = c.get('userEmail') as string;
+		const vaultId = c.req.param('vaultId');
+		const startDate = c.req.query('startDate');
+		const endDate = c.req.query('endDate');
+		const memberIdsParam = c.req.query('memberIds');
+		const memberIds = memberIdsParam ? memberIdsParam.split(',') : undefined;
+
+		const result = await getMemberSpendingByEmail(userEmail, c.env.DB, {
+			startDate,
+			endDate,
+			vaultId,
+			memberIds
 		});
 
 		return c.json(result);

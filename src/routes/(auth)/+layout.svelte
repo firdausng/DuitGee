@@ -5,6 +5,7 @@
 	import UserDropdown from '$lib/components/UserDropdown.svelte';
 	import NotificationDropdown from '$lib/components/NotificationDropdown.svelte';
 	import InvitationIndicator from '$lib/components/InvitationIndicator.svelte';
+	import IconDisplay from '$lib/components/IconDisplay.svelte';
 	import { House, Receipt, Tag, ChartPie, User, Stool, CaretRight, Gear, Bell, CaretDown, List, Moon, Sun, Plus, UserPlus } from 'phosphor-svelte';
 	import { goto } from '$app/navigation';
 	import { theme } from '$lib/stores/theme.svelte.js';
@@ -54,7 +55,10 @@
 				breadcrumbs.push({
 					name: vaultName,
 					href: `/vaults/${vaultId}`,
-					isHome: false
+					isHome: false,
+					icon: currentVault?.vault.icon,
+					iconType: currentVault?.vault.iconType,
+					color: currentVault?.vault.color
 				});
 
 				// Vault sub-pages
@@ -288,6 +292,16 @@
 														<span>{item.name}</span>
 													</a>
 												{/each}
+
+												<!-- Edit Vault -->
+												<a
+													href="/vaults/{data.pathname.split('/')[2]}/edit"
+													class="flex items-center px-4 py-3 text-sm transition-colors hover:bg-accent text-muted-foreground"
+													onclick={() => showMobileMenu = false}
+												>
+													<Gear class="w-4 h-4 mr-3" />
+													<span>Edit Vault</span>
+												</a>
 											{/if}
 
 											<!-- Settings Section -->
@@ -466,6 +480,15 @@
 														{item.name}
 													</a>
 												{/each}
+												<div class="border-t border-border my-1"></div>
+												<a
+													href="/vaults/{data.pathname.split('/')[2]}/edit"
+													class="flex items-center px-4 py-2 text-sm transition-colors hover:bg-accent text-muted-foreground"
+													onclick={() => showVaultDropdown = false}
+												>
+													<Gear class="w-4 h-4 mr-3" />
+													Edit Vault
+												</a>
 											</div>
 										</div>
 									{/if}
@@ -506,13 +529,18 @@
 							{/if}
 							<a
 								href={crumb.href}
-								class="font-medium transition-colors px-2 py-1 rounded-md {index === breadcrumbs.length - 1
+								class="font-medium transition-colors px-2 py-1 rounded-md flex items-center space-x-1.5 {index === breadcrumbs.length - 1
 									? 'text-foreground bg-accent/50'
 									: crumb.isHome
 									? 'text-primary hover:bg-primary/10'
 									: 'text-muted-foreground hover:text-foreground hover:bg-accent/50'}"
 							>
-								{crumb.name}
+								{#if crumb.icon}
+									<div class="w-5 h-5 rounded flex items-center justify-center" style="background-color: {crumb.color}20; border: 1px solid {crumb.color}">
+										<IconDisplay icon={crumb.icon} iconType={crumb.iconType} size="xs" />
+									</div>
+								{/if}
+								<span>{crumb.name}</span>
 							</a>
 						{/each}
 					</nav>

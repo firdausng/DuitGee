@@ -1,5 +1,3 @@
-import { formatISO } from 'date-fns';
-
 export interface AuditContext {
 	userId: string;
 	timestamp?: Date;
@@ -23,36 +21,39 @@ export interface DeleteAuditFields {
 /**
  * Generate audit fields for record creation
  * Microservice-compatible: Uses userId as string without FK constraints
+ * Timestamps are stored in UTC format (ISO 8601 with Z suffix)
  */
 export function createAuditFields(context: AuditContext): CreateAuditFields {
 	const timestamp = context.timestamp || new Date();
 	return {
 		createdBy: context.userId,
-		createdAt: formatISO(timestamp)
+		createdAt: timestamp.toISOString()
 	};
 }
 
 /**
  * Generate audit fields for record updates
  * Microservice-compatible: Uses userId as string without FK constraints
+ * Timestamps are stored in UTC format (ISO 8601 with Z suffix)
  */
 export function updateAuditFields(context: AuditContext): UpdateAuditFields {
 	const timestamp = context.timestamp || new Date();
 	return {
 		updatedBy: context.userId,
-		updatedAt: formatISO(timestamp)
+		updatedAt: timestamp.toISOString()
 	};
 }
 
 /**
  * Generate audit fields for record deletion (soft delete)
  * Microservice-compatible: Uses userId as string without FK constraints
+ * Timestamps are stored in UTC format (ISO 8601 with Z suffix)
  */
 export function deleteAuditFields(context: AuditContext): DeleteAuditFields {
 	const timestamp = context.timestamp || new Date();
 	return {
 		deletedBy: context.userId,
-		deletedAt: formatISO(timestamp)
+		deletedAt: timestamp.toISOString()
 	};
 }
 

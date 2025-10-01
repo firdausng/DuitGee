@@ -54,6 +54,7 @@ declare namespace Cloudflare {
         ADMIN_EMAILS: string;
         ASSETS: Fetcher;
         DB: D1Database;
+        KV: KVNamespace;
     }
 }
 interface Env extends Cloudflare.Env {}

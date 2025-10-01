@@ -103,13 +103,12 @@ export const createUser = async (data: CreateUser, db: D1Database) => {
 
 export const updateUser = async (userId: string, data: UpdateUser, db: D1Database) => {
 	const client = drizzle(db, { schema });
-	const { formatISO } = await import('date-fns');
 
 	const updatedUser = await client
 		.update(users)
 		.set({
 			...data,
-			updatedAt: formatISO(new Date())
+			updatedAt: new Date().toISOString()
 		})
 		.where(eq(users.id, userId))
 		.returning();

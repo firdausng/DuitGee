@@ -27,25 +27,34 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
             case 'daily':
                 const startOfDay = new Date(now);
                 startOfDay.setHours(0, 0, 0, 0);
+                const endOfDay = new Date(now);
+                endOfDay.setHours(23, 59, 59, 999);
                 startDate = startOfDay.toISOString();
-                endDate = now.toISOString();
+                endDate = endOfDay.toISOString();
                 break;
             case 'weekly':
                 const startOfWeek = new Date(now);
                 startOfWeek.setDate(now.getDate() - now.getDay());
                 startOfWeek.setHours(0, 0, 0, 0);
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 6);
+                endOfWeek.setHours(23, 59, 59, 999);
                 startDate = startOfWeek.toISOString();
-                endDate = now.toISOString();
+                endDate = endOfWeek.toISOString();
                 break;
             case 'monthly':
                 const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                endOfMonth.setHours(23, 59, 59, 999);
                 startDate = startOfMonth.toISOString();
-                endDate = now.toISOString();
+                endDate = endOfMonth.toISOString();
                 break;
             case 'yearly':
                 const startOfYear = new Date(now.getFullYear(), 0, 1);
+                const endOfYear = new Date(now.getFullYear(), 11, 31);
+                endOfYear.setHours(23, 59, 59, 999);
                 startDate = startOfYear.toISOString();
-                endDate = now.toISOString();
+                endDate = endOfYear.toISOString();
                 break;
             case 'all':
                 // No date filtering for "All Time"
@@ -56,8 +65,10 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
                 // Default to daily for unknown periods
                 const defaultStartOfDay = new Date(now);
                 defaultStartOfDay.setHours(0, 0, 0, 0);
+                const defaultEndOfDay = new Date(now);
+                defaultEndOfDay.setHours(23, 59, 59, 999);
                 startDate = defaultStartOfDay.toISOString();
-                endDate = now.toISOString();
+                endDate = defaultEndOfDay.toISOString();
         }
 
         const expenses = await getExpenses(locals.currentUser.id, platform.env.DB, {
@@ -76,7 +87,8 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
             vaultId,
             expenses,
             categories,
-            currentPeriod: timePeriod
+            currentPeriod: timePeriod,
+            vault
         };
     } catch (err) {
         console.warn("[expenses.route] error on expense route", err);

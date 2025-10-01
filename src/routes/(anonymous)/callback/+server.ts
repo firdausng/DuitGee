@@ -30,7 +30,7 @@ export const GET: RequestHandler = async ({  platform, url, locals, cookies }) =
 
         await createUserWithDefaultVault({
                 firstName: authResponse.user.firstName,
-                lastName: authResponse.user.firstName,
+                lastName: authResponse.user.lastName,
                 email: authResponse.user.email
             },
             platform.env.DB);

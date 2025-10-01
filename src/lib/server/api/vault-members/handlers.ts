@@ -3,7 +3,6 @@ import * as schema from "$lib/server/db/schema";
 import { vaults, vaultMembers, users } from "$lib/server/db/schema";
 import { and, eq, or } from "drizzle-orm";
 import { createId } from '@paralleldrive/cuid2';
-import {formatISO} from "date-fns";
 
 // Invite a user to a vault
 export const inviteUserToVault = async (
@@ -84,9 +83,9 @@ export const inviteUserToVault = async (
             role: role,
             permissions: permissions,
             invitedBy: inviterId,
-            invitedAt: formatISO(new Date()),
+            invitedAt: new Date().toISOString(),
             status: 'pending',
-            createdAt: formatISO(new Date())
+            createdAt: new Date().toISOString()
         })
         .returning();
 
@@ -99,6 +98,17 @@ export const inviteUserToVault = async (
 // Accept vault invitation
 export const acceptVaultInvitation = async (userId: string, invitationId: string, db: D1Database) => {
     const client = drizzle(db, { schema });
+
+    console.log('[acceptVaultInvitation] userId:', userId, 'invitationId:', invitationId);
+
+    // First check if invitation exists at all
+    const anyInvitation = await client
+        .select()
+        .from(vaultMembers)
+        .where(eq(vaultMembers.id, invitationId))
+        .limit(1);
+
+    console.log('[acceptVaultInvitation] anyInvitation:', anyInvitation);
 
     // Find the invitation
     const invitation = await client
@@ -113,7 +123,18 @@ export const acceptVaultInvitation = async (userId: string, invitationId: string
         )
         .limit(1);
 
+    console.log('[acceptVaultInvitation] invitation found:', invitation);
+
     if (invitation.length === 0) {
+        if (anyInvitation.length === 0) {
+            throw new Error('Invitation not found');
+        }
+        if (anyInvitation[0].userId !== userId) {
+            throw new Error('This invitation is not for you');
+        }
+        if (anyInvitation[0].status !== 'pending') {
+            throw new Error(`Invitation already ${anyInvitation[0].status}`);
+        }
         throw new Error('Invitation not found or already processed');
     }
 
@@ -122,7 +143,7 @@ export const acceptVaultInvitation = async (userId: string, invitationId: string
         .update(vaultMembers)
         .set({
             status: 'active',
-            joinedAt: formatISO(new Date())
+            joinedAt: new Date().toISOString()
         })
         .where(eq(vaultMembers.id, invitationId))
         .returning();

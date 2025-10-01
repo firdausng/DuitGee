@@ -4,11 +4,20 @@
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import IconDisplay from '$lib/components/IconDisplay.svelte';
-	import { Plus, Pencil, Trash, MagnifyingGlass } from 'phosphor-svelte';
+	import AlertDialog from '$lib/components/ui/AlertDialog.svelte';
+	import { authManager } from '$lib/stores/current-session.svelte';
+	import { Plus, Pencil, Trash, MagnifyingGlass, Funnel } from 'phosphor-svelte';
     import {goto} from "$app/navigation";
-	import { page, navigating } from '$app/stores';
+	import { page, navigating } from '$app/state';
 
 	let { data } = $props();
+
+	// Sidebar state
+	let isSidebarOpen = $state(false);
+
+	// Delete dialog state
+	let showDeleteDialog = $state(false);
+	let expenseToDelete = $state<string | null>(null);
 
 	// Time period tabs
 	const timePeriods = [
@@ -26,70 +35,26 @@
 		currentPeriod = data.currentPeriod;
 	});
 
-	// Use SvelteKit's built-in navigation loading state
-	let isLoading = $derived(!!$navigating);
+	// Track loading state - use navigating for navigation-based loading
+	let isLoading = $state(false);
+
+	// Update loading state based on navigation
+	// $effect(() => {
+	// 	isLoading = !!navigating;
+	// });
 
 	function switchPeriod(period: string) {
 		if (period === currentPeriod) return; // Don't reload if same period
 
-		const newUrl = new URL($page.url);
+		const newUrl = new URL(page.url);
 		newUrl.searchParams.set('period', period);
 		goto(newUrl.pathname + newUrl.search);
 	}
 
-	// Mock data - replace with actual data from load function
-	// let expenses = [
-	// 	{
-	// 		id: '1',
-	// 		title: 'Grocery Shopping',
-	// 		description: 'Weekly grocery shopping at Whole Foods',
-	// 		amount: 89.50,
-	// 		category: { id: '1', name: 'Food', color: '#10B981' },
-	// 		date: new Date('2023-12-01T10:30:00')
-	// 	},
-	// 	{
-	// 		id: '2',
-	// 		title: 'Gas Station',
-	// 		description: 'Fill up the tank',
-	// 		amount: 65.00,
-	// 		category: { id: '2', name: 'Transportation', color: '#F59E0B' },
-	// 		date: new Date('2023-11-30T15:45:00')
-	// 	},
-	// 	{
-	// 		id: '3',
-	// 		title: 'Coffee Shop',
-	// 		description: 'Morning coffee with friends',
-	// 		amount: 12.50,
-	// 		category: { id: '1', name: 'Food', color: '#10B981' },
-	// 		date: new Date('2023-11-30T08:15:00')
-	// 	},
-	// 	{
-	// 		id: '4',
-	// 		title: 'Movie Tickets',
-	// 		description: 'Weekend movie night',
-	// 		amount: 28.00,
-	// 		category: { id: '3', name: 'Entertainment', color: '#8B5CF6' },
-	// 		date: new Date('2023-11-29T19:30:00')
-	// 	},
-	// 	{
-	// 		id: '5',
-	// 		title: 'Uber Ride',
-	// 		description: 'Ride to downtown',
-	// 		amount: 15.75,
-	// 		category: { id: '2', name: 'Transportation', color: '#F59E0B' },
-	// 		date: new Date('2023-11-29T14:20:00')
-	// 	}
-	// ];
-
-	// let categories = [
-	// 	{ id: '1', name: 'Food', color: '#10B981' },
-	// 	{ id: '2', name: 'Transportation', color: '#F59E0B' },
-	// 	{ id: '3', name: 'Entertainment', color: '#8B5CF6' }
-	// ];
-
 	let searchTerm = $state('');
 	let selectedCategory = $state('');
 	let sortBy = $state('date');
+	let selectedMemberIds = $state<string[]>([]);
 
 	let filteredExpenses = $derived.by(()=>{
         return data.expenses.expenses
@@ -97,7 +62,8 @@
                 // If no search term, show all expenses; otherwise filter by note content
                 const matchesSearch = !searchTerm || expense.note?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
                 const matchesCategory = !selectedCategory || expense.category?.id === selectedCategory;
-                return matchesSearch && matchesCategory;
+                const matchesMember = selectedMemberIds.length === 0 || (expense.creator && selectedMemberIds.includes(expense.creator.id));
+                return matchesSearch && matchesCategory && matchesMember;
             })
             .sort((a, b) => {
                 if (sortBy === 'date') return b.date.localeCompare(a.date); // ISO strings can be compared directly
@@ -111,10 +77,44 @@
         return filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
     });
 
-	function deleteExpense(id: string) {
-		// if (confirm('Are you sure you want to delete this expense?')) {
-		// 	expenses = expenses.filter((e) => e.id !== id);
-		// }
+	function confirmDeleteExpense(expenseId: string) {
+		expenseToDelete = expenseId;
+		showDeleteDialog = true;
+	}
+
+	async function deleteExpense() {
+		if (!expenseToDelete) return;
+
+		try {
+			const response = await fetch(`/api/expenses/vaults/${data.vaultId}/expenses/${expenseToDelete}`, {
+				method: 'DELETE',
+				headers: {
+					'Authorization': `Bearer ${authManager.authState?.accessToken}`,
+					'Content-Type': 'application/json'
+				}
+			});
+
+			if (response.ok) {
+				showDeleteDialog = false;
+				expenseToDelete = null;
+				// Reload the page to refresh the expense list
+				window.location.reload();
+			} else {
+				const error = await response.json();
+				alert(`Failed to delete expense: ${error.error || 'Unknown error'}`);
+			}
+		} catch (error) {
+			console.error('Failed to delete expense:', error);
+			alert('Failed to delete expense. Please try again.');
+		}
+	}
+
+	function toggleMemberFilter(memberId: string) {
+		if (selectedMemberIds.includes(memberId)) {
+			selectedMemberIds = selectedMemberIds.filter(id => id !== memberId);
+		} else {
+			selectedMemberIds = [...selectedMemberIds, memberId];
+		}
 	}
 
 	function getPeriodLabel(period: string) {
@@ -151,7 +151,11 @@
 			<h1 class="text-3xl font-bold text-foreground font-display">Expenses</h1>
 			<p class="mt-2 text-muted-foreground">Manage and track all your expenses</p>
 		</div>
-		<div class="mt-4 sm:mt-0">
+		<div class="mt-4 sm:mt-0 flex gap-2">
+			<Button variant="outline" onclick={() => isSidebarOpen = !isSidebarOpen} disabled={isLoading}>
+				<Funnel class="w-4 h-4 mr-2" />
+				Filters
+			</Button>
 			<Button onclick={() => goto(`/vaults/${data.vaultId}/expenses/new`)} disabled={isLoading}>
 				<Plus class="w-4 h-4 mr-2" />
 				Add Expense
@@ -165,7 +169,7 @@
 		<div class="sm:hidden">
 			<label for="period-select" class="sr-only">Select time period</label>
 			<select
-				bind:value={currentPeriod}
+				value={currentPeriod}
 				onchange={(e) => switchPeriod(e.target.value)}
 				disabled={isLoading}
 				class="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
@@ -211,58 +215,99 @@
 		</div>
 	</div>
 
-	<!-- Period Summary -->
-	<div class="bg-gradient-to-r from-primary to-accent rounded-lg p-6 mb-6 text-primary-foreground relative overflow-hidden shadow-lg">
-		{#if isLoading}
-			<div class="absolute inset-0 bg-primary/50 flex items-center justify-center backdrop-blur-sm">
-				<div class="flex items-center space-x-2 text-primary-foreground">
-					<div class="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
-					<span class="text-sm font-medium">Loading expenses...</span>
+
+	<!-- Filter Sidebar -->
+	{#if isSidebarOpen}
+		<div class="fixed inset-0 z-50 lg:static lg:z-0">
+			<!-- Backdrop for mobile -->
+			<div class="fixed inset-0 bg-black/50 lg:hidden" onclick={() => isSidebarOpen = false}></div>
+
+			<!-- Sidebar -->
+			<div class="fixed right-0 top-0 h-full w-80 bg-background border-l border-border shadow-lg lg:relative lg:w-auto lg:shadow-none transform transition-transform duration-300 ease-in-out">
+				<div class="p-6">
+					<div class="flex items-center justify-between mb-6">
+						<h2 class="text-lg font-semibold text-foreground">Filters</h2>
+						<Button variant="ghost" size="sm" onclick={() => isSidebarOpen = false}>
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</Button>
+					</div>
+
+					<div class="space-y-4">
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Search</label>
+							<div class="relative">
+								<MagnifyingGlass class="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+								<Input
+									bind:value={searchTerm}
+									placeholder="Search expenses..."
+									class="pl-10"
+									disabled={isLoading}
+								/>
+							</div>
+						</div>
+
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Category</label>
+							<Select bind:value={selectedCategory} disabled={isLoading}>
+								<option value="">All Categories</option>
+								{#each data.categories as category}
+									<option value={category.id}>{category.name}</option>
+								{/each}
+							</Select>
+						</div>
+
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Sort By</label>
+							<Select bind:value={sortBy} disabled={isLoading}>
+								<option value="date">Sort by Date</option>
+								<option value="amount">Sort by Amount</option>
+								<option value="title">Sort by Note</option>
+							</Select>
+						</div>
+
+						<!-- Member Filter -->
+						{#if data.vault?.allMembers && data.vault.allMembers.length > 1}
+							<div>
+								<label class="block text-sm font-medium text-foreground mb-2">Filter by Member</label>
+								<div class="space-y-2 max-h-48 overflow-y-auto">
+									{#each data.vault.allMembers as member}
+										<label class="flex items-center gap-2 cursor-pointer hover:bg-accent/50 p-2 rounded transition-colors">
+											<input
+												type="checkbox"
+												checked={selectedMemberIds.includes(member.user.id)}
+												onchange={() => toggleMemberFilter(member.user.id)}
+												disabled={isLoading}
+												class="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary"
+											/>
+											<span class="text-sm truncate flex-1">
+												{member.user.firstName && member.user.lastName ? `${member.user.firstName} ${member.user.lastName}` : member.user.email}
+											</span>
+											{#if member.role === 'owner'}
+												<span class="text-xs text-muted-foreground">(Owner)</span>
+											{/if}
+										</label>
+									{/each}
+								</div>
+							</div>
+						{/if}
+
+						<div class="pt-4 border-t border-border">
+							<Button variant="outline" class="w-full" onclick={() => {
+								searchTerm = '';
+								selectedCategory = '';
+								sortBy = 'date';
+								selectedMemberIds = [];
+							}}>
+								Clear Filters
+							</Button>
+						</div>
+					</div>
 				</div>
 			</div>
-		{/if}
-		<div class="flex items-center justify-between {isLoading ? 'opacity-50' : ''}">
-			<div>
-				<h2 class="text-lg font-semibold">Expenses for {getPeriodLabel(currentPeriod)}</h2>
-				<p class="text-primary-foreground/80 mt-1">
-					{filteredExpenses.length} {filteredExpenses.length === 1 ? 'expense' : 'expenses'}
-					{#if data.expenses.pagination.total > filteredExpenses.length}
-						(showing {filteredExpenses.length} of {data.expenses.pagination.total})
-					{/if}
-				</p>
-			</div>
-			<div class="text-right">
-				<p class="text-2xl font-bold">{formatCurrency(totalAmount)}</p>
-				<p class="text-primary-foreground/80">Total spent</p>
-			</div>
 		</div>
-	</div>
-
-	<!-- Filters -->
-	<div class="bg-background rounded-lg border border-border shadow-sm p-6 mb-6 {isLoading ? 'opacity-50 pointer-events-none' : ''}">
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-			<div class="relative">
-				<MagnifyingGlass class="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
-				<Input
-					bind:value={searchTerm}
-					placeholder="Search expenses..."
-					class="pl-10"
-					disabled={isLoading}
-				/>
-			</div>
-			<Select bind:value={selectedCategory} disabled={isLoading}>
-				<option value="">All Categories</option>
-				{#each data.categories as category}
-					<option value={category.id}>{category.name}</option>
-				{/each}
-			</Select>
-			<Select bind:value={sortBy} disabled={isLoading}>
-				<option value="date">Sort by Date</option>
-				<option value="amount">Sort by Amount</option>
-				<option value="title">Sort by Note</option>
-			</Select>
-		</div>
-	</div>
+	{/if}
 
 	<!-- Expenses List -->
 	<div class="bg-background rounded-lg border border-border shadow-sm overflow-hidden relative">
@@ -304,7 +349,7 @@
 								<div class="flex-1 min-w-0">
 									<div class="flex items-center space-x-2">
 										<h3 class="text-sm font-medium text-foreground truncate">
-											{expense.note || 'Untitled Expense'}
+											{expense.note || ''}
 										</h3>
 										{#if expense.category?.group}
 											<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary space-x-1">
@@ -340,7 +385,7 @@
 									<Button
 										variant="ghost"
 										size="sm"
-										onclick={() => deleteExpense(expense.id)}
+										onclick={() => confirmDeleteExpense(expense.id)}
 									>
 										<Trash class="w-4 h-4 text-destructive" />
 									</Button>
@@ -363,7 +408,7 @@
 									</div>
 									<div class="flex-1 min-w-0">
 										<h3 class="text-sm font-medium text-foreground truncate leading-tight">
-											{expense.note || 'Untitled Expense'}
+											{expense.note || ''}
 										</h3>
 										<div class="flex items-center space-x-1 mt-1">
 											<span class="text-xs text-muted-foreground">
@@ -374,9 +419,14 @@
 												{new Date(expense.date).toLocaleDateString()}
 											</span>
 										</div>
+										{#if expense.creator}
+											<div class="text-xs text-muted-foreground mt-0.5 truncate">
+												by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName} (${expense.creator.email})` : expense.creator.email}
+											</div>
+										{/if}
 									</div>
 								</div>
-								<div class="flex items-center space-x-2 flex-shrink-0">
+								<div class="flex items-center space-x-1.5 flex-shrink-0">
 									<p class="text-base font-semibold text-foreground">
 										{formatCurrency(expense.amount)}
 									</p>
@@ -384,9 +434,17 @@
 										variant="ghost"
 										size="sm"
 										onclick={() => goto(`/vaults/${data.vaultId}/expenses/${expense.id}/edit`)}
-										class="p-1.5"
+										class="h-7 w-7 p-0"
 									>
 										<Pencil class="w-3.5 h-3.5" />
+									</Button>
+									<Button
+										variant="ghost"
+										size="sm"
+										onclick={() => confirmDeleteExpense(expense.id)}
+										class="h-7 w-7 p-0"
+									>
+										<Trash class="w-3.5 h-3.5 text-destructive" />
 									</Button>
 								</div>
 							</div>
@@ -407,3 +465,14 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Delete Confirmation Dialog -->
+<AlertDialog
+	bind:open={showDeleteDialog}
+	title="Delete Expense"
+	description="Are you sure you want to delete this expense? This action cannot be undone."
+	confirmText="Delete"
+	cancelText="Cancel"
+	variant="destructive"
+	onConfirm={deleteExpense}
+/>

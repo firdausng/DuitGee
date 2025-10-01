@@ -19,30 +19,38 @@ export const getExpenses = async (
 	options?: GetExpensesOptions
 ): Promise<ExpensesResponse> => {
 	const client = drizzle(db, { schema });
-	const { page = 1, limit = 10, categoryId, startDate, endDate, vaultId } = options || {};
+	const { page = 1, limit = 10, categoryId, startDate, endDate, vaultId, memberIds } = options || {};
 	const offset = (page - 1) * limit;
 
 	// Build where clause for vault access control
 	let whereClause;
 
 	if (vaultId) {
-		// For specific vault, check if user has access
-		whereClause = and(
-			eq(expenses.vaultId, vaultId),
-			or(
-				// Personal expenses in this vault
-				eq(expenses.userId, userId),
-				// Shared vault where user is owner
-				eq(vaults.ownerId, userId),
-				// Shared vault where user is an active member - use EXISTS subquery
-				sql`EXISTS (
-					SELECT 1 FROM vault_members vm
-					WHERE vm.vault_id = ${expenses.vaultId}
-					AND vm.user_id = ${userId}
-					AND vm.status = 'active'
-				)`
+		// For specific vault, verify user has access first, then show ALL expenses in the vault
+		const vaultAccess = await client
+			.select({ id: vaults.id })
+			.from(vaults)
+			.leftJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
+			.where(
+				and(
+					eq(vaults.id, vaultId),
+					or(
+						eq(vaults.ownerId, userId),
+						and(
+							eq(vaultMembers.userId, userId),
+							eq(vaultMembers.status, 'active')
+						)
+					)
+				)
 			)
-		);
+			.limit(1);
+
+		if (vaultAccess.length === 0) {
+			throw new Error('Access denied to this vault');
+		}
+
+		// Show all expenses in this vault (from any member)
+		whereClause = eq(expenses.vaultId, vaultId);
 	} else {
 		// For all expenses, show personal expenses + vault expenses user has access to
 		whereClause = or(
@@ -72,6 +80,11 @@ export const getExpenses = async (
 			sql`${expenses.date} >= ${startDate}`,
 			sql`${expenses.date} <= ${endDate}`
 		);
+	}
+	if (memberIds && memberIds.length > 0) {
+		// Filter by specific member IDs
+		const memberConditions = memberIds.map(memberId => eq(expenses.userId, memberId));
+		whereClause = and(whereClause, or(...memberConditions));
 	}
 
 	const expensesList = await client
@@ -206,7 +219,7 @@ export const createExpense = async (userId: string, data: any, db: D1Database) =
 		.values({
 			...data,
 			userId,
-			date: data.date ? formatISO(new Date(data.date)) : formatISO(new Date()),
+			date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
 			...initialAuditFields({ userId })
 		})
 		.returning();
@@ -223,7 +236,7 @@ export const updateExpense = async (userId: string, vaultId: string, expenseId: 
 	// Format date if provided
 	const updateData = { ...data };
 	if (updateData.date) {
-		updateData.date = formatISO(new Date(updateData.date));
+		updateData.date = new Date(updateData.date).toISOString();
 	}
 
 	const updatedExpense = await client
@@ -268,24 +281,29 @@ export const getExpensesSummary = async (
 	options?: GetExpensesSummaryOptions & { vaultId?: string }
 ): Promise<ExpensesSummary> => {
 	const client = drizzle(db, { schema });
-	const { startDate, endDate, vaultId } = options || {};
+	const { startDate, endDate, vaultId, memberIds } = options || {};
 
 	// Build where clause for vault access
 	let whereClause;
 
 	if (vaultId) {
+		// For specific vault, show ALL expenses in the vault if user has access
+		const hasAccess = or(
+			// User is the vault owner
+			eq(vaults.ownerId, userId),
+			// User is an active member of the vault
+			sql`EXISTS (
+				SELECT 1 FROM vault_members vm
+				WHERE vm.vault_id = ${vaultId}
+				AND vm.user_id = ${userId}
+				AND vm.status = 'active'
+			)`
+		);
+
+		// Show all expenses in this vault if user has access
 		whereClause = and(
 			eq(expenses.vaultId, vaultId),
-			// User must have access to this vault through membership or ownership
-			or(
-				eq(vaults.ownerId, userId),
-				sql`EXISTS (
-					SELECT 1 FROM vault_members vm
-					WHERE vm.vault_id = ${expenses.vaultId}
-					AND vm.user_id = ${userId}
-					AND vm.status = 'active'
-				)`
-			)
+			hasAccess
 		);
 	} else {
 		// For all expenses accessible to the user
@@ -314,6 +332,11 @@ export const getExpensesSummary = async (
 			sql`${expenses.date} <= ${endDate}`
 		);
 	}
+	if (memberIds && memberIds.length > 0) {
+		// Filter by specific member IDs
+		const memberConditions = memberIds.map(memberId => eq(expenses.userId, memberId));
+		whereClause = and(whereClause, or(...memberConditions));
+	}
 
 	const summary = await client
 		.select({
@@ -333,6 +356,85 @@ export const getExpensesSummary = async (
 		summary,
 		totalAmount
 	};
+};
+
+export const getMemberSpending = async (
+	userId: string,
+	db: D1Database,
+	options?: GetExpensesSummaryOptions & { vaultId?: string }
+): Promise<Array<{ userId: string; userName: string; totalAmount: number; expenseCount: number }>> => {
+	const client = drizzle(db, { schema });
+	const { startDate, endDate, vaultId } = options || {};
+
+	if (!vaultId) {
+		return [];
+	}
+
+	// First verify user has access to the vault
+	const vault = await client
+		.select({ ownerId: vaults.ownerId })
+		.from(vaults)
+		.where(eq(vaults.id, vaultId))
+		.limit(1);
+
+	if (vault.length === 0) {
+		throw new Error('Vault not found');
+	}
+
+	const isOwner = vault[0].ownerId === userId;
+
+	if (!isOwner) {
+		// Check if user is an active member
+		const membership = await client
+			.select()
+			.from(vaultMembers)
+			.where(
+				and(
+					eq(vaultMembers.vaultId, vaultId),
+					eq(vaultMembers.userId, userId),
+					eq(vaultMembers.status, 'active')
+				)
+			)
+			.limit(1);
+
+		if (membership.length === 0) {
+			throw new Error('Access denied');
+		}
+	}
+
+	// Build where clause for expenses - just filter by vault and date
+	let whereClause = eq(expenses.vaultId, vaultId);
+
+	if (startDate && endDate) {
+		whereClause = and(
+			whereClause,
+			sql`${expenses.date} >= ${startDate}`,
+			sql`${expenses.date} <= ${endDate}`
+		);
+	}
+
+	const memberStats = await client
+		.select({
+			userId: expenses.userId,
+			firstName: users.firstName,
+			lastName: users.lastName,
+			email: users.email,
+			totalAmount: sum(expenses.amount).mapWith(Number),
+			expenseCount: sql<number>`count(*)`.mapWith(Number)
+		})
+		.from(expenses)
+		.leftJoin(users, eq(expenses.userId, users.id))
+		.where(whereClause)
+		.groupBy(expenses.userId, users.firstName, users.lastName, users.email);
+
+	return memberStats.map(stat => ({
+		userId: stat.userId,
+		userName: stat.firstName && stat.lastName
+			? `${stat.firstName} ${stat.lastName}`
+			: stat.email,
+		totalAmount: stat.totalAmount,
+		expenseCount: stat.expenseCount
+	}));
 };
 
 // Email-based wrapper functions for API consistency
@@ -427,4 +529,25 @@ export const getExpensesSummaryByEmail = async (
 	}
 
 	return getExpensesSummary(user[0].id, db, options);
+};
+
+export const getMemberSpendingByEmail = async (
+	userEmail: string,
+	db: D1Database,
+	options?: GetExpensesSummaryOptions & { vaultId?: string }
+): Promise<Array<{ userId: string; userName: string; totalAmount: number; expenseCount: number }>> => {
+	const client = drizzle(db, { schema });
+
+	// Find user by email first
+	const user = await client
+		.select({ id: users.id })
+		.from(users)
+		.where(eq(users.email, userEmail))
+		.limit(1);
+
+	if (user.length === 0) {
+		throw new Error('User not found');
+	}
+
+	return getMemberSpending(user[0].id, db, options);
 };
