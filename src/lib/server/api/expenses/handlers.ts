@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
 import { expenses, categories, categoryGroups, vaults, vaultMembers, users, expenseTags, expenseTemplates, paymentTypes, paymentProviders } from "$lib/server/db/schema";
-import { and, eq, desc, sum, sql, or, isNull } from "drizzle-orm";
+import { and, eq, desc, sum, sql, or, isNull, inArray } from "drizzle-orm";
 import { requireVaultPermission } from "$lib/server/utils/permissions";
 import { initialAuditFields, updateAuditFields } from "$lib/server/utils/audit";
 import { formatISO } from "date-fns";
@@ -130,6 +130,39 @@ export const getExpenses = async (
 		.leftJoin(vaults, eq(expenses.vaultId, vaults.id))
 		.where(whereClause);
 
+	// Get all expense IDs to fetch tags
+	const expenseIds = expensesList.map(row => row.expenses.id);
+
+	// Fetch tags for all expenses in one query
+	const allTags = expenseIds.length > 0 ? await client
+		.select({
+			expenseId: expenseTags.expenseId,
+			name: schema.tags.name,
+			usageCount: schema.tags.usageCount,
+			createdAt: schema.tags.createdAt,
+			createdBy: schema.tags.createdBy
+		})
+		.from(expenseTags)
+		.leftJoin(schema.tags, eq(expenseTags.tagName, schema.tags.name))
+		.where(inArray(expenseTags.expenseId, expenseIds))
+		: [];
+
+	// Group tags by expense ID
+	const tagsByExpense = new Map<string, Array<{ name: string; usageCount: number; createdAt: string; createdBy: string }>>();
+	allTags.forEach(tag => {
+		if (!tagsByExpense.has(tag.expenseId)) {
+			tagsByExpense.set(tag.expenseId, []);
+		}
+		if (tag.name) {
+			tagsByExpense.get(tag.expenseId)!.push({
+				name: tag.name,
+				usageCount: tag.usageCount!,
+				createdAt: tag.createdAt!,
+				createdBy: tag.createdBy!
+			});
+		}
+	});
+
 	// Transform the raw data to match our Expense type
 	const transformedExpenses: Expense[] = expensesList.map(row => ({
 		id: row.expenses.id,
@@ -165,7 +198,8 @@ export const getExpenses = async (
 			firstName: row.users.firstName || undefined,
 			lastName: row.users.lastName || undefined,
 			email: row.users.email
-		} : null
+		} : null,
+		tags: tagsByExpense.get(row.expenses.id) || []
 	}));
 
 	return {
@@ -626,6 +660,174 @@ export const getMemberSpending = async (
 		totalAmount: stat.totalAmount,
 		expenseCount: stat.expenseCount
 	}));
+};
+
+// Get expenses by vault ID (for statistics and analytics)
+export interface GetExpensesByVaultOptions {
+	limit?: number;
+	categoryId?: string;
+	tagName?: string;
+	note?: string;
+	startDate?: string;
+	endDate?: string;
+	memberIds?: string[];
+}
+
+export const getExpensesByVault = async (
+	vaultId: string,
+	userId: string,
+	db: D1Database,
+	options?: GetExpensesByVaultOptions
+): Promise<Expense[]> => {
+	const client = drizzle(db, { schema });
+	const { limit = 10000, categoryId, tagName, note, startDate, endDate, memberIds } = options || {};
+
+	// Verify user has access to the vault
+	const vaultAccess = await client
+		.select({ id: vaults.id })
+		.from(vaults)
+		.leftJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
+		.where(
+			and(
+				eq(vaults.id, vaultId),
+				or(
+					eq(vaults.ownerId, userId),
+					and(
+						eq(vaultMembers.userId, userId),
+						eq(vaultMembers.status, 'active')
+					)
+				)
+			)
+		)
+		.limit(1);
+
+	if (vaultAccess.length === 0) {
+		throw new Error('Access denied to this vault');
+	}
+
+	// Build where clause
+	let whereClause = eq(expenses.vaultId, vaultId);
+
+	if (categoryId) {
+		whereClause = and(whereClause, eq(expenses.categoryId, categoryId));
+	}
+
+	if (startDate && endDate) {
+		whereClause = and(
+			whereClause,
+			sql`${expenses.date} >= ${startDate}`,
+			sql`${expenses.date} <= ${endDate}`
+		);
+	}
+
+	if (memberIds && memberIds.length > 0) {
+		const memberConditions = memberIds.map(memberId => eq(expenses.userId, memberId));
+		whereClause = and(whereClause, or(...memberConditions));
+	}
+
+	if (note) {
+		whereClause = and(
+			whereClause,
+			sql`lower(${expenses.note}) like ${'%' + note.toLowerCase() + '%'}`
+		);
+	}
+
+	// Fetch expenses
+	const expensesList = await client
+		.select()
+		.from(expenses)
+		.leftJoin(categories, eq(expenses.categoryId, categories.id))
+		.leftJoin(categoryGroups, eq(categories.groupId, categoryGroups.id))
+		.leftJoin(vaults, eq(expenses.vaultId, vaults.id))
+		.leftJoin(users, eq(expenses.userId, users.id))
+		.where(whereClause)
+		.orderBy(desc(expenses.date))
+		.limit(limit);
+
+	// Get all expense IDs to fetch tags
+	const expenseIds = expensesList.map(row => row.expenses.id);
+
+	// Fetch tags for all expenses in one query
+	const allTags = expenseIds.length > 0 ? await client
+		.select({
+			expenseId: expenseTags.expenseId,
+			name: schema.tags.name,
+			usageCount: schema.tags.usageCount,
+			createdAt: schema.tags.createdAt,
+			createdBy: schema.tags.createdBy
+		})
+		.from(expenseTags)
+		.leftJoin(schema.tags, eq(expenseTags.tagName, schema.tags.name))
+		.where(inArray(expenseTags.expenseId, expenseIds))
+		: [];
+
+	// Group tags by expense ID
+	const tagsByExpense = new Map<string, Array<{ name: string; usageCount: number; createdAt: string; createdBy: string }>>();
+	allTags.forEach(tag => {
+		if (!tagsByExpense.has(tag.expenseId)) {
+			tagsByExpense.set(tag.expenseId, []);
+		}
+		if (tag.name) {
+			tagsByExpense.get(tag.expenseId)!.push({
+				name: tag.name,
+				usageCount: tag.usageCount!,
+				createdAt: tag.createdAt!,
+				createdBy: tag.createdBy!
+			});
+		}
+	});
+
+	// Filter by tag if specified (after fetching)
+	let filteredExpensesList = expensesList;
+	if (tagName) {
+		const expenseIdsWithTag = new Set(
+			allTags
+				.filter(tag => tag.name === tagName)
+				.map(tag => tag.expenseId)
+		);
+		filteredExpensesList = expensesList.filter(row => expenseIdsWithTag.has(row.expenses.id));
+	}
+
+	// Transform the raw data to match our Expense type
+	const transformedExpenses: Expense[] = filteredExpensesList.map(row => ({
+		id: row.expenses.id,
+		note: row.expenses.note,
+		amount: row.expenses.amount,
+		date: row.expenses.date,
+		createdAt: row.expenses.createdAt,
+		vaultId: row.expenses.vaultId || undefined,
+		vault: row.vaults?.id ? {
+			id: row.vaults.id,
+			name: row.vaults.name,
+			color: row.vaults.color,
+			icon: row.vaults.icon || undefined,
+			iconType: (row.vaults.iconType as 'emoji' | 'phosphor') || 'emoji',
+			isPersonal: row.vaults.isPersonal
+		} : null,
+		category: row.categories?.id ? {
+			id: row.categories.id,
+			name: row.categories.name,
+			color: row.categories.color,
+			icon: row.categories.icon || undefined,
+			iconType: (row.categories.iconType as 'emoji' | 'phosphor') || 'emoji',
+			group: row.category_groups?.id ? {
+				id: row.category_groups.id,
+				name: row.category_groups.name,
+				icon: row.category_groups.icon || undefined,
+				iconType: (row.category_groups.iconType as 'emoji' | 'phosphor') || 'emoji',
+				color: row.category_groups.color
+			} : null
+		} : null,
+		creator: row.users?.id ? {
+			id: row.users.id,
+			firstName: row.users.firstName || undefined,
+			lastName: row.users.lastName || undefined,
+			email: row.users.email
+		} : null,
+		tags: tagsByExpense.get(row.expenses.id) || []
+	}));
+
+	return transformedExpenses;
 };
 
 // Email-based wrapper functions for API consistency

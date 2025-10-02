@@ -10,6 +10,7 @@
 	import Receipt from 'phosphor-svelte/lib/Receipt';
 	import Tag from 'phosphor-svelte/lib/Tag';
 	import ChartPie from 'phosphor-svelte/lib/ChartPie';
+	import ChartBar from 'phosphor-svelte/lib/ChartBar';
 	import User from 'phosphor-svelte/lib/User';
 	import Stool from 'phosphor-svelte/lib/Stool';
 	import CaretRight from 'phosphor-svelte/lib/CaretRight';
@@ -42,6 +43,7 @@
 			return [
 				{ name: 'Dashboard', href: `/vaults/${vaultId}`, icon: House, key: 'dashboard' },
 				{ name: 'Expenses', href: `/vaults/${vaultId}/expenses`, icon: Receipt, key: 'expenses' },
+				{ name: 'Statistics', href: `/vaults/${vaultId}/statistics`, icon: ChartBar, key: 'statistics' },
 				{ name: 'Categories', href: `/vaults/${vaultId}/categories`, icon: Tag, key: 'categories' },
 				{ name: 'Tags', href: `/vaults/${vaultId}/tags`, icon: Tag, key: 'tags' },
 				{ name: 'Templates', href: `/vaults/${vaultId}/templates`, icon: Lightning, key: 'templates' },
@@ -97,6 +99,9 @@
 							break;
 						case 'tags':
 							breadcrumbs.push({ name: 'Tags', href: `/vaults/${vaultId}/tags`, isHome: false });
+							break;
+						case 'statistics':
+							breadcrumbs.push({ name: 'Statistics', href: `/vaults/${vaultId}/statistics`, isHome: false });
 							break;
 						case 'templates':
 							breadcrumbs.push({ name: 'Templates', href: `/vaults/${vaultId}/templates`, isHome: false });
