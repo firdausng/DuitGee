@@ -11,9 +11,11 @@ import { categoryGroupsApi } from './category-groups/category-groups';
 import { usersApi } from './users/users';
 import { vaultsApi } from './vaults/vaults';
 import { vaultMembersApi } from './vault-members/vault-members';
+import { notificationApi } from "$lib/server/api/notifications/notifications";
+import { tagsApi } from "$lib/server/api/tags/tags";
+import { templatesApi } from "$lib/server/api/templates/templates";
 import {AuthService} from "$lib/server/auth-service.svelte";
 import {jwk} from "hono/jwk";
-import {notificationApi} from "$lib/server/api/notifications/notifications";
 import { openAPIRouteHandler } from 'hono-openapi'
 import { Scalar } from "@scalar/hono-api-reference";
 
@@ -87,13 +89,15 @@ const router = new Hono<App.Api>()
 			return c.json({ error: 'Invalid or expired token' }, 401);
 		}
 	})
-	.route('/expenses', expensesApi)
-	.route('/categories', categoriesApi)
-	.route('/category-groups', categoryGroupsApi)
-	.route('/notifications', notificationApi)
+	.route('/', expensesApi)
+	.route('/', categoriesApi)
+	.route('/', categoryGroupsApi)
+	.route('/', notificationApi)
 	.route('/users', usersApi)
 	.route('/vaults', vaultsApi)
-	.route('/vault-members', vaultMembersApi);
+	.route('/vault-members', vaultMembersApi)
+	.route('/', tagsApi)
+	.route('/', templatesApi);
 
 export const api = new Hono<App.Api>().route('/api', router);
 

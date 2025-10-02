@@ -9,6 +9,7 @@ import {
     updateVaultMember,
     getUserVaultInvitationsByEmail
 } from "$lib/server/api/vault-members/handlers";
+import { describeRoute, resolver } from 'hono-openapi';
 
 // Schema for inviting a user to a vault
 const inviteUserSchema = v.object({
@@ -28,9 +29,41 @@ const getInvitationsByEmailSchema = v.object({
     email: v.pipe(v.string(), v.email())
 });
 
+const VAULT_MEMBER_TAG = ['Vault Member'];
+const commonVaultMemberConfig = {
+    tags: VAULT_MEMBER_TAG,
+};
+
 export const vaultMembersApi = new Hono<App.Api>()
-    // POST /vault-members/invite/:vaultId - Invite user to vault
-    .post('/invite/:vaultId', vValidator('json', inviteUserSchema), async (c) => {
+    .post(
+        '/invite/:vaultId',
+        describeRoute({
+            ...commonVaultMemberConfig,
+            description: 'Invite user to vault',
+            responses: {
+                201: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.any(),
+                            message: v.string()
+                        })) },
+                    },
+                },
+                403: {
+                    description: 'Permission denied',
+                },
+                404: {
+                    description: 'User not found',
+                },
+                409: {
+                    description: 'User already invited',
+                },
+            },
+        }),
+        vValidator('json', inviteUserSchema),
+        async (c) => {
         const userId = c.get('userEmail') as string;
         const vaultId = c.req.param('vaultId');
         const data = c.req.valid('json');
@@ -64,8 +97,28 @@ export const vaultMembersApi = new Hono<App.Api>()
         }
     })
 
-    // PUT /vault-members/invitations/:invitationId/accept - Accept invitation
-    .put('/invitations/:invitationId/accept', async (c) => {
+    .put(
+        '/invitations/:invitationId/accept',
+        describeRoute({
+            ...commonVaultMemberConfig,
+            description: 'Accept vault invitation',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.any(),
+                            message: v.string()
+                        })) },
+                    },
+                },
+                404: {
+                    description: 'Invitation not found',
+                },
+            },
+        }),
+        async (c) => {
         const userId = c.get('userEmail') as string;
         const invitationId = c.req.param('invitationId');
 
@@ -86,8 +139,28 @@ export const vaultMembersApi = new Hono<App.Api>()
         }
     })
 
-    // PUT /vault-members/invitations/:invitationId/decline - Decline invitation
-    .put('/invitations/:invitationId/decline', async (c) => {
+    .put(
+        '/invitations/:invitationId/decline',
+        describeRoute({
+            ...commonVaultMemberConfig,
+            description: 'Decline vault invitation',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.any(),
+                            message: v.string()
+                        })) },
+                    },
+                },
+                404: {
+                    description: 'Invitation not found',
+                },
+            },
+        }),
+        async (c) => {
         const userId = c.get('userEmail') as string;
         const invitationId = c.req.param('invitationId');
 
@@ -108,8 +181,31 @@ export const vaultMembersApi = new Hono<App.Api>()
         }
     })
 
-    // DELETE /vault-members/:vaultId/members/:userId - Remove user from vault
-    .delete('/:vaultId/members/:userId', async (c) => {
+    .delete(
+        '/:vaultId/members/:userId',
+        describeRoute({
+            ...commonVaultMemberConfig,
+            description: 'Remove user from vault',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.any(),
+                            message: v.string()
+                        })) },
+                    },
+                },
+                400: {
+                    description: 'Cannot remove vault owner',
+                },
+                403: {
+                    description: 'Permission denied',
+                },
+            },
+        }),
+        async (c) => {
         const removerId = c.get('userEmail') as string;
         const vaultId = c.req.param('vaultId');
         const userId = c.req.param('userId');
@@ -135,8 +231,32 @@ export const vaultMembersApi = new Hono<App.Api>()
         }
     })
 
-    // PUT /vault-members/:vaultId/members/:userId - Update member role/permissions
-    .put('/:vaultId/members/:userId', vValidator('json', updateMemberSchema), async (c) => {
+    .put(
+        '/:vaultId/members/:userId',
+        describeRoute({
+            ...commonVaultMemberConfig,
+            description: 'Update member role/permissions',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.any(),
+                            message: v.string()
+                        })) },
+                    },
+                },
+                400: {
+                    description: 'Cannot update vault owner',
+                },
+                403: {
+                    description: 'Permission denied',
+                },
+            },
+        }),
+        vValidator('json', updateMemberSchema),
+        async (c) => {
         const updaterId = c.get('userEmail') as string;
         const vaultId = c.req.param('vaultId');
         const userId = c.req.param('userId');
@@ -163,8 +283,24 @@ export const vaultMembersApi = new Hono<App.Api>()
         }
     })
 
-    // GET /vault-members/invitations - Get user's vault invitations
-    .get('/invitations', async (c) => {
+    .get(
+        '/invitations',
+        describeRoute({
+            ...commonVaultMemberConfig,
+            description: 'Get user\'s vault invitations',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.array(v.any())
+                        })) },
+                    },
+                },
+            },
+        }),
+        async (c) => {
         const userId = c.get('userEmail') as string;
 
         try {
@@ -182,8 +318,28 @@ export const vaultMembersApi = new Hono<App.Api>()
         }
     })
 
-    // GET /vault-members/invitations/by-email?email=user@example.com - Get invitations by email
-    .get('/invitations/by-email', vValidator('query', getInvitationsByEmailSchema), async (c) => {
+    .get(
+        '/invitations/by-email',
+        describeRoute({
+            ...commonVaultMemberConfig,
+            description: 'Get invitations by email',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.array(v.any())
+                        })) },
+                    },
+                },
+                404: {
+                    description: 'User not found',
+                },
+            },
+        }),
+        vValidator('query', getInvitationsByEmailSchema),
+        async (c) => {
         const query = c.req.valid('query');
 
         try {

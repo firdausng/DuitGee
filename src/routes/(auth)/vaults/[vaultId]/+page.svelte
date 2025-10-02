@@ -186,7 +186,7 @@
 		if (!expenseToDelete) return;
 
 		try {
-			const response = await fetch(`/api/expenses/vaults/${data.vaultId}/expenses/${expenseToDelete}`, {
+			const response = await fetch(`/api/vaults/${data.vaultId}/expenses/${expenseToDelete}`, {
 				method: 'DELETE',
 				headers: { 'Authorization': `Bearer ${authManager.authState?.accessToken}` }
 			});

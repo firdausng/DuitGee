@@ -10,6 +10,7 @@ import {
     getUnreadNotificationCount
 } from "$lib/server/api/notifications/handlers";
 import { createNotificationSchema, updateNotificationSchema } from "$lib/server/api/notifications/schema";
+import { describeRoute, resolver } from 'hono-openapi';
 
 // Query parameters schema for GET notifications
 const getNotificationsQuerySchema = v.object({
@@ -18,9 +19,31 @@ const getNotificationsQuerySchema = v.object({
     unreadOnly: v.optional(v.pipe(v.string(), v.transform(s => s === 'true')), 'false')
 });
 
+const NOTIFICATION_TAG = ['Notification'];
+const commonNotificationConfig = {
+    tags: NOTIFICATION_TAG,
+};
+
 export const notificationApi = new Hono<App.Api>()
-    // GET /notifications - Get user's notifications
-    .get('/', vValidator('query', getNotificationsQuerySchema), async (c) => {
+    .get(
+        '/',
+        describeRoute({
+            ...commonNotificationConfig,
+            description: 'Get user\'s notifications',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.any()
+                        })) },
+                    },
+                },
+            },
+        }),
+        vValidator('query', getNotificationsQuerySchema),
+        async (c) => {
         const userId = c.get('userEmail') as string;
         const query = c.req.valid('query');
 
@@ -48,8 +71,24 @@ export const notificationApi = new Hono<App.Api>()
         }
     })
 
-    // PUT /notifications - Mark all notifications as read
-    .put('/', async (c) => {
+    .put(
+        '/',
+        describeRoute({
+            ...commonNotificationConfig,
+            description: 'Mark all notifications as read',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            message: v.string()
+                        })) },
+                    },
+                },
+            },
+        }),
+        async (c) => {
         const userId = c.get('userEmail') as string;
 
         try {
@@ -75,8 +114,25 @@ export const notificationApi = new Hono<App.Api>()
         }
     })
 
-    // POST /notifications - Create a new notification (admin/system use)
-    .post('/', vValidator('json', createNotificationSchema), async (c) => {
+    .post(
+        '/',
+        describeRoute({
+            ...commonNotificationConfig,
+            description: 'Create a new notification (admin/system use)',
+            responses: {
+                201: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.any()
+                        })) },
+                    },
+                },
+            },
+        }),
+        vValidator('json', createNotificationSchema),
+        async (c) => {
         const userId = c.get('userEmail') as string;
         const data = c.req.valid('json');
 
@@ -96,8 +152,26 @@ export const notificationApi = new Hono<App.Api>()
         }
     })
 
-    // GET /notifications/count - Get unread notification count
-    .get('/count', async (c) => {
+    .get(
+        '/count',
+        describeRoute({
+            ...commonNotificationConfig,
+            description: 'Get unread notification count',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.object({
+                                unreadCount: v.number()
+                            })
+                        })) },
+                    },
+                },
+            },
+        }),
+        async (c) => {
         const userId = c.get('userEmail') as string;
 
         try {
@@ -116,8 +190,27 @@ export const notificationApi = new Hono<App.Api>()
         }
     })
 
-    // PUT /notifications/:id - Mark specific notification as read
-    .put('/:id', async (c) => {
+    .put(
+        '/:id',
+        describeRoute({
+            ...commonNotificationConfig,
+            description: 'Mark specific notification as read',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            message: v.string()
+                        })) },
+                    },
+                },
+                404: {
+                    description: 'Notification not found',
+                },
+            },
+        }),
+        async (c) => {
         const userId = c.get('userEmail') as string;
         const notificationId = c.req.param('id');
 
@@ -144,8 +237,27 @@ export const notificationApi = new Hono<App.Api>()
         }
     })
 
-    // DELETE /notifications/:id - Delete specific notification
-    .delete('/:id', async (c) => {
+    .delete(
+        '/:id',
+        describeRoute({
+            ...commonNotificationConfig,
+            description: 'Delete specific notification',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            message: v.string()
+                        })) },
+                    },
+                },
+                404: {
+                    description: 'Notification not found',
+                },
+            },
+        }),
+        async (c) => {
         const userId = c.get('userEmail') as string;
         const notificationId = c.req.param('id');
 

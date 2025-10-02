@@ -9,6 +9,7 @@ import {
 	updateCategoryGroup,
 	getCategoryGroupsWithCategories
 } from "$lib/server/api/category-groups/handlers";
+import { describeRoute, resolver } from 'hono-openapi';
 
 const categoryGroupSchema = v.object({
 	name: v.pipe(v.string(), v.minLength(1, 'Name must be 1 or more characters long.')),
@@ -19,8 +20,27 @@ const categoryGroupSchema = v.object({
 
 const updateCategoryGroupSchema = v.partial(categoryGroupSchema);
 
+const CATEGORY_GROUP_TAG = ['Category Group'];
+const commonCategoryGroupConfig = {
+	tags: CATEGORY_GROUP_TAG,
+};
+
 export const categoryGroupsApi = new Hono<App.Api>()
-	.get('/vaults/:vaultId/category-groups', async (c) => {
+	.get(
+		'/vaults/:vaultId/category-groups',
+		describeRoute({
+			...commonCategoryGroupConfig,
+			description: 'Get category groups list',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(v.array(v.any())) },
+					},
+				},
+			},
+		}),
+		async (c) => {
 		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		console.log('userId', userId);
@@ -28,14 +48,43 @@ export const categoryGroupsApi = new Hono<App.Api>()
 
 		return c.json(groupsList);
 	})
-	.get('/vaults/:vaultId/category-groups/with-categories', async (c) => {
+	.get(
+		'/vaults/:vaultId/category-groups/with-categories',
+		describeRoute({
+			...commonCategoryGroupConfig,
+			description: 'Get category groups with their categories',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(v.array(v.any())) },
+					},
+				},
+			},
+		}),
+		async (c) => {
 		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const groupsWithCategories = await getCategoryGroupsWithCategories(userId, vaultId, c.env.DB);
 
 		return c.json(groupsWithCategories);
 	})
-	.post('/vaults/:vaultId/category-groups', vValidator('json', categoryGroupSchema), async (c) => {
+	.post(
+		'/vaults/:vaultId/category-groups',
+		describeRoute({
+			...commonCategoryGroupConfig,
+			description: 'Create category group',
+			responses: {
+				201: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(categoryGroupSchema) },
+					},
+				},
+			},
+		}),
+		vValidator('json', categoryGroupSchema),
+		async (c) => {
 		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const data = c.req.valid('json');
@@ -48,7 +97,24 @@ export const categoryGroupsApi = new Hono<App.Api>()
 
 		return c.json(group, 201);
 	})
-	.get('/vaults/:vaultId/category-groups/:id', async (c) => {
+	.get(
+		'/vaults/:vaultId/category-groups/:id',
+		describeRoute({
+			...commonCategoryGroupConfig,
+			description: 'Get category group by id',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(categoryGroupSchema) },
+					},
+				},
+				404: {
+					description: 'Not Found response',
+				},
+			},
+		}),
+		async (c) => {
 		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
@@ -61,7 +127,25 @@ export const categoryGroupsApi = new Hono<App.Api>()
 
 		return c.json(group);
 	})
-	.put('/vaults/:vaultId/category-groups/:id', vValidator('json', updateCategoryGroupSchema), async (c) => {
+	.put(
+		'/vaults/:vaultId/category-groups/:id',
+		describeRoute({
+			...commonCategoryGroupConfig,
+			description: 'Update category group',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(categoryGroupSchema) },
+					},
+				},
+				404: {
+					description: 'Not Found response',
+				},
+			},
+		}),
+		vValidator('json', updateCategoryGroupSchema),
+		async (c) => {
 		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
@@ -75,7 +159,24 @@ export const categoryGroupsApi = new Hono<App.Api>()
 
 		return c.json(group);
 	})
-	.delete('/vaults/:vaultId/category-groups/:id', async (c) => {
+	.delete(
+		'/vaults/:vaultId/category-groups/:id',
+		describeRoute({
+			...commonCategoryGroupConfig,
+			description: 'Delete category group',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(v.object({ message: v.string() })) },
+					},
+				},
+				404: {
+					description: 'Not Found response',
+				},
+			},
+		}),
+		async (c) => {
 		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');

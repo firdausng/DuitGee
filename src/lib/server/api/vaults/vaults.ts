@@ -10,6 +10,7 @@ import {
     getVaultStatsByEmail
 } from "$lib/server/api/vaults/handlers";
 import { vaultSchema } from "$lib/server/api/vaults/schema";
+import { describeRoute, resolver } from 'hono-openapi';
 
 const updateVaultSchema = v.partial(vaultSchema);
 
@@ -18,9 +19,30 @@ const getUserVaultsByEmailSchema = v.object({
     email: v.pipe(v.string(), v.email())
 });
 
+const VAULT_TAG = ['Vault'];
+const commonVaultConfig = {
+    tags: VAULT_TAG,
+};
+
 export const vaultsApi = new Hono<App.Api>()
-    // GET /vaults - Get user's vaults
-    .get('/', async (c) => {
+    .get(
+        '/',
+        describeRoute({
+            ...commonVaultConfig,
+            description: 'Get user\'s vaults',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.array(v.any())
+                        })) },
+                    },
+                },
+            },
+        }),
+        async (c) => {
         const userEmail = c.get('userEmail') as string;
 
         try {
@@ -37,9 +59,28 @@ export const vaultsApi = new Hono<App.Api>()
             }, 500);
         }
     })
-
-    // GET /vaults/by-email?email=user@example.com - Get vaults by user email
-    .get('/by-email', vValidator('query', getUserVaultsByEmailSchema), async (c) => {
+    .get(
+        '/by-email',
+        describeRoute({
+            ...commonVaultConfig,
+            description: 'Get vaults by user email',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.array(v.any())
+                        })) },
+                    },
+                },
+                404: {
+                    description: 'User not found',
+                },
+            },
+        }),
+        vValidator('query', getUserVaultsByEmailSchema),
+        async (c) => {
         const query = c.req.valid('query');
 
         try {
@@ -56,9 +97,25 @@ export const vaultsApi = new Hono<App.Api>()
             }, error instanceof Error && error.message === 'User not found' ? 404 : 500);
         }
     })
-
-    // POST /vaults - Create a new vault
-    .post('/', vValidator('json', vaultSchema), async (c) => {
+    .post(
+        '/',
+        describeRoute({
+            ...commonVaultConfig,
+            description: 'Create a new vault',
+            responses: {
+                201: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: vaultSchema
+                        })) },
+                    },
+                },
+            },
+        }),
+        vValidator('json', vaultSchema),
+        async (c) => {
         const userEmail = c.get('userEmail') as string;
         const data = c.req.valid('json');
 
@@ -76,9 +133,27 @@ export const vaultsApi = new Hono<App.Api>()
             }, 500);
         }
     })
-
-    // GET /vaults/:id - Get specific vault with members
-    .get('/:id', async (c) => {
+    .get(
+        '/:id',
+        describeRoute({
+            ...commonVaultConfig,
+            description: 'Get specific vault with members',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.any()
+                        })) },
+                    },
+                },
+                404: {
+                    description: 'Vault not found',
+                },
+            },
+        }),
+        async (c) => {
         const userEmail = c.get('userEmail') as string;
         const vaultId = c.req.param('id');
 
@@ -97,9 +172,28 @@ export const vaultsApi = new Hono<App.Api>()
             }, status);
         }
     })
-
-    // PUT /vaults/:id - Update vault
-    .put('/:id', vValidator('json', updateVaultSchema), async (c) => {
+    .put(
+        '/:id',
+        describeRoute({
+            ...commonVaultConfig,
+            description: 'Update vault',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: vaultSchema
+                        })) },
+                    },
+                },
+                403: {
+                    description: 'Permission denied',
+                },
+            },
+        }),
+        vValidator('json', updateVaultSchema),
+        async (c) => {
         const userEmail = c.get('userEmail') as string;
         const vaultId = c.req.param('id');
         const data = c.req.valid('json');
@@ -119,9 +213,28 @@ export const vaultsApi = new Hono<App.Api>()
             }, status);
         }
     })
-
-    // DELETE /vaults/:id - Delete vault
-    .delete('/:id', async (c) => {
+    .delete(
+        '/:id',
+        describeRoute({
+            ...commonVaultConfig,
+            description: 'Delete vault',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.any(),
+                            message: v.string()
+                        })) },
+                    },
+                },
+                403: {
+                    description: 'Permission denied',
+                },
+            },
+        }),
+        async (c) => {
         const userEmail = c.get('userEmail') as string;
         const vaultId = c.req.param('id');
 
@@ -141,9 +254,27 @@ export const vaultsApi = new Hono<App.Api>()
             }, status);
         }
     })
-
-    // GET /vaults/:id/stats - Get vault statistics
-    .get('/:id/stats', async (c) => {
+    .get(
+        '/:id/stats',
+        describeRoute({
+            ...commonVaultConfig,
+            description: 'Get vault statistics',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': { schema: resolver(v.object({
+                            success: v.boolean(),
+                            data: v.any()
+                        })) },
+                    },
+                },
+                404: {
+                    description: 'Vault not found',
+                },
+            },
+        }),
+        async (c) => {
         const userEmail = c.get('userEmail') as string;
         const vaultId = c.req.param('id');
 

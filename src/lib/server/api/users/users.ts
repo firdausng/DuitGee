@@ -10,11 +10,37 @@ import {
 } from "$lib/server/api/users/handlers";
 import {userSchema} from "$lib/schemas/expense";
 import {updateUserSchema} from "$lib/server/api/users/schema";
+import { describeRoute, resolver } from 'hono-openapi';
 
-
+const USER_TAG = ['User'];
+const commonUserConfig = {
+	tags: USER_TAG,
+};
 
 export const usersApi = new Hono<App.Api>()
-	.get('/', async (c) => {
+	.get(
+		'/',
+		describeRoute({
+			...commonUserConfig,
+			description: 'Get users list with pagination',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(v.object({
+							data: v.array(v.any()),
+							pagination: v.object({
+								page: v.number(),
+								limit: v.number(),
+								total: v.number(),
+								totalPages: v.number()
+							})
+						})) },
+					},
+				},
+			},
+		}),
+		async (c) => {
 		const page = parseInt(c.req.query('page') || '1');
 		const limit = parseInt(c.req.query('limit') || '10');
 
@@ -26,7 +52,22 @@ export const usersApi = new Hono<App.Api>()
 
 		return c.json(result);
 	})
-	.post('/', vValidator('json', userSchema), async (c) => {
+	.post(
+		'/',
+		describeRoute({
+			...commonUserConfig,
+			description: 'Create user',
+			responses: {
+				201: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(userSchema) },
+					},
+				},
+			},
+		}),
+		vValidator('json', userSchema),
+		async (c) => {
 		const data = c.req.valid('json');
 
 		const user = await createUser(data, c.env.DB);
@@ -37,7 +78,24 @@ export const usersApi = new Hono<App.Api>()
 
 		return c.json(user, 201);
 	})
-	.get('/:id', async (c) => {
+	.get(
+		'/:id',
+		describeRoute({
+			...commonUserConfig,
+			description: 'Get user by id',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(userSchema) },
+					},
+				},
+				404: {
+					description: 'Not Found response',
+				},
+			},
+		}),
+		async (c) => {
 		const id = c.req.param('id');
 
 		const user = await getUser(id, c.env.DB);
@@ -48,7 +106,25 @@ export const usersApi = new Hono<App.Api>()
 
 		return c.json(user);
 	})
-	.put('/:id', vValidator('json', updateUserSchema), async (c) => {
+	.put(
+		'/:id',
+		describeRoute({
+			...commonUserConfig,
+			description: 'Update user',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(userSchema) },
+					},
+				},
+				404: {
+					description: 'Not Found response',
+				},
+			},
+		}),
+		vValidator('json', updateUserSchema),
+		async (c) => {
 		const id = c.req.param('id');
 		const data = c.req.valid('json');
 
@@ -60,7 +136,24 @@ export const usersApi = new Hono<App.Api>()
 
 		return c.json(user);
 	})
-	.delete('/:id', async (c) => {
+	.delete(
+		'/:id',
+		describeRoute({
+			...commonUserConfig,
+			description: 'Delete user',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(v.object({ message: v.string() })) },
+					},
+				},
+				404: {
+					description: 'Not Found response',
+				},
+			},
+		}),
+		async (c) => {
 		const id = c.req.param('id');
 
 		const isDeleted = await deleteUser(id, c.env.DB);

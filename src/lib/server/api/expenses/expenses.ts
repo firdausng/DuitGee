@@ -15,6 +15,7 @@ import {
 	getExpensesSummaryByEmail,
 	getMemberSpendingByEmail
 } from "$lib/server/api/expenses/handlers";
+import { describeRoute, resolver } from 'hono-openapi';
 
 const expenseSchema = v.object({
 	note: v.optional(v.string()),
@@ -25,8 +26,35 @@ const expenseSchema = v.object({
 
 const updateExpenseSchema = v.partial(expenseSchema);
 
+const EXPENSE_TAG = ['Expense'];
+const commonExpenseConfig = {
+	tags: EXPENSE_TAG,
+};
+
 export const expensesApi = new Hono<App.Api>()
-	.get('/vaults/:vaultId/expenses', async (c) => {
+	.get(
+		'/vaults/:vaultId/expenses',
+		describeRoute({
+			...commonExpenseConfig,
+			description: 'Get expenses list with pagination and filters',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(v.object({
+							data: v.array(v.any()),
+							pagination: v.object({
+								page: v.number(),
+								limit: v.number(),
+								total: v.number(),
+								totalPages: v.number()
+							})
+						})) },
+					},
+				},
+			},
+		}),
+		async (c) => {
 		const userEmail = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const page = parseInt(c.req.query('page') || '1');
@@ -49,7 +77,22 @@ export const expensesApi = new Hono<App.Api>()
 
 		return c.json(result);
 	})
-	.post('/vaults/:vaultId/expenses', vValidator('json', expenseSchema), async (c) => {
+	.post(
+		'/vaults/:vaultId/expenses',
+		describeRoute({
+			...commonExpenseConfig,
+			description: 'Create expense',
+			responses: {
+				201: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(v.any()) },
+					},
+				},
+			},
+		}),
+		vValidator('json', expenseSchema),
+		async (c) => {
 		const userEmail = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const data = c.req.valid('json');
@@ -58,7 +101,24 @@ export const expensesApi = new Hono<App.Api>()
 
 		return c.json(expense, 201);
 	})
-	.get('/vaults/:vaultId/expenses/:id', async (c) => {
+	.get(
+		'/vaults/:vaultId/expenses/:id',
+		describeRoute({
+			...commonExpenseConfig,
+			description: 'Get expense by id',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(v.any()) },
+					},
+				},
+				404: {
+					description: 'Not Found response',
+				},
+			},
+		}),
+		async (c) => {
 		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
@@ -71,7 +131,25 @@ export const expensesApi = new Hono<App.Api>()
 
 		return c.json(expense);
 	})
-	.put('/vaults/:vaultId/expenses/:id', vValidator('json', updateExpenseSchema), async (c) => {
+	.put(
+		'/vaults/:vaultId/expenses/:id',
+		describeRoute({
+			...commonExpenseConfig,
+			description: 'Update expense',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(v.any()) },
+					},
+				},
+				404: {
+					description: 'Not Found response',
+				},
+			},
+		}),
+		vValidator('json', updateExpenseSchema),
+		async (c) => {
 		const userEmail = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
@@ -85,7 +163,24 @@ export const expensesApi = new Hono<App.Api>()
 
 		return c.json(expense);
 	})
-	.delete('/vaults/:vaultId/expenses/:id', async (c) => {
+	.delete(
+		'/vaults/:vaultId/expenses/:id',
+		describeRoute({
+			...commonExpenseConfig,
+			description: 'Delete expense',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(v.object({ message: v.string() })) },
+					},
+				},
+				404: {
+					description: 'Not Found response',
+				},
+			},
+		}),
+		async (c) => {
 		const userEmail = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
@@ -98,7 +193,21 @@ export const expensesApi = new Hono<App.Api>()
 
 		return c.json({ message: 'Expense deleted successfully' });
 	})
-	.get('/vaults/:vaultId/expenses/stats/summary', async (c) => {
+	.get(
+		'/vaults/:vaultId/expenses/stats/summary',
+		describeRoute({
+			...commonExpenseConfig,
+			description: 'Get expenses summary statistics',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(v.any()) },
+					},
+				},
+			},
+		}),
+		async (c) => {
 		const userEmail = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const startDate = c.req.query('startDate');
@@ -115,7 +224,21 @@ export const expensesApi = new Hono<App.Api>()
 
 		return c.json(result);
 	})
-	.get('/vaults/:vaultId/expenses/stats/members', async (c) => {
+	.get(
+		'/vaults/:vaultId/expenses/stats/members',
+		describeRoute({
+			...commonExpenseConfig,
+			description: 'Get member spending statistics',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(v.array(v.any())) },
+					},
+				},
+			},
+		}),
+		async (c) => {
 		const userEmail = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const startDate = c.req.query('startDate');
