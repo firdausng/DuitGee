@@ -1,124 +1,158 @@
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
 import { tags } from "$lib/server/db/schema";
-import { and, eq, desc, isNull } from "drizzle-orm";
-import { initialAuditFields, updateAuditFields } from "$lib/server/utils/audit";
-import { createId } from '@paralleldrive/cuid2';
+import { eq, desc, like, sql } from "drizzle-orm";
+import { normalizeTagName } from "$lib/server/api/tags/schema";
 
+/**
+ * Get all tags ordered by usage count (most popular first)
+ */
 export const getTags = async (
-	vaultId: string,
-	db: D1Database
+	db: D1Database,
+	options?: { limit?: number }
 ): Promise<Array<typeof tags.$inferSelect>> => {
 	const client = drizzle(db, { schema });
 
-	const tagsList = await client
+	let query = client
 		.select()
 		.from(tags)
-		.where(
-			and(
-				eq(tags.vaultId, vaultId),
-				isNull(tags.deletedAt)
-			)
-		)
-		.orderBy(tags.name);
+		.orderBy(desc(tags.usageCount), tags.name);
 
-	return tagsList;
+	if (options?.limit) {
+		query = query.limit(options.limit);
+	}
+
+	return await query;
 };
 
+/**
+ * Search tags by name prefix (for autocomplete/suggestions)
+ */
+export const searchTags = async (
+	db: D1Database,
+	query?: string,
+	limit: number = 20
+): Promise<Array<typeof tags.$inferSelect>> => {
+	const client = drizzle(db, { schema });
+
+	let dbQuery = client
+		.select()
+		.from(tags)
+		.orderBy(desc(tags.usageCount), tags.name)
+		.limit(limit);
+
+	if (query) {
+		const normalizedQuery = normalizeTagName(query);
+		dbQuery = dbQuery.where(like(tags.name, `${normalizedQuery}%`));
+	}
+
+	return await dbQuery;
+};
+
+/**
+ * Get a specific tag by name (case-insensitive)
+ */
 export const getTag = async (
-	tagId: string,
+	name: string,
 	db: D1Database
 ): Promise<typeof tags.$inferSelect | undefined> => {
 	const client = drizzle(db, { schema });
+	const normalizedName = normalizeTagName(name);
 
-	const tag = await client
+	const result = await client
 		.select()
 		.from(tags)
-		.where(
-			and(
-				eq(tags.id, tagId),
-				isNull(tags.deletedAt)
-			)
-		)
+		.where(eq(tags.name, normalizedName))
 		.limit(1);
 
-	return tag[0];
+	return result[0];
 };
 
-export const createTag = async (
+/**
+ * Create or get existing tag (Twitter-style auto-creation)
+ * If tag exists, returns existing tag. If not, creates it.
+ */
+export const getOrCreateTag = async (
+	name: string,
 	userId: string,
-	data: {
-		vaultId: string;
-		name: string;
-		color?: string;
-		icon?: string;
-		iconType?: string;
-	},
 	db: D1Database
-) => {
+): Promise<typeof tags.$inferSelect> => {
 	const client = drizzle(db, { schema });
+	const normalizedName = normalizeTagName(name);
 
-	const tagId = createId();
+	// Try to get existing tag
+	const existingTag = await getTag(normalizedName, db);
+	if (existingTag) {
+		return existingTag;
+	}
+
+	// Create new tag
 	const tagData = {
-		id: tagId,
-		...data,
-		...initialAuditFields({ userId })
+		name: normalizedName,
+		usageCount: 0,
+		createdAt: new Date().toISOString(),
+		createdBy: userId,
 	};
 
-	const tag = await client
+	const result = await client
 		.insert(tags)
 		.values(tagData)
 		.returning();
 
-	return tag[0];
+	return result[0];
 };
 
-export const updateTag = async (
-	userId: string,
-	tagId: string,
-	data: {
-		name?: string;
-		color?: string;
-		icon?: string;
-		iconType?: string;
-	},
+/**
+ * Increment tag usage count
+ * Call this whenever a tag is used on an expense/template
+ */
+export const incrementTagUsage = async (
+	name: string,
 	db: D1Database
-) => {
+): Promise<void> => {
 	const client = drizzle(db, { schema });
+	const normalizedName = normalizeTagName(name);
 
-	const updatedTag = await client
+	await client
 		.update(tags)
 		.set({
-			...data,
-			...updateAuditFields({ userId })
+			usageCount: sql`${tags.usageCount} + 1`
 		})
-		.where(
-			and(
-				eq(tags.id, tagId),
-				isNull(tags.deletedAt)
-			)
-		)
-		.returning();
-
-	return updatedTag[0];
+		.where(eq(tags.name, normalizedName));
 };
 
-export const deleteTag = async (
-	userId: string,
-	tagId: string,
+/**
+ * Decrement tag usage count
+ * Call this when a tag is removed from an expense/template
+ */
+export const decrementTagUsage = async (
+	name: string,
 	db: D1Database
-) => {
+): Promise<void> => {
 	const client = drizzle(db, { schema });
+	const normalizedName = normalizeTagName(name);
 
-	// Soft delete
-	const deletedTag = await client
+	await client
 		.update(tags)
 		.set({
-			deletedAt: new Date().toISOString(),
-			deletedBy: userId
+			usageCount: sql`${tags.usageCount} - 1`
 		})
-		.where(eq(tags.id, tagId))
+		.where(eq(tags.name, normalizedName));
+};
+
+/**
+ * Delete unused tags (usageCount = 0)
+ * Can be run as a cleanup task
+ */
+export const deleteUnusedTags = async (
+	db: D1Database
+): Promise<number> => {
+	const client = drizzle(db, { schema });
+
+	const result = await client
+		.delete(tags)
+		.where(eq(tags.usageCount, 0))
 		.returning();
 
-	return deletedTag[0];
+	return result.length;
 };

@@ -43,6 +43,27 @@
       "when": 1759407745489,
       "tag": "0005_mean_meteorite",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1759420213560,
+      "tag": "0006_bitter_ender_wiggin",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1759420300929,
+      "tag": "0007_flawless_typhoid_mary",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1759420335555,
+      "tag": "0008_nappy_exodus",
+      "breakpoints": true
     }
   ]
 }

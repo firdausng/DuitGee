@@ -1,6 +1,7 @@
-import { sqliteTable, integer, text, real } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, integer, text, real, primaryKey } from 'drizzle-orm/sqlite-core';
 import { createId } from '@paralleldrive/cuid2';
-import { formatISO } from 'date-fns';
+import { UTCDate } from "@date-fns/utc";
+import { formatISO } from "date-fns";
 
 export const users = sqliteTable('users', {
 	id: text('id').primaryKey().$defaultFn(() => createId()),
@@ -8,8 +9,8 @@ export const users = sqliteTable('users', {
 	firstName: text('first_name'),
 	lastName: text('last_name'),
 	name: text('name'), // Full name or display name
-    createdAt: text('created_at').$defaultFn(() => formatISO(new Date())),
-    updatedAt: text('updated_at').$defaultFn(() => formatISO(new Date())),
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
+    updatedAt: text('updated_at').$defaultFn(() => formatISO(new UTCDate())),
     deletedAt: text('deleted_at'),
 });
 
@@ -23,9 +24,9 @@ export const categoryGroups = sqliteTable('category_groups', {
 	isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(false),
 	vaultId: text('vault_id').references(() => vaults.id, { onDelete: 'cascade' }), // null for public groups
     // Audit fields
-    createdAt: text('created_at').$defaultFn(() => formatISO(new Date())),
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
     createdBy: text('created_by').notNull(), // User ID as string, no FK constraint
-    updatedAt: text('updated_at').$defaultFn(() => formatISO(new Date())),
+    updatedAt: text('updated_at').$defaultFn(() => formatISO(new UTCDate())),
     updatedBy: text('updated_by'), // User ID as string, no FK constraint
     deletedAt: text('deleted_at'),
     deletedBy: text('deleted_by'), // User ID as string, no FK constraint
@@ -43,9 +44,9 @@ export const categories = sqliteTable('categories', {
 	isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(false),
 	vaultId: text('vault_id').references(() => vaults.id, { onDelete: 'cascade' }), // null for public categories
     // Audit fields
-    createdAt: text('created_at').$defaultFn(() => formatISO(new Date())),
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
     createdBy: text('created_by').notNull(), // User ID as string, no FK constraint
-    updatedAt: text('updated_at').$defaultFn(() => formatISO(new Date())),
+    updatedAt: text('updated_at').$defaultFn(() => formatISO(new UTCDate())),
     updatedBy: text('updated_by'), // User ID as string, no FK constraint
     deletedAt: text('deleted_at'),
     deletedBy: text('deleted_by'), // User ID as string, no FK constraint
@@ -62,9 +63,9 @@ export const vaults = sqliteTable('vaults', {
 	ownerId: text('owner_id').notNull(), // User ID as string, no FK constraint for microservice compatibility
 	isPersonal: integer('is_personal', { mode: 'boolean' }).notNull().default(true), // false for shared vaults
     // Audit fields
-    createdAt: text('created_at').$defaultFn(() => formatISO(new Date())),
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
     createdBy: text('created_by').notNull(), // User ID as string, no FK constraint
-    updatedAt: text('updated_at').$defaultFn(() => formatISO(new Date())),
+    updatedAt: text('updated_at').$defaultFn(() => formatISO(new UTCDate())),
     updatedBy: text('updated_by'), // User ID as string, no FK constraint
     deletedAt: text('deleted_at'),
     deletedBy: text('deleted_by'), // User ID as string, no FK constraint
@@ -80,10 +81,10 @@ export const vaultMembers = sqliteTable('vault_members', {
 	invitedBy: text('invited_by'), // User ID as string, no FK constraint
 	status: text('status').notNull().default('pending'), // 'pending', 'active', 'declined', 'removed'
     // Audit fields
-    invitedAt: text('invited_at').$defaultFn(() => formatISO(new Date())),
+    invitedAt: text('invited_at').$defaultFn(() => formatISO(new UTCDate())),
     joinedAt: text('joined_at'),
-    createdAt: text('created_at').$defaultFn(() => formatISO(new Date())),
-    updatedAt: text('updated_at').$defaultFn(() => formatISO(new Date())),
+    createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
+    updatedAt: text('updated_at').$defaultFn(() => formatISO(new UTCDate())),
     updatedBy: text('updated_by'), // User ID as string, no FK constraint
     deletedAt: text('deleted_at'),
     deletedBy: text('deleted_by'), // User ID as string, no FK constraint
@@ -109,29 +110,24 @@ export const expenses = sqliteTable('expenses', {
     deletedBy: text('deleted_by'), // User ID as string, no FK constraint
 });
 
-// Tags - flexible labeling system (flat, no groups)
+// Tags - Twitter-style flexible labeling (case-insensitive, auto-created)
 export const tags = sqliteTable('tags', {
-	id: text('id').primaryKey().$defaultFn(() => createId()),
-	vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
-	name: text('name').notNull(),
-	color: text('color').notNull().default('#6B7280'),
-	icon: text('icon'),
-	iconType: text('icon_type').default('emoji'), // 'emoji' or 'phosphor'
-	// Audit fields
-	createdAt: text('created_at').$defaultFn(() => formatISO(new Date())),
-	createdBy: text('created_by').notNull(),
-	updatedAt: text('updated_at').$defaultFn(() => formatISO(new Date())),
-	updatedBy: text('updated_by'),
-	deletedAt: text('deleted_at'),
-	deletedBy: text('deleted_by'),
+	name: text('name').primaryKey(), // Lowercase, normalized (e.g., "travel")
+	usageCount: integer('usage_count').notNull().default(0),
+	createdAt: text('created_at').$defaultFn(() => new Date().toISOString()),
+	createdBy: text('created_by').notNull(), // First user who used it
 });
 
 // Junction table for many-to-many relationship between expenses and tags
 export const expenseTags = sqliteTable('expense_tags', {
 	expenseId: text('expense_id').notNull().references(() => expenses.id, { onDelete: 'cascade' }),
-	tagId: text('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
-	createdAt: text('created_at').$defaultFn(() => formatISO(new Date())),
-});
+	tagName: text('tag_name').notNull().references(() => tags.name, { onDelete: 'cascade' }),
+    color: text('color').notNull().default('#6B7280'), // Per-expense tag color customization
+	createdAt: text('created_at').$defaultFn(() => new Date().toISOString()),
+}, (table) => ({
+	// Composite primary key to prevent duplicate tags on same expense
+	pk: primaryKey({ columns: [table.expenseId, table.tagName] }),
+}));
 
 // Expense templates - reusable expense configurations
 export const expenseTemplates = sqliteTable('expense_templates', {
@@ -162,9 +158,13 @@ export const expenseTemplates = sqliteTable('expense_templates', {
 // Junction table for template tags
 export const expenseTemplateTags = sqliteTable('expense_template_tags', {
 	templateId: text('template_id').notNull().references(() => expenseTemplates.id, { onDelete: 'cascade' }),
-	tagId: text('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
-	createdAt: text('created_at').$defaultFn(() => formatISO(new Date())),
-});
+    tagName: text('tag_name').notNull().references(() => tags.name, { onDelete: 'cascade' }),
+    color: text('color').notNull().default('#6B7280'),
+	createdAt: text('created_at').$defaultFn(() => new Date().toISOString()),
+}, (table) => ({
+	// Composite primary key to prevent duplicate tags on same template
+	pk: primaryKey({ columns: [table.templateId, table.tagName] }),
+}));
 
 // Payment types table
 export const paymentTypes = sqliteTable('payment_types', {

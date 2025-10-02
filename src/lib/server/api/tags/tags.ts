@@ -4,20 +4,11 @@ import { vValidator } from "@hono/valibot-validator";
 import {
 	getTags,
 	getTag,
-	createTag,
-	updateTag,
-	deleteTag
+	searchTags,
+	deleteUnusedTags
 } from "$lib/server/api/tags/handlers";
 import { describeRoute, resolver } from 'hono-openapi';
-
-const tagSchema = v.object({
-	name: v.pipe(v.string(), v.minLength(1, 'Name must be 1 or more characters long.')),
-	color: v.optional(v.pipe(v.string(), v.regex(/^#[0-9A-F]{6}$/i, 'Invalid color format'))),
-	icon: v.optional(v.string()),
-	iconType: v.optional(v.string())
-});
-
-const updateTagSchema = v.partial(tagSchema);
+import { tagSchema } from "$lib/server/api/tags/schema";
 
 const TAG_TAG = ['Tag'];
 const commonTagConfig = {
@@ -25,71 +16,72 @@ const commonTagConfig = {
 };
 
 export const tagsApi = new Hono<App.Api>()
+	// Get all tags (ordered by popularity)
 	.get(
-		'/vaults/:vaultId/tags',
+		'/tags',
 		describeRoute({
 			...commonTagConfig,
-			description: 'Get tags list',
+			description: 'Get all tags ordered by usage count (most popular first)',
 			responses: {
 				200: {
 					description: 'Successful response',
 					content: {
-						'application/json': { schema: resolver(v.array(v.any())) },
+						'application/json': { schema: resolver(v.array(tagSchema)) },
 					},
 				},
 			},
 		}),
 		async (c) => {
-		const vaultId = c.req.param('vaultId');
-		const tagsList = await getTags(vaultId, c.env.DB);
+		const limit = c.req.query('limit') ? parseInt(c.req.query('limit')!) : undefined;
+		const tagsList = await getTags(c.env.DB, { limit });
 
 		return c.json(tagsList);
 	})
-	.post(
-		'/vaults/:vaultId/tags',
-		describeRoute({
-			...commonTagConfig,
-			description: 'Create tag',
-			responses: {
-				201: {
-					description: 'Successful response',
-					content: {
-						'application/json': { schema: resolver(v.any()) },
-					},
-				},
-			},
-		}),
-		vValidator('json', tagSchema),
-		async (c) => {
-		const userId = c.get('userEmail') as string;
-		const vaultId = c.req.param('vaultId');
-		const data = c.req.valid('json');
-
-		const tag = await createTag(userId, { ...data, vaultId }, c.env.DB);
-
-		return c.json(tag, 201);
-	})
+	// Search/autocomplete tags
 	.get(
-		'/vaults/:vaultId/tags/:id',
+		'/tags/search',
 		describeRoute({
 			...commonTagConfig,
-			description: 'Get tag by id',
+			description: 'Search tags by name prefix (for autocomplete)',
 			responses: {
 				200: {
 					description: 'Successful response',
 					content: {
-						'application/json': { schema: resolver(v.any()) },
+						'application/json': { schema: resolver(v.array(tagSchema)) },
 					},
-				},
-				404: {
-					description: 'Not Found response',
 				},
 			},
 		}),
 		async (c) => {
-		const id = c.req.param('id');
+		const query = c.req.query('q');
+		const limit = c.req.query('limit') ? parseInt(c.req.query('limit')!) : 20;
 
-		const tag = await getTag(id, c.env.DB);
+		const tagsList = await searchTags(c.env.DB, query, limit);
+
+		return c.json(tagsList);
+	})
+	// Get specific tag by name
+	.get(
+		'/tags/:name',
+		describeRoute({
+			...commonTagConfig,
+			description: 'Get tag by name (case-insensitive)',
+			responses: {
+				200: {
+					description: 'Successful response',
+					content: {
+						'application/json': { schema: resolver(tagSchema) },
+					},
+				},
+				404: {
+					description: 'Tag not found',
+				},
+			},
+		}),
+		async (c) => {
+		const name = c.req.param('name');
+
+		const tag = await getTag(name, c.env.DB);
 
 		if (!tag) {
 			return c.json({ error: 'Tag not found' }, 404);
@@ -97,63 +89,29 @@ export const tagsApi = new Hono<App.Api>()
 
 		return c.json(tag);
 	})
-	.put(
-		'/vaults/:vaultId/tags/:id',
-		describeRoute({
-			...commonTagConfig,
-			description: 'Update tag',
-			responses: {
-				200: {
-					description: 'Successful response',
-					content: {
-						'application/json': { schema: resolver(v.any()) },
-					},
-				},
-				404: {
-					description: 'Not Found response',
-				},
-			},
-		}),
-		vValidator('json', updateTagSchema),
-		async (c) => {
-		const userId = c.get('userEmail') as string;
-		const id = c.req.param('id');
-		const data = c.req.valid('json');
-
-		const tag = await updateTag(userId, id, data, c.env.DB);
-
-		if (!tag) {
-			return c.json({ error: 'Tag not found' }, 404);
-		}
-
-		return c.json(tag);
-	})
+	// Cleanup unused tags (admin/maintenance endpoint)
 	.delete(
-		'/vaults/:vaultId/tags/:id',
+		'/tags/cleanup',
 		describeRoute({
 			...commonTagConfig,
-			description: 'Delete tag',
+			description: 'Delete all unused tags (usageCount = 0)',
 			responses: {
 				200: {
 					description: 'Successful response',
 					content: {
-						'application/json': { schema: resolver(v.object({ message: v.string() })) },
+						'application/json': { schema: resolver(v.object({
+							message: v.string(),
+							deletedCount: v.number()
+						})) },
 					},
-				},
-				404: {
-					description: 'Not Found response',
 				},
 			},
 		}),
 		async (c) => {
-		const userId = c.get('userEmail') as string;
-		const id = c.req.param('id');
+		const deletedCount = await deleteUnusedTags(c.env.DB);
 
-		const isDeleted = await deleteTag(userId, id, c.env.DB);
-
-		if (!isDeleted) {
-			return c.json({ error: 'Tag not found' }, 404);
-		}
-
-		return c.json({ message: 'Tag deleted successfully' });
+		return c.json({
+			message: `Successfully deleted ${deletedCount} unused tags`,
+			deletedCount
+		});
 	});

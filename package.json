@@ -38,6 +38,7 @@
     "wrangler": "^4.40.2"
   },
   "dependencies": {
+    "@date-fns/utc": "^2.1.1",
     "@hono/standard-validator": "^0.1.5",
     "@hono/valibot-validator": "^0.5.3",
     "@hono/zod-validator": "^0.7.2",

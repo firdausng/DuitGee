@@ -96,7 +96,7 @@ const router = new Hono<App.Api>()
 	.route('/users', usersApi)
 	.route('/vaults', vaultsApi)
 	.route('/vault-members', vaultMembersApi)
-	.route('/', tagsApi)
+	.route('/tags', tagsApi)
 	.route('/', templatesApi);
 
 export const api = new Hono<App.Api>().route('/api', router);
