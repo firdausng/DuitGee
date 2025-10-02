@@ -15,9 +15,10 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
 
     try {
         // Get time period from URL params
-        const timePeriod = url.searchParams.get('period') || 'daily';
+        const timePeriod = url.searchParams.get('period') || 'monthly';
         const memberIdsParam = url.searchParams.get('memberIds');
         const memberIds = memberIdsParam ? memberIdsParam.split(',') : undefined;
+        const limit = parseInt(url.searchParams.get('limit') || '10');
 
         // Calculate date range based on time period
         const now = new Date();
@@ -119,7 +120,7 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
                 startDate,
                 endDate,
                 memberIds,
-                limit: 5
+                limit
             }),
             getExpensesSummary(locals.currentUser.id, platform.env.DB, {
                 vaultId,

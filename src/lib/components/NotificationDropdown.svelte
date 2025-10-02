@@ -1,7 +1,16 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { DropdownMenu } from 'bits-ui';
-    import { Bell, Check, X, Eye, UserPlus, Receipt, Users, Gear, Megaphone, Clock } from 'phosphor-svelte';
+	import Bell from 'phosphor-svelte/lib/Bell';
+	import Check from 'phosphor-svelte/lib/Check';
+	import X from 'phosphor-svelte/lib/X';
+	import Eye from 'phosphor-svelte/lib/Eye';
+	import UserPlus from 'phosphor-svelte/lib/UserPlus';
+	import Receipt from 'phosphor-svelte/lib/Receipt';
+	import Users from 'phosphor-svelte/lib/Users';
+	import Gear from 'phosphor-svelte/lib/Gear';
+	import Megaphone from 'phosphor-svelte/lib/Megaphone';
+	import Clock from 'phosphor-svelte/lib/Clock';
     import Button from '$lib/components/ui/Button.svelte';
     import {authManager} from "$lib/stores/current-session.svelte";
 

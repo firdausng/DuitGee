@@ -8,7 +8,10 @@
 	import Label from '$lib/components/ui/Label.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import IconDisplay from '$lib/components/IconDisplay.svelte';
-	import { Palette, Lock, Globe, Vault } from 'phosphor-svelte';
+	import Palette from 'phosphor-svelte/lib/Palette';
+	import Lock from 'phosphor-svelte/lib/Lock';
+	import Globe from 'phosphor-svelte/lib/Globe';
+	import Vault from 'phosphor-svelte/lib/Vault';
 
 	interface Props {
 		formData: SuperValidated<Infer<VaultSchema>>;

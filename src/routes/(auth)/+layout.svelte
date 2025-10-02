@@ -6,7 +6,17 @@
 	import NotificationDropdown from '$lib/components/NotificationDropdown.svelte';
 	import InvitationIndicator from '$lib/components/InvitationIndicator.svelte';
 	import IconDisplay from '$lib/components/IconDisplay.svelte';
-	import { House, Receipt, Tag, ChartPie, User, Stool, CaretRight, Gear, Bell, CaretDown, List, Moon, Sun, Plus, UserPlus } from 'phosphor-svelte';
+	import House from 'phosphor-svelte/lib/House';
+	import Receipt from 'phosphor-svelte/lib/Receipt';
+	import Tag from 'phosphor-svelte/lib/Tag';
+	import ChartPie from 'phosphor-svelte/lib/ChartPie';
+	import User from 'phosphor-svelte/lib/User';
+	import Stool from 'phosphor-svelte/lib/Stool';
+	import CaretRight from 'phosphor-svelte/lib/CaretRight';
+	import Gear from 'phosphor-svelte/lib/Gear';
+	import List from 'phosphor-svelte/lib/List';
+	import Plus from 'phosphor-svelte/lib/Plus';
+	import ArrowDown from 'phosphor-svelte/lib/ArrowDown';
 	import { goto } from '$app/navigation';
 	import { theme } from '$lib/stores/theme.svelte.js';
     import {authManager} from "$lib/stores/current-session.svelte";
@@ -379,7 +389,7 @@
 								>
 									<span class="text-xs">+</span>
 									<span class="ml-1 hidden md:inline">Quick Add</span>
-									<CaretDown class="w-3 h-3 ml-1 transition-transform duration-200 {showQuickAddDropdown ? 'rotate-180' : ''}" />
+									<ArrowDown class="w-3 h-3 ml-1 transition-transform duration-200 {showQuickAddDropdown ? 'rotate-180' : ''}" />
 								</Button>
 
 								{#if showQuickAddDropdown}
@@ -460,7 +470,7 @@
 									>
 										<Gear class="w-3.5 h-3.5 mr-1.5" />
 										<span class="hidden md:inline">Manage</span>
-										<CaretDown class="w-3 h-3 ml-1 transition-transform duration-200 {showVaultDropdown ? 'rotate-180' : ''}" />
+										<ArrowDown class="w-3 h-3 ml-1 transition-transform duration-200 {showVaultDropdown ? 'rotate-180' : ''}" />
 									</button>
 
 									{#if showVaultDropdown}

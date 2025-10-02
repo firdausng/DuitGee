@@ -1,7 +1,12 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/Button.svelte';
 	import IconDisplay from '$lib/components/IconDisplay.svelte';
-	import { Plus, Pencil, Trash, Folder, GridFour, List } from 'phosphor-svelte';
+	import Plus from 'phosphor-svelte/lib/Plus';
+	import Pencil from 'phosphor-svelte/lib/Pencil';
+	import Trash from 'phosphor-svelte/lib/Trash';
+	import Folder from 'phosphor-svelte/lib/Folder';
+	import GridFour from 'phosphor-svelte/lib/GridFour';
+	import List from 'phosphor-svelte/lib/List';
     import {page} from "$app/state";
     import {goto} from "$app/navigation";
 

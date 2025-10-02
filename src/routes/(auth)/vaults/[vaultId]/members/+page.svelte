@@ -1,6 +1,14 @@
 <script lang="ts">
     import Button from '$lib/components/ui/Button.svelte';
-    import { UserPlus, Crown, Shield, User, Mailbox, Clock, Check, X, List } from 'phosphor-svelte';
+	import UserPlus from 'phosphor-svelte/lib/UserPlus';
+	import Crown from 'phosphor-svelte/lib/Crown';
+	import Shield from 'phosphor-svelte/lib/Shield';
+	import User from 'phosphor-svelte/lib/User';
+	import Mailbox from 'phosphor-svelte/lib/Mailbox';
+	import Clock from 'phosphor-svelte/lib/Clock';
+	import Check from 'phosphor-svelte/lib/Check';
+	import X from 'phosphor-svelte/lib/X';
+	import List from 'phosphor-svelte/lib/List';
 
     let { data } = $props();
 

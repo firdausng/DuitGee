@@ -2,7 +2,9 @@
     import { superForm } from 'sveltekit-superforms';
     import Button from '$lib/components/ui/Button.svelte';
     import Input from '$lib/components/ui/Input.svelte';
-    import { User, Mailbox, AddressBook } from 'phosphor-svelte';
+	import User from 'phosphor-svelte/lib/User';
+	import Mailbox from 'phosphor-svelte/lib/Mailbox';
+	import AddressBook from 'phosphor-svelte/lib/AddressBook';
 
     let { data } = $props();
 

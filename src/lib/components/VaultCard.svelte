@@ -1,7 +1,12 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/Button.svelte';
 	import IconDisplay from '$lib/components/IconDisplay.svelte';
-	import { Users, Gear, Trash, Lock, Globe, Star } from 'phosphor-svelte';
+	import Users from 'phosphor-svelte/lib/Users';
+	import Gear from 'phosphor-svelte/lib/Gear';
+	import Trash from 'phosphor-svelte/lib/Trash';
+	import Lock from 'phosphor-svelte/lib/Lock';
+	import Globe from 'phosphor-svelte/lib/Globe';
+	import Star from 'phosphor-svelte/lib/Star';
     import {goto} from "$app/navigation";
 
 	interface Props {

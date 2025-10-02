@@ -2,7 +2,11 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import VaultCard from '$lib/components/VaultCard.svelte';
 	import VaultListItem from '$lib/components/VaultListItem.svelte';
-	import { Plus, Vault, Users, GridFour, List } from 'phosphor-svelte';
+	import Plus from 'phosphor-svelte/lib/Plus';
+	import Vault from 'phosphor-svelte/lib/Vault';
+	import Users from 'phosphor-svelte/lib/Users';
+	import GridFour from 'phosphor-svelte/lib/GridFour';
+	import List from 'phosphor-svelte/lib/List';
     import {goto} from "$app/navigation";
 
 	let { data } = $props();

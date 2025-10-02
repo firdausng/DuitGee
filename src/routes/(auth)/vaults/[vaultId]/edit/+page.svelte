@@ -3,7 +3,7 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
-	import { Trash } from 'phosphor-svelte';
+	import Trash from 'phosphor-svelte/lib/Trash';
 
 	let { data } = $props();
 

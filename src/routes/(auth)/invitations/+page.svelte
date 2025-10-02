@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { UserPlus, Check, X, Clock, Users, Stool } from 'phosphor-svelte';
+	import UserPlus from 'phosphor-svelte/lib/UserPlus';
+	import Check from 'phosphor-svelte/lib/Check';
+	import X from 'phosphor-svelte/lib/X';
+	import Clock from 'phosphor-svelte/lib/Clock';
+	import Users from 'phosphor-svelte/lib/Users';
+	import Stool from 'phosphor-svelte/lib/Stool';
     import Button from '$lib/components/ui/Button.svelte';
     import { enhance } from '$app/forms';
 

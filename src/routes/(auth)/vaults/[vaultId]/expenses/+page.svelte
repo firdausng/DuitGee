@@ -6,7 +6,11 @@
 	import IconDisplay from '$lib/components/IconDisplay.svelte';
 	import AlertDialog from '$lib/components/ui/AlertDialog.svelte';
 	import { authManager } from '$lib/stores/current-session.svelte';
-	import { Plus, Pencil, Trash, MagnifyingGlass, Funnel } from 'phosphor-svelte';
+	import Plus from 'phosphor-svelte/lib/Plus';
+	import Pencil from 'phosphor-svelte/lib/Pencil';
+	import Trash from 'phosphor-svelte/lib/Trash';
+	import MagnifyingGlass from 'phosphor-svelte/lib/MagnifyingGlass';
+	import Funnel from 'phosphor-svelte/lib/Funnel';
     import {goto} from "$app/navigation";
 	import { page, navigating } from '$app/state';
 	import { fade, slide } from 'svelte/transition';

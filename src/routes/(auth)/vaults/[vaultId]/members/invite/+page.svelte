@@ -3,7 +3,12 @@
     import { valibot } from 'sveltekit-superforms/adapters';
     import Button from '$lib/components/ui/Button.svelte';
     import Input from '$lib/components/ui/Input.svelte';
-    import { Mailbox, Shield, User, UserPlus, ArrowLeft, Crown } from 'phosphor-svelte';
+	import Mailbox from 'phosphor-svelte/lib/Mailbox';
+	import Shield from 'phosphor-svelte/lib/Shield';
+	import User from 'phosphor-svelte/lib/User';
+	import UserPlus from 'phosphor-svelte/lib/UserPlus';
+	import ArrowLeft from 'phosphor-svelte/lib/ArrowLeft';
+	import Crown from 'phosphor-svelte/lib/Crown';
     import * as v from 'valibot';
 
     let { data } = $props();

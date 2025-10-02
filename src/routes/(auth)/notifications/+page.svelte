@@ -1,6 +1,17 @@
 <script lang="ts">
     import Button from '$lib/components/ui/Button.svelte';
-    import { Bell, Check, X, Eye, UserPlus, Receipt, Users, Gear, Megaphone, Clock, CaretLeft, CaretRight } from 'phosphor-svelte';
+	import Bell from 'phosphor-svelte/lib/Bell';
+	import Check from 'phosphor-svelte/lib/Check';
+	import X from 'phosphor-svelte/lib/X';
+	import Eye from 'phosphor-svelte/lib/Eye';
+	import UserPlus from 'phosphor-svelte/lib/UserPlus';
+	import Receipt from 'phosphor-svelte/lib/Receipt';
+	import Users from 'phosphor-svelte/lib/Users';
+	import Gear from 'phosphor-svelte/lib/Gear';
+	import Megaphone from 'phosphor-svelte/lib/Megaphone';
+	import Clock from 'phosphor-svelte/lib/Clock';
+	import CaretLeft from 'phosphor-svelte/lib/CaretLeft';
+	import CaretRight from 'phosphor-svelte/lib/CaretRight';
     import { goto } from '$app/navigation';
 
     let { data } = $props();

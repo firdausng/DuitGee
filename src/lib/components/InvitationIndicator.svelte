@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { UserPlus } from 'phosphor-svelte';
+	import UserPlus from 'phosphor-svelte/lib/UserPlus';
     import { authManager } from "$lib/stores/current-session.svelte";
     import { goto } from '$app/navigation';
 
