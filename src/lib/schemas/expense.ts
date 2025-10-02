@@ -5,7 +5,10 @@ export const expenseSchema = v.object({
 	amount: v.pipe(v.number(), v.minValue(0.01, 'Amount must be positive')),
 	categoryId: v.pipe(v.string(), v.minLength(1, 'Category is required')),
 	//vaultId: v.pipe(v.string(), v.minLength(1, 'Vault is required')), // Required vault
-	date: v.pipe(v.string(), v.isoDateTime())
+	date: v.pipe(v.string(), v.isoDateTime()),
+	paymentType: v.optional(v.string()),
+	paymentProvider: v.optional(v.string()),
+	tagIds: v.optional(v.string()) // Comma-separated tag IDs
 });
 
 export const categoryGroupSchema = v.object({

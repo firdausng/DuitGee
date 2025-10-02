@@ -38,6 +38,7 @@
 		<ExpenseForm
 			data={data.form}
 			categories={data.categories}
+			tags={data.tags}
 			isEdit={true}
 			vaultId={data.vaultId}
 		/>

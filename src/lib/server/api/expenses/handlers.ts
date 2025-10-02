@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
-import { expenses, categories, categoryGroups, vaults, vaultMembers, users } from "$lib/server/db/schema";
+import { expenses, categories, categoryGroups, vaults, vaultMembers, users, expenseTags, expenseTemplates } from "$lib/server/db/schema";
 import { and, eq, desc, sum, sql, or, isNull } from "drizzle-orm";
 import { requireVaultPermission } from "$lib/server/utils/permissions";
 import { initialAuditFields, updateAuditFields } from "$lib/server/utils/audit";
@@ -160,7 +160,7 @@ export const getExpense = async (
 	vaultId: string,
 	expenseId: string,
 	db: D1Database
-): Promise<Expense | undefined> => {
+): Promise<any> => {
 	const client = drizzle(db, { schema });
 
 	// First get the expense to verify it belongs to the vault
@@ -183,7 +183,19 @@ export const getExpense = async (
 
 	const row = expenseResult[0];
 
-	// Transform to match our Expense type
+	// Get associated tags
+	const tagResults = await client
+		.select({
+			id: schema.tags.id,
+			name: schema.tags.name,
+			color: schema.tags.color,
+			icon: schema.tags.icon
+		})
+		.from(expenseTags)
+		.leftJoin(schema.tags, eq(expenseTags.tagId, schema.tags.id))
+		.where(eq(expenseTags.expenseId, expenseId));
+
+	// Transform to match our Expense type with additional fields
 	return {
 		id: row.expenses.id,
 		note: row.expenses.note,
@@ -191,6 +203,8 @@ export const getExpense = async (
 		date: row.expenses.date,
 		createdAt: row.expenses.createdAt,
 		vaultId: row.expenses.vaultId || undefined,
+		paymentType: row.expenses.paymentType || undefined,
+		paymentProvider: row.expenses.paymentProvider || undefined,
 		vault: null, // Not included in this query
 		category: row.categories?.id ? {
 			id: row.categories.id,
@@ -205,7 +219,13 @@ export const getExpense = async (
 				iconType: (row.category_groups.iconType as 'emoji' | 'phosphor') || 'emoji',
 				color: row.category_groups.color
 			} : null
-		} : null
+		} : null,
+		tags: tagResults.filter(t => t.id).map(t => ({
+			id: t.id!,
+			name: t.name!,
+			color: t.color!,
+			icon: t.icon || undefined
+		}))
 	};
 };
 
@@ -218,9 +238,11 @@ export const createExpense = async (userId: string, data: any, db: D1Database, k
 
 	// Generate expense ID and prepare data
 	const expenseId = createId();
+	const { tagIds, templateId, ...expenseFields } = data;
+
 	const expenseData = {
 		id: expenseId,
-		...data,
+		...expenseFields,
 		userId,
 		date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
 		...initialAuditFields({ userId })
@@ -235,6 +257,27 @@ export const createExpense = async (userId: string, data: any, db: D1Database, k
 		.values(expenseData)
 		.returning();
 
+	// Handle tag associations if provided
+	if (tagIds && tagIds.length > 0) {
+		const tagEntries = tagIds.map((tagId: string) => ({
+			expenseId,
+			tagId,
+			createdAt: formatISO(new Date())
+		}));
+		await client.insert(expenseTags).values(tagEntries);
+	}
+
+	// Increment template usage if expense was created from a template
+	if (templateId) {
+		await client
+			.update(expenseTemplates)
+			.set({
+				usageCount: sql`${expenseTemplates.usageCount} + 1`,
+				lastUsedAt: formatISO(new Date())
+			})
+			.where(eq(expenseTemplates.id, templateId));
+	}
+
 	return expense[0];
 };
 
@@ -244,8 +287,11 @@ export const updateExpense = async (userId: string, vaultId: string, expenseId: 
 	// Check if user has admin permissions to edit expenses
 	await requireVaultPermission(userId, vaultId, 'canEditExpenses', db);
 
+	// Extract tags from data
+	const { tagIds, ...expenseFields } = data;
+
 	// Format date if provided
-	const updateData = { ...data };
+	const updateData = { ...expenseFields };
 	if (updateData.date) {
 		updateData.date = new Date(updateData.date).toISOString();
 	}
@@ -263,6 +309,24 @@ export const updateExpense = async (userId: string, vaultId: string, expenseId: 
 			)
 		)
 		.returning();
+
+	// Update tag associations if provided
+	if (tagIds !== undefined) {
+		// Delete existing tags
+		await client
+			.delete(expenseTags)
+			.where(eq(expenseTags.expenseId, expenseId));
+
+		// Insert new tags
+		if (tagIds.length > 0) {
+			const tagEntries = tagIds.map((tagId: string) => ({
+				expenseId,
+				tagId,
+				createdAt: formatISO(new Date())
+			}));
+			await client.insert(expenseTags).values(tagEntries);
+		}
+	}
 
 	// Invalidate expense cache after update
 	await invalidateExpenseCache(expenseId, kv);

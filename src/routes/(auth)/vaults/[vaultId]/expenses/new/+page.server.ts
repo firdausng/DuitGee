@@ -5,6 +5,8 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from "./$types";
 import {createExpense} from "$lib/server/api/expenses/handlers";
 import {getCategories} from "$lib/server/api/categories/handlers";
+import {getTags} from "$lib/server/api/tags/handlers";
+import {getTemplates} from "$lib/server/api/templates/handlers";
 
 export const load: PageServerLoad = async ({platform, locals, params}) => {
     if(platform === undefined){
@@ -13,12 +15,18 @@ export const load: PageServerLoad = async ({platform, locals, params}) => {
 
     let {vaultId} = params;
 
-    const categories = await getCategories(vaultId, platform.env.DB);
+    const [categories, tags, templates] = await Promise.all([
+        getCategories(vaultId, platform.env.DB),
+        getTags(vaultId, platform.env.DB),
+        getTemplates(locals.currentUser.id, vaultId, platform.env.DB)
+    ]);
 
 	const form = await superValidate(valibot(expenseSchema));
 	return {
         form,
         categories,
+        tags,
+        templates,
         vaultId
     };
 };
@@ -36,9 +44,17 @@ export const actions: Actions = {
 			return fail(400, { form });
 		}
 
+        // Parse tagIds from comma-separated string
+        const tagIds = form.data.tagIds
+            ? form.data.tagIds.split(',').filter(Boolean)
+            : [];
+
         const data = {
             ...form.data,
-            vaultId
+            vaultId,
+            tagIds,
+            paymentType: form.data.paymentType || undefined,
+            paymentProvider: form.data.paymentProvider || undefined
         }
 
 		try {

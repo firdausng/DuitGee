@@ -4,15 +4,6 @@
 
 	let { data } = $props();
 
-	// Mock categories - replace with actual data from load function
-	// const categories = [
-	// 	{ id: '1', name: 'Food', color: '#10B981' },
-	// 	{ id: '2', name: 'Transportation', color: '#F59E0B' },
-	// 	{ id: '3', name: 'Entertainment', color: '#8B5CF6' },
-	// 	{ id: '4', name: 'Shopping', color: '#EC4899' },
-	// 	{ id: '5', name: 'Bills', color: '#EF4444' }
-	// ];
-
 	function handleSuccess() {
 		goto(`/vaults/${data.vaultId}/expenses`);
 	}
@@ -37,6 +28,8 @@
 		<ExpenseForm
 			data={data.form}
 			categories={data.categories}
+			tags={data.tags}
+			templates={data.templates}
 			vaultId={data.vaultId}
 		/>
 	</div>

@@ -1,15 +1,15 @@
 <script lang="ts">
     import {type Infer, superForm, type SuperValidated} from 'sveltekit-superforms';
-	import { valibotClient } from 'sveltekit-superforms/adapters';
-    import {type ExpenseSchema, expenseSchema} from '$lib/schemas/expense';
+    import {type ExpenseSchema} from '$lib/schemas/expense';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import Textarea from '$lib/components/ui/Textarea.svelte';
-	import { createEventDispatcher } from 'svelte';
-	import { page } from '$app/stores';
+	import TagSelector from '$lib/components/TagSelector.svelte';
+	import TemplateSelector from '$lib/components/TemplateSelector.svelte';
 	import { goto } from '$app/navigation';
+	import CaretDown from 'phosphor-svelte/lib/CaretDown';
 
 	interface Props {
 		data: SuperValidated<Infer<ExpenseSchema>>;
@@ -22,18 +22,157 @@
 			keywords?: string;
 			group?: { name: string; color?: string }
 		}>;
+		tags?: Array<{
+			id: string;
+			name: string;
+			color: string;
+			icon?: string;
+		}>;
+		templates?: Array<any>;
 		isEdit?: boolean;
 		vaultId: string;
 	}
 
-	let { data, categories, isEdit = false, vaultId }: Props = $props();
+	let { data, categories, tags = [], templates = [], isEdit = false, vaultId }: Props = $props();
 
 	// State for searchable categories
 	let allCategories = $state(categories);
 	let searchableCategories = $state(categories);
 	let isSearching = $state(false);
 
+	// State for payment and tags
+	let selectedTagIds = $state<string[]>([]);
+	let showAdvancedOptions = $state(false);
+	let paymentType = $state<string>('');
+	let paymentProvider = $state<string>('');
+
+	// Make tags reactive so new tags appear immediately
+	let allTags = $state(tags);
+
 	const { form, errors, enhance, submitting } = superForm(data);
+
+	const paymentTypes = [
+		{ value: 'cash', label: 'Cash' },
+		{ value: 'e_wallet', label: 'E-Wallet' },
+		{ value: 'credit_card', label: 'Credit Card' },
+		{ value: 'debit_card', label: 'Debit Card' },
+		{ value: 'bank_transfer', label: 'Bank Transfer' }
+	];
+
+	const eWalletProviders = ['GoPay', 'OVO', 'Dana', 'ShopeePay', 'LinkAja'];
+	const bankProviders = ['BCA', 'Mandiri', 'BNI', 'BRI', 'Permata', 'CIMB'];
+
+	let showProviderSelect = $derived(
+		paymentType === 'e_wallet' ||
+		paymentType === 'bank_transfer' ||
+		paymentType === 'credit_card' ||
+		paymentType === 'debit_card'
+	);
+
+	let providerOptions = $derived(() => {
+		if (paymentType === 'e_wallet') return eWalletProviders;
+		if (paymentType === 'bank_transfer' ||
+			paymentType === 'credit_card' ||
+			paymentType === 'debit_card') return bankProviders;
+		return [];
+	});
+
+	// Map payment type IDs to codes for backwards compatibility
+	const paymentTypeIdToCode: Record<string, string> = {
+		'pt_cash': 'cash',
+		'pt_ewallet': 'e_wallet',
+		'pt_credit': 'credit_card',
+		'pt_debit': 'debit_card',
+		'pt_transfer': 'bank_transfer'
+	};
+
+	// Map payment provider IDs to names
+	const paymentProviderIdToName: Record<string, string> = {
+		'pp_gopay': 'GoPay',
+		'pp_ovo': 'OVO',
+		'pp_dana': 'Dana',
+		'pp_shopeepay': 'ShopeePay',
+		'pp_linkaja': 'LinkAja',
+		'pp_bca': 'BCA',
+		'pp_mandiri': 'Mandiri',
+		'pp_bni': 'BNI',
+		'pp_bri': 'BRI',
+		'pp_permata': 'Permata',
+		'pp_cimb': 'CIMB'
+	};
+
+	function handleTemplateSelect(template: any) {
+		// Pre-fill form with template data
+		if (template.categoryId) $form.categoryId = template.categoryId;
+		if (template.defaultAmount) $form.amount = template.defaultAmount;
+		if (template.note) $form.note = template.note;
+
+		// Map payment type ID to code
+		if (template.paymentTypeId) {
+			paymentType = paymentTypeIdToCode[template.paymentTypeId] || '';
+		}
+
+		// Map payment provider ID to name
+		if (template.paymentProviderId) {
+			paymentProvider = paymentProviderIdToName[template.paymentProviderId] || '';
+		}
+
+		if (template.tags && template.tags.length > 0) {
+			selectedTagIds = template.tags.map((t: any) => t.id);
+		}
+	}
+
+	function handleTagsChange(tagIds: string[]) {
+		selectedTagIds = tagIds;
+	}
+
+	async function handleCreateTag(name: string): Promise<any> {
+		try {
+			const formData = new FormData();
+			formData.append('name', name);
+			formData.append('color', '#6B7280'); // Default color
+
+			const response = await fetch(`/vaults/${vaultId}/tags`, {
+				method: 'POST',
+				body: formData
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				console.log('Create tag result:', result);
+
+				// Handle SvelteKit action response format
+				if (result.type === 'success' && result.data) {
+					// Parse if data is string (devalue serialization)
+					let data = result.data;
+					if (typeof data === 'string') {
+						try {
+							data = JSON.parse(data);
+						} catch (e) {
+							console.error('Failed to parse data:', e);
+							return null;
+						}
+					}
+
+					// Check if data is the direct response object
+					if (data.success && data.tag) {
+						allTags = [...allTags, data.tag];
+						return data.tag;
+					}
+
+					// Check if data is array format (devalue)
+					if (Array.isArray(data) && data[2]) {
+						const newTag = data[2];
+						allTags = [...allTags, newTag];
+						return newTag;
+					}
+				}
+			}
+		} catch (error) {
+			console.error('Error creating tag:', error);
+		}
+		return null;
+	}
 
 	function handleCancel() {
 		goto(`/vaults/${vaultId}/expenses`);
@@ -103,7 +242,23 @@
 	}
 </script>
 
+<!-- Template Selector (only for new expenses, not edit) -->
+{#if !isEdit && templates.length > 0}
+	<div class="mb-4">
+		<TemplateSelector
+			templates={templates}
+			onSelectTemplate={handleTemplateSelect}
+			maxVisible={4}
+		/>
+	</div>
+{/if}
+
 <form method="POST" use:enhance class="space-y-3">
+	<!-- Hidden fields for payment and tags -->
+	<input type="hidden" name="paymentType" value={paymentType} />
+	<input type="hidden" name="paymentProvider" value={paymentProvider} />
+	<input type="hidden" name="tagIds" value={selectedTagIds.join(',')} />
+
 	<div class="grid grid-cols-2 gap-2">
 		<div>
 			<label for="amount" class="block text-xs font-medium text-muted-foreground mb-1">
@@ -178,6 +333,75 @@
             <p class="mt-0.5 text-xs text-destructive">{$errors.note}</p>
         {/if}
     </div>
+
+	<!-- Advanced Options (collapsible) -->
+	<div class="border-t pt-3">
+		<button
+			type="button"
+			onclick={() => showAdvancedOptions = !showAdvancedOptions}
+			class="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
+		>
+			<CaretDown class="w-4 h-4 transition-transform {showAdvancedOptions ? 'rotate-180' : ''}" />
+			<span>Advanced Options</span>
+			{#if (paymentType || selectedTagIds.length > 0) && !showAdvancedOptions}
+				<span class="text-xs text-primary">({paymentType ? '1' : '0'}{selectedTagIds.length > 0 ? ` + ${selectedTagIds.length} tags` : ''})</span>
+			{/if}
+		</button>
+
+		{#if showAdvancedOptions}
+			<div class="space-y-3 pl-6">
+				<!-- Payment Type -->
+				<div>
+					<label for="payment-type" class="block text-xs font-medium text-muted-foreground mb-1">
+						Payment Type
+					</label>
+					<select
+						id="payment-type"
+						bind:value={paymentType}
+						class="w-full h-8 px-3 py-1 text-sm border rounded-md bg-background text-foreground"
+					>
+						<option value="">Select payment type...</option>
+						{#each paymentTypes as type}
+							<option value={type.value}>{type.label}</option>
+						{/each}
+					</select>
+				</div>
+
+				<!-- Payment Provider -->
+				{#if showProviderSelect}
+					<div>
+						<label for="payment-provider" class="block text-xs font-medium text-muted-foreground mb-1">
+							Payment Provider
+						</label>
+						<SearchableSelect
+							name="paymentProvider"
+							bind:value={paymentProvider}
+							options={providerOptions().map(p => ({ id: p, name: p, color: '#6B7280' }))}
+							placeholder="Choose provider"
+							searchPlaceholder="Search providers..."
+							onSearch={(term) => {}}
+							class="w-full"
+						/>
+					</div>
+				{/if}
+
+				<!-- Tags -->
+				<div>
+					<label class="block text-xs font-medium text-muted-foreground mb-1">
+						Tags
+					</label>
+					<TagSelector
+						availableTags={allTags}
+						bind:selectedTagIds={selectedTagIds}
+						onTagsChange={handleTagsChange}
+						onCreateTag={handleCreateTag}
+						allowCreate={true}
+						placeholder="Add tags..."
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
 
 	<div class="flex gap-2 pt-1">
 		<Button type="submit" disabled={$submitting} size="sm" class="flex-1 h-8 text-xs">

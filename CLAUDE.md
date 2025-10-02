@@ -216,3 +216,8 @@ When using `<select>` with period/filter changes that trigger navigation:
 - Available on both dashboard and expense list pages
 - Mobile and desktop layouts both include delete buttons
 - Delete button styled with destructive variant (red color)
+
+## Seed
+- some data need to be seeded
+- store all seed sql in `seed` folder
+- sql file will be run manually, so do try to run it

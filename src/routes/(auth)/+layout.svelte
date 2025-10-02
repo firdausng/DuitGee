@@ -17,6 +17,10 @@
 	import List from 'phosphor-svelte/lib/List';
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import ArrowDown from 'phosphor-svelte/lib/ArrowDown';
+	import Bell from 'phosphor-svelte/lib/Bell';
+	import Sun from 'phosphor-svelte/lib/Sun';
+	import Moon from 'phosphor-svelte/lib/Moon';
+	import Lightning from 'phosphor-svelte/lib/Lightning';
 	import { goto } from '$app/navigation';
 	import { theme } from '$lib/stores/theme.svelte.js';
     import {authManager} from "$lib/stores/current-session.svelte";
@@ -39,6 +43,8 @@
 				{ name: 'Dashboard', href: `/vaults/${vaultId}`, icon: House, key: 'dashboard' },
 				{ name: 'Expenses', href: `/vaults/${vaultId}/expenses`, icon: Receipt, key: 'expenses' },
 				{ name: 'Categories', href: `/vaults/${vaultId}/categories`, icon: Tag, key: 'categories' },
+				{ name: 'Tags', href: `/vaults/${vaultId}/tags`, icon: Tag, key: 'tags' },
+				{ name: 'Templates', href: `/vaults/${vaultId}/templates`, icon: Lightning, key: 'templates' },
 				{ name: 'Members', href: `/vaults/${vaultId}/members`, icon: User, key: 'members' },
 			];
 		}
@@ -88,6 +94,12 @@
 							if (segments[3] === 'new') {
 								breadcrumbs.push({ name: 'New Category', href: `/vaults/${vaultId}/categories/new`, isHome: false });
 							}
+							break;
+						case 'tags':
+							breadcrumbs.push({ name: 'Tags', href: `/vaults/${vaultId}/tags`, isHome: false });
+							break;
+						case 'templates':
+							breadcrumbs.push({ name: 'Templates', href: `/vaults/${vaultId}/templates`, isHome: false });
 							break;
 						case 'edit':
 							breadcrumbs.push({ name: 'Settings', href: `/vaults/${vaultId}/edit`, isHome: false });
@@ -323,7 +335,7 @@
 												class="flex items-center px-4 py-3 text-sm transition-colors hover:bg-accent text-muted-foreground"
 												onclick={() => showMobileMenu = false}
 											>
-												<UserPlus class="w-4 h-4 mr-3" />
+												<Plus class="w-4 h-4 mr-3" />
 												<span>Invitations</span>
 											</a>
 

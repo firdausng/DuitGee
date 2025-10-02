@@ -5,6 +5,7 @@ import { fail, redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from "./$types";
 import {getCategories} from "$lib/server/api/categories/handlers";
 import {getExpense, updateExpense} from "$lib/server/api/expenses/handlers";
+import {getTags} from "$lib/server/api/tags/handlers";
 
 export const load: PageServerLoad = async ({ params, fetch, locals, cookies, platform }) => {
     if(platform === undefined){
@@ -14,8 +15,11 @@ export const load: PageServerLoad = async ({ params, fetch, locals, cookies, pla
     const { id, vaultId } = params;
 
 	try {
-        const categories = await getCategories(vaultId, platform.env.DB);
-        const expense = await getExpense(vaultId, id, platform.env.DB);
+        const [categories, tags, expense] = await Promise.all([
+            getCategories(vaultId, platform.env.DB),
+            getTags(vaultId, platform.env.DB),
+            getExpense(vaultId, id, platform.env.DB)
+        ]);
 
         if (!expense) {
             throw error(404, 'Expense not found');
@@ -25,14 +29,19 @@ export const load: PageServerLoad = async ({ params, fetch, locals, cookies, pla
 			note: expense.note!,
 			amount: expense.amount,
 			categoryId: expense.category?.id,
-			date: expense.date
+			date: expense.date,
+			paymentType: expense.paymentType || '',
+			paymentProvider: expense.paymentProvider || '',
+			tagIds: expense.tags?.map((t: any) => t.id).join(',') || ''
 		};
 
 		const form = await superValidate(formData, valibot(expenseSchema));
 		return {
             form,
             categories,
-            expense
+            tags,
+            expense,
+            vaultId
         };
 	} catch (err) {
 		throw error(500, 'Failed to load expense');
@@ -51,10 +60,22 @@ export const actions: Actions = {
 			return fail(400, { form });
 		}
 
-		try {
-			const expense = await updateExpense(locals.currentUser.id, vaultId, id, form.data, platform.env.DB);
+		// Parse tagIds from comma-separated string
+		const tagIds = form.data.tagIds
+			? form.data.tagIds.split(',').filter(Boolean)
+			: [];
 
-			redirect(302, '/expenses');
+		const data = {
+			...form.data,
+			tagIds,
+			paymentType: form.data.paymentType || undefined,
+			paymentProvider: form.data.paymentProvider || undefined
+		};
+
+		try {
+			const expense = await updateExpense(locals.currentUser.id, vaultId, id, data, platform.env.DB);
+
+			redirect(302, `/vaults/${vaultId}/expenses`);
 		} catch (err) {
 			return fail(500, {
 				form,

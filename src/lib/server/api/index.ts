@@ -14,6 +14,8 @@ import { vaultMembersApi } from './vault-members/vault-members';
 import {AuthService} from "$lib/server/auth-service.svelte";
 import {jwk} from "hono/jwk";
 import {notificationApi} from "$lib/server/api/notifications/notifications";
+import { openAPIRouteHandler } from 'hono-openapi'
+import { Scalar } from "@scalar/hono-api-reference";
 
 const router = new Hono<App.Api>()
 	// .use('*', cors())
@@ -94,6 +96,47 @@ const router = new Hono<App.Api>()
 	.route('/vault-members', vaultMembersApi);
 
 export const api = new Hono<App.Api>().route('/api', router);
+
+api.get(
+    '/openapi.json',
+    openAPIRouteHandler(router, {
+        documentation: {
+            info: {
+                title: 'Honey Bear API',
+                version: '1.0.0',
+                description: 'Honey Bear API',
+            },
+            servers: [
+                { url: 'http://localhost:9000/api', description: 'Local Server' },
+            ],
+            components: {
+                securitySchemes: {
+                    bearerAuth: {
+                        type: "http",
+                        scheme: "bearer",
+                        bearerFormat: "JWT",
+                    },
+                },
+            },
+            security: [
+                {
+                    bearerAuth: [],
+                },
+            ],
+        },
+    })
+);
+
+api.get(
+    '/scalar',
+    Scalar({
+        url: '/openapi.json',
+        theme: 'purple',
+        pageTitle: 'Honey Bear API',
+    })
+)
+
+
 
 async function hashSHA256(data: string): Promise<string> {
     const encoder = new TextEncoder();
