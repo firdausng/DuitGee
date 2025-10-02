@@ -5,6 +5,8 @@ import { and, eq, desc, sum, sql, or, isNull } from "drizzle-orm";
 import { requireVaultPermission } from "$lib/server/utils/permissions";
 import { initialAuditFields, updateAuditFields } from "$lib/server/utils/audit";
 import { formatISO } from "date-fns";
+import { setExpenseCache, invalidateExpenseCache } from "$lib/server/utils/kv-cache";
+import { createId } from '@paralleldrive/cuid2';
 import type {
 	ExpensesResponse,
 	Expense,
@@ -207,27 +209,36 @@ export const getExpense = async (
 	};
 };
 
-export const createExpense = async (userId: string, data: any, db: D1Database) => {
+export const createExpense = async (userId: string, data: any, db: D1Database, kv?: KVNamespace) => {
 	const client = drizzle(db, { schema });
 
 	// Check if user has permission to create expenses in this vault
 	// Both members and admins can create expenses
 	await requireVaultPermission(userId, data.vaultId, 'canCreateExpenses', db);
 
+	// Generate expense ID and prepare data
+	const expenseId = createId();
+	const expenseData = {
+		id: expenseId,
+		...data,
+		userId,
+		date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
+		...initialAuditFields({ userId })
+	};
+
+	// Write to KV cache first
+	await setExpenseCache(expenseId, expenseData, kv);
+
+	// Then write to database
 	const expense = await client
 		.insert(expenses)
-		.values({
-			...data,
-			userId,
-			date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
-			...initialAuditFields({ userId })
-		})
+		.values(expenseData)
 		.returning();
 
 	return expense[0];
 };
 
-export const updateExpense = async (userId: string, vaultId: string, expenseId: string, data: any, db: D1Database) => {
+export const updateExpense = async (userId: string, vaultId: string, expenseId: string, data: any, db: D1Database, kv?: KVNamespace) => {
 	const client = drizzle(db, { schema });
 
 	// Check if user has admin permissions to edit expenses
@@ -253,10 +264,13 @@ export const updateExpense = async (userId: string, vaultId: string, expenseId: 
 		)
 		.returning();
 
+	// Invalidate expense cache after update
+	await invalidateExpenseCache(expenseId, kv);
+
 	return updatedExpense[0];
 };
 
-export const deleteExpense = async (userId: string, vaultId: string, expenseId: string, db: D1Database) => {
+export const deleteExpense = async (userId: string, vaultId: string, expenseId: string, db: D1Database, kv?: KVNamespace) => {
 	const client = drizzle(db, { schema });
 
 	// Check if user has admin permissions to delete expenses
@@ -271,6 +285,9 @@ export const deleteExpense = async (userId: string, vaultId: string, expenseId: 
 			)
 		)
 		.returning();
+
+	// Invalidate expense cache after deletion
+	await invalidateExpenseCache(expenseId, kv);
 
 	return deletedExpense[0];
 };
@@ -466,7 +483,7 @@ export const getExpensesByEmail = async (
 	return getExpenses(user[0].id, db, options);
 };
 
-export const createExpenseByEmail = async (userEmail: string, data: any, db: D1Database) => {
+export const createExpenseByEmail = async (userEmail: string, data: any, db: D1Database, kv?: KVNamespace) => {
 	const client = drizzle(db, { schema });
 
 	// Find user by email first
@@ -480,10 +497,10 @@ export const createExpenseByEmail = async (userEmail: string, data: any, db: D1D
 		throw new Error('User not found');
 	}
 
-	return createExpense(user[0].id, data, db);
+	return createExpense(user[0].id, data, db, kv);
 };
 
-export const updateExpenseByEmail = async (userEmail: string, vaultId: string, expenseId: string, data: any, db: D1Database) => {
+export const updateExpenseByEmail = async (userEmail: string, vaultId: string, expenseId: string, data: any, db: D1Database, kv?: KVNamespace) => {
 	const client = drizzle(db, { schema });
 
 	// Find user by email first
@@ -497,10 +514,10 @@ export const updateExpenseByEmail = async (userEmail: string, vaultId: string, e
 		throw new Error('User not found');
 	}
 
-	return updateExpense(user[0].id, vaultId, expenseId, data, db);
+	return updateExpense(user[0].id, vaultId, expenseId, data, db, kv);
 };
 
-export const deleteExpenseByEmail = async (userEmail: string, vaultId: string, expenseId: string, db: D1Database) => {
+export const deleteExpenseByEmail = async (userEmail: string, vaultId: string, expenseId: string, db: D1Database, kv?: KVNamespace) => {
 	const client = drizzle(db, { schema });
 
 	// Find user by email first
@@ -514,7 +531,7 @@ export const deleteExpenseByEmail = async (userEmail: string, vaultId: string, e
 		throw new Error('User not found');
 	}
 
-	return deleteExpense(user[0].id, vaultId, expenseId, db);
+	return deleteExpense(user[0].id, vaultId, expenseId, db, kv);
 };
 
 export const getExpensesSummaryByEmail = async (

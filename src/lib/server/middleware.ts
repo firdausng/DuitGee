@@ -94,7 +94,7 @@ export const checkSessionHandler: Handle = async ({ event, resolve }) => {
             event.platform.env.DB);
     }
 
-    const vaults = await getUserVaults(appUser.id, event.platform.env.DB);
+    const vaults = await getUserVaults(appUser.id, event.platform.env.DB, event.platform.env.KV);
 
     console.log(`[checkSessionHandler] setting active user to the local data for ${event.url.pathname}`);
     event.locals.currentSession = successSession;

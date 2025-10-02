@@ -54,7 +54,7 @@ export const expensesApi = new Hono<App.Api>()
 		const vaultId = c.req.param('vaultId');
 		const data = c.req.valid('json');
 
-		const expense = await createExpenseByEmail(userEmail, { ...data, vaultId }, c.env.DB);
+		const expense = await createExpenseByEmail(userEmail, { ...data, vaultId }, c.env.DB, c.env.KV);
 
 		return c.json(expense, 201);
 	})
@@ -77,7 +77,7 @@ export const expensesApi = new Hono<App.Api>()
 		const id = c.req.param('id');
 		const data = c.req.valid('json');
 
-		const expense = await updateExpenseByEmail(userEmail, vaultId, id, data, c.env.DB);
+		const expense = await updateExpenseByEmail(userEmail, vaultId, id, data, c.env.DB, c.env.KV);
 
 		if (!expense) {
 			return c.json({ error: 'Expense not found' }, 404);
@@ -90,7 +90,7 @@ export const expensesApi = new Hono<App.Api>()
 		const vaultId = c.req.param('vaultId');
 		const id = c.req.param('id');
 
-		const isDeleted = await deleteExpenseByEmail(userEmail, vaultId, id, c.env.DB);
+		const isDeleted = await deleteExpenseByEmail(userEmail, vaultId, id, c.env.DB, c.env.KV);
 
 		if (!isDeleted) {
 			return c.json({ error: 'Expense not found' }, 404);

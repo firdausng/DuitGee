@@ -63,7 +63,7 @@ export const vaultsApi = new Hono<App.Api>()
         const data = c.req.valid('json');
 
         try {
-            const vault = await createVaultByEmail(userEmail, data, c.env.DB);
+            const vault = await createVaultByEmail(userEmail, data, c.env.DB, c.env.KV);
             return c.json({
                 success: true,
                 data: vault
@@ -105,7 +105,7 @@ export const vaultsApi = new Hono<App.Api>()
         const data = c.req.valid('json');
 
         try {
-            const vault = await updateVaultByEmail(userEmail, vaultId, data, c.env.DB);
+            const vault = await updateVaultByEmail(userEmail, vaultId, data, c.env.DB, c.env.KV);
             return c.json({
                 success: true,
                 data: vault
@@ -126,7 +126,7 @@ export const vaultsApi = new Hono<App.Api>()
         const vaultId = c.req.param('id');
 
         try {
-            const vault = await deleteVaultByEmail(userEmail, vaultId, c.env.DB);
+            const vault = await deleteVaultByEmail(userEmail, vaultId, c.env.DB, c.env.KV);
             return c.json({
                 success: true,
                 data: vault,

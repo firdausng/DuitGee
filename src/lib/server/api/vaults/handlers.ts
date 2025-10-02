@@ -6,6 +6,7 @@ import { createId } from '@paralleldrive/cuid2';
 import type {Vault} from "$lib/server/api/vaults/schema";
 import type {UserVault} from "$lib/types/vaults";
 import {formatISO} from "date-fns";
+import { getUserVaultsFromCache, setUserVaultsCache, invalidateUserVaultsCache, invalidateVaultMembersCache } from "$lib/server/utils/kv-cache";
 
 // Get all vaults for a user by email (owned + member of)
 export const getUserVaultsByEmail = async (userEmail: string, db: D1Database): Promise<UserVault[]> => {
@@ -27,7 +28,13 @@ export const getUserVaultsByEmail = async (userEmail: string, db: D1Database): P
 };
 
 // Get all vaults for a user (owned + member of)
-export const getUserVaults = async (userId: string, db: D1Database): Promise<UserVault[]> => {
+export const getUserVaults = async (userId: string, db: D1Database, kv?: KVNamespace): Promise<UserVault[]> => {
+    // Try to get from KV cache first
+    const cached = await getUserVaultsFromCache(userId, kv);
+    if (cached) {
+        return cached;
+    }
+
     const client = drizzle(db, { schema });
 
     // Get owned vaults
@@ -104,6 +111,9 @@ export const getUserVaults = async (userId: string, db: D1Database): Promise<Use
     // Combine and sort all vaults
     const allVaults = [...ownedVaults, ...memberVaults];
     allVaults.sort((a, b) => new Date(b.vault.createdAt).getTime() - new Date(a.vault.createdAt).getTime());
+
+    // Cache the result in KV
+    await setUserVaultsCache(userId, allVaults, kv);
 
     return allVaults;
 };
@@ -236,7 +246,7 @@ export const getVault = async (userId: string, vaultId: string, db: D1Database) 
 };
 
 // Create a new vault by email
-export const createVaultByEmail = async (userEmail: string, data: Vault, db: D1Database) => {
+export const createVaultByEmail = async (userEmail: string, data: Vault, db: D1Database, kv?: KVNamespace) => {
     const client = drizzle(db, { schema });
 
     // First, find the user by email
@@ -251,11 +261,11 @@ export const createVaultByEmail = async (userEmail: string, data: Vault, db: D1D
     }
 
     // Then create the vault using the existing function
-    return createVault(user[0].id, data, db);
+    return createVault(user[0].id, data, db, kv);
 };
 
 // Update vault by email
-export const updateVaultByEmail = async (userEmail: string, vaultId: string, data: any, db: D1Database) => {
+export const updateVaultByEmail = async (userEmail: string, vaultId: string, data: any, db: D1Database, kv?: KVNamespace) => {
     const client = drizzle(db, { schema });
 
     // First, find the user by email
@@ -270,11 +280,11 @@ export const updateVaultByEmail = async (userEmail: string, vaultId: string, dat
     }
 
     // Then update the vault using the existing function
-    return updateVault(user[0].id, vaultId, data, db);
+    return updateVault(user[0].id, vaultId, data, db, kv);
 };
 
 // Delete vault by email
-export const deleteVaultByEmail = async (userEmail: string, vaultId: string, db: D1Database) => {
+export const deleteVaultByEmail = async (userEmail: string, vaultId: string, db: D1Database, kv?: KVNamespace) => {
     const client = drizzle(db, { schema });
 
     // First, find the user by email
@@ -289,7 +299,7 @@ export const deleteVaultByEmail = async (userEmail: string, vaultId: string, db:
     }
 
     // Then delete the vault using the existing function
-    return deleteVault(user[0].id, vaultId, db);
+    return deleteVault(user[0].id, vaultId, db, kv);
 };
 
 // Get vault stats by email
@@ -312,7 +322,7 @@ export const getVaultStatsByEmail = async (userEmail: string, vaultId: string, d
 };
 
 // Create a new vault
-export const createVault = async (userId: string, data: Vault, db: D1Database) => {
+export const createVault = async (userId: string, data: Vault, db: D1Database, kv?: KVNamespace) => {
     const client = drizzle(db, { schema });
 
     console.log(`[createVault.handler] Creating vault: ${JSON.stringify({
@@ -349,6 +359,9 @@ export const createVault = async (userId: string, data: Vault, db: D1Database) =
                 });
         }
 
+        // Invalidate user's vault cache
+        await invalidateUserVaultsCache(userId, kv);
+
         console.log(`[createVault.handler] Successfully created vault`);
         return vault[0];
     } catch (error) {
@@ -358,7 +371,7 @@ export const createVault = async (userId: string, data: Vault, db: D1Database) =
 };
 
 // Update vault
-export const updateVault = async (userId: string, vaultId: string, data: any, db: D1Database) => {
+export const updateVault = async (userId: string, vaultId: string, data: any, db: D1Database, kv?: KVNamespace) => {
     const client = drizzle(db, { schema });
 
     // Check if user is owner or has admin permissions
@@ -394,11 +407,20 @@ export const updateVault = async (userId: string, vaultId: string, data: any, db
         .where(eq(vaults.id, vaultId))
         .returning();
 
+    // Get all vault members to invalidate their caches
+    const members = await client
+        .select({ userId: vaultMembers.userId })
+        .from(vaultMembers)
+        .where(eq(vaultMembers.vaultId, vaultId));
+
+    const memberIds = [updatedVault[0].ownerId, ...members.map(m => m.userId!)];
+    await invalidateVaultMembersCache(memberIds, kv);
+
     return updatedVault[0];
 };
 
 // Delete vault
-export const deleteVault = async (userId: string, vaultId: string, db: D1Database) => {
+export const deleteVault = async (userId: string, vaultId: string, db: D1Database, kv?: KVNamespace) => {
     const client = drizzle(db, { schema });
 
     // Only owner can delete vault
@@ -417,10 +439,20 @@ export const deleteVault = async (userId: string, vaultId: string, db: D1Databas
         throw new Error('Permission denied: Only vault owner can delete vault');
     }
 
+    // Get all vault members before deletion
+    const members = await client
+        .select({ userId: vaultMembers.userId })
+        .from(vaultMembers)
+        .where(eq(vaultMembers.vaultId, vaultId));
+
     const deletedVault = await client
         .delete(vaults)
         .where(eq(vaults.id, vaultId))
         .returning();
+
+    // Invalidate cache for owner and all members
+    const memberIds = [userId, ...members.map(m => m.userId!)];
+    await invalidateVaultMembersCache(memberIds, kv);
 
     return deletedVault[0];
 };
