@@ -16,10 +16,10 @@
 	};
 
 	type Tag = {
-		id: string;
-		name: string;
-		color: string;
-		icon?: string;
+		name: string; // Primary key - normalized, lowercase
+		usageCount: number;
+		createdAt: string;
+		createdBy: string;
 	};
 
 	type PaymentType = {
@@ -49,7 +49,7 @@
 			note?: string;
 			icon?: string;
 			iconType?: string;
-			tagIds?: string[];
+			tagNames?: string[]; // Changed from tagIds to tagNames
 		};
 		categories: Category[];
 		tags: Tag[];
@@ -87,7 +87,7 @@
 		note: template?.note || '',
 		icon: template?.icon || '📝',
 		iconType: template?.iconType || 'emoji',
-		tagIds: template?.tagIds || []
+		tagNames: template?.tagNames || [] // Changed from tagIds to tagNames
 	});
 
 	// State for searchable categories
@@ -137,56 +137,22 @@
 		onSubmit(submitData);
 	}
 
-	function handleTagsChange(tagIds: string[]) {
-		formData.tagIds = tagIds;
+	function handleTagsChange(tagNames: string[]) {
+		formData.tagNames = tagNames;
 	}
 
+	// Tags are auto-created on submission, no need for explicit creation
 	async function handleCreateTag(name: string): Promise<Tag | null> {
-		try {
-			const formData = new FormData();
-			formData.append('name', name);
-			formData.append('color', '#6B7280'); // Default color
-
-			const response = await fetch(`/vaults/${vaultId}/tags`, {
-				method: 'POST',
-				body: formData
-			});
-
-			if (response.ok) {
-				const result = await response.json();
-				console.log('Create tag result:', result);
-
-				// Handle SvelteKit action response format
-				if (result.type === 'success' && result.data) {
-					// Parse if data is string (devalue serialization)
-					let data = result.data;
-					if (typeof data === 'string') {
-						try {
-							data = JSON.parse(data);
-						} catch (e) {
-							console.error('Failed to parse data:', e);
-							return null;
-						}
-					}
-
-					// Check if data is the direct response object
-					if (data.success && data.tag) {
-						allTags = [...allTags, data.tag];
-						return data.tag;
-					}
-
-					// Check if data is array format (devalue)
-					if (Array.isArray(data) && data[2]) {
-						const newTag = data[2];
-						allTags = [...allTags, newTag];
-						return newTag;
-					}
-				}
-			}
-		} catch (error) {
-			console.error('Error creating tag:', error);
-		}
-		return null;
+		// Twitter-style tags are auto-created on use
+		// Just return a mock tag object to update the UI
+		const newTag: Tag = {
+			name: name.toLowerCase().trim(),
+			usageCount: 0,
+			createdAt: new Date().toISOString(),
+			createdBy: ''
+		};
+		allTags = [...allTags, newTag];
+		return newTag;
 	}
 
 	// Client-side search function
@@ -350,7 +316,7 @@
 		</label>
 		<TagSelector
 			availableTags={allTags}
-			bind:selectedTagIds={formData.tagIds}
+			bind:selectedTagNames={formData.tagNames}
 			onTagsChange={handleTagsChange}
 			onCreateTag={handleCreateTag}
 			allowCreate={true}

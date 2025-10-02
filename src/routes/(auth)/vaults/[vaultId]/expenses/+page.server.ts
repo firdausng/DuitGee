@@ -3,6 +3,7 @@ import type { PageServerLoad } from "./$types";
 import {getExpenses} from "$lib/server/api/expenses/handlers";
 import {getCategories} from "$lib/server/api/categories/handlers";
 import {getVault} from "$lib/server/api/vaults/handlers";
+import {getTags} from "$lib/server/api/tags/handlers";
 
 
 export const load: PageServerLoad = async ({ locals, platform, url, cookies, params }) => {
@@ -71,22 +72,27 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
                 endDate = defaultEndOfDay.toISOString();
         }
 
-        const expenses = await getExpenses(locals.currentUser.id, platform.env.DB, {
-            page,
-            limit,
-            startDate,
-            endDate,
-            vaultId
-        });
-
         const vault = await getVault(locals.currentUser.id, vaultId, platform.env.DB);
-        const categories = await getCategories(vault.vault.id, platform.env.DB);
+
+        // Load expenses, categories, and popular tags
+        const [expenses, categories, tags] = await Promise.all([
+            getExpenses(locals.currentUser.id, platform.env.DB, {
+                page,
+                limit,
+                startDate,
+                endDate,
+                vaultId
+            }),
+            getCategories(vault.vault.id, platform.env.DB),
+            getTags(platform.env.DB, { limit: 100 }) // Get top 100 popular tags
+        ]);
 
         return {
             activeUser: locals.currentUser,
             vaultId,
             expenses,
             categories,
+            tags,
             currentPeriod: timePeriod,
             vault
         };

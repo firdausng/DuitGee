@@ -17,7 +17,7 @@ export const load: PageServerLoad = async ({ params, fetch, locals, cookies, pla
 	try {
         const [categories, tags, expense] = await Promise.all([
             getCategories(vaultId, platform.env.DB),
-            getTags(vaultId, platform.env.DB),
+            getTags(platform.env.DB, { limit: 100 }),
             getExpense(vaultId, id, platform.env.DB)
         ]);
 
@@ -25,15 +25,28 @@ export const load: PageServerLoad = async ({ params, fetch, locals, cookies, pla
             throw error(404, 'Expense not found');
         }
 
+		// Convert ISO date to datetime-local format (YYYY-MM-DDTHH:mm)
+		const formatDateForInput = (isoDate: string): string => {
+			const date = new Date(isoDate);
+			const year = date.getFullYear();
+			const month = String(date.getMonth() + 1).padStart(2, '0');
+			const day = String(date.getDate()).padStart(2, '0');
+			const hours = String(date.getHours()).padStart(2, '0');
+			const minutes = String(date.getMinutes()).padStart(2, '0');
+			return `${year}-${month}-${day}T${hours}:${minutes}`;
+		};
+
 		const formData = {
-			note: expense.note!,
+			note: expense.note || '',
 			amount: expense.amount,
 			categoryId: expense.category?.id,
-			date: expense.date,
+			date: formatDateForInput(expense.date),
 			paymentType: expense.paymentType || '',
 			paymentProvider: expense.paymentProvider || '',
-			tagIds: expense.tags?.map((t: any) => t.id).join(',') || ''
+			tagNames: expense.tags?.map((t: any) => t.name).join(',') || ''
 		};
+
+        console.log('formData', formData);
 
 		const form = await superValidate(formData, valibot(expenseSchema));
 		return {
@@ -60,14 +73,14 @@ export const actions: Actions = {
 			return fail(400, { form });
 		}
 
-		// Parse tagIds from comma-separated string
-		const tagIds = form.data.tagIds
-			? form.data.tagIds.split(',').filter(Boolean)
+		// Parse tagNames from comma-separated string
+		const tagNames = form.data.tagNames
+			? form.data.tagNames.split(',').filter(Boolean)
 			: [];
 
 		const data = {
 			...form.data,
-			tagIds,
+			tagNames,
 			paymentType: form.data.paymentType || undefined,
 			paymentProvider: form.data.paymentProvider || undefined
 		};

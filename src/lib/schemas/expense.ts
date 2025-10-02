@@ -8,7 +8,7 @@ export const expenseSchema = v.object({
 	date: v.pipe(v.string(), v.isoDateTime()),
 	paymentType: v.optional(v.string()),
 	paymentProvider: v.optional(v.string()),
-	tagIds: v.optional(v.string()) // Comma-separated tag IDs
+	tagNames: v.optional(v.string()) // Comma-separated tag names
 });
 
 export const categoryGroupSchema = v.object({

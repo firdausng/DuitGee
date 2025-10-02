@@ -3,16 +3,16 @@
 	import Plus from 'phosphor-svelte/lib/Plus';
 
 	type Tag = {
-		id: string;
-		name: string;
-		color: string;
-		icon?: string;
+		name: string; // Primary key - normalized, lowercase
+		usageCount: number;
+		createdAt: string;
+		createdBy: string;
 	};
 
 	interface Props {
 		availableTags: Tag[];
-		selectedTagIds?: string[];
-		onTagsChange: (tagIds: string[]) => void;
+		selectedTagNames?: string[];
+		onTagsChange: (tagNames: string[]) => void;
 		onCreateTag?: (name: string) => Promise<Tag | null>;
 		placeholder?: string;
 		allowCreate?: boolean;
@@ -20,7 +20,7 @@
 
 	let {
 		availableTags,
-		selectedTagIds = $bindable([]),
+		selectedTagNames = $bindable([]),
 		onTagsChange,
 		onCreateTag,
 		placeholder = "Add tags...",
@@ -32,12 +32,12 @@
 	let isCreating = $state(false);
 
 	let selectedTags = $derived(
-		availableTags.filter(tag => selectedTagIds.includes(tag.id))
+		availableTags.filter(tag => selectedTagNames.includes(tag.name))
 	);
 
 	let filteredTags = $derived(
 		availableTags.filter(tag =>
-			!selectedTagIds.includes(tag.id) &&
+			!selectedTagNames.includes(tag.name) &&
 			tag.name.toLowerCase().includes(searchQuery.toLowerCase())
 		)
 	);
@@ -48,20 +48,20 @@
 		!availableTags.some(tag => tag.name.toLowerCase() === searchQuery.trim().toLowerCase())
 	);
 
-	function toggleTag(tagId: string) {
-		const newTagIds = selectedTagIds.includes(tagId)
-			? selectedTagIds.filter(id => id !== tagId)
-			: [...selectedTagIds, tagId];
+	function toggleTag(tagName: string) {
+		const newTagNames = selectedTagNames.includes(tagName)
+			? selectedTagNames.filter(name => name !== tagName)
+			: [...selectedTagNames, tagName];
 
-		selectedTagIds = newTagIds;
-		onTagsChange(newTagIds);
+		selectedTagNames = newTagNames;
+		onTagsChange(newTagNames);
 		searchQuery = '';
 	}
 
-	function removeTag(tagId: string) {
-		const newTagIds = selectedTagIds.filter(id => id !== tagId);
-		selectedTagIds = newTagIds;
-		onTagsChange(newTagIds);
+	function removeTag(tagName: string) {
+		const newTagNames = selectedTagNames.filter(name => name !== tagName);
+		selectedTagNames = newTagNames;
+		onTagsChange(newTagNames);
 	}
 
 	async function createNewTag() {
@@ -72,9 +72,9 @@
 			const newTag = await onCreateTag(searchQuery.trim());
 			if (newTag) {
 				// Add the new tag to selected tags
-				const newTagIds = [...selectedTagIds, newTag.id];
-				selectedTagIds = newTagIds;
-				onTagsChange(newTagIds);
+				const newTagNames = [...selectedTagNames, newTag.name];
+				selectedTagNames = newTagNames;
+				onTagsChange(newTagNames);
 				searchQuery = '';
 			}
 		} catch (error) {
@@ -102,13 +102,9 @@
 			{#each selectedTags as tag}
 				<button
 					type="button"
-					onclick={() => removeTag(tag.id)}
-					class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all active:scale-95"
-					style="background-color: {tag.color}20; color: {tag.color}; border: 1px solid {tag.color}40;"
+					onclick={() => removeTag(tag.name)}
+					class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all active:scale-95 bg-primary/10 text-primary border border-primary/20"
 				>
-					{#if tag.icon}
-						<span>{tag.icon}</span>
-					{/if}
 					<span>{tag.name}</span>
 					<X class="w-3 h-3" weight="bold" />
 				</button>
@@ -164,17 +160,11 @@
 						{#each filteredTags as tag}
 							<button
 								type="button"
-								onclick={() => toggleTag(tag.id)}
+								onclick={() => toggleTag(tag.name)}
 								class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors text-left"
 							>
-								{#if tag.icon}
-									<span class="text-base">{tag.icon}</span>
-								{/if}
-								<span
-									class="w-3 h-3 rounded-full flex-shrink-0"
-									style="background-color: {tag.color}"
-								></span>
 								<span class="flex-1">{tag.name}</span>
+								<span class="text-xs text-muted-foreground">{tag.usageCount}</span>
 							</button>
 						{/each}
 					{/if}

@@ -23,10 +23,10 @@
 			group?: { name: string; color?: string }
 		}>;
 		tags?: Array<{
-			id: string;
 			name: string;
-			color: string;
-			icon?: string;
+			usageCount: number;
+			createdAt: string;
+			createdBy: string;
 		}>;
 		templates?: Array<any>;
 		isEdit?: boolean;
@@ -40,16 +40,18 @@
 	let searchableCategories = $state(categories);
 	let isSearching = $state(false);
 
-	// State for payment and tags
-	let selectedTagIds = $state<string[]>([]);
+	const { form, errors, enhance, submitting } = superForm(data);
+
+	// State for payment and tags - initialize from form data in edit mode
+	let selectedTagNames = $state<string[]>(
+		$form.tagNames ? $form.tagNames.split(',').filter(Boolean) : []
+	);
 	let showAdvancedOptions = $state(false);
-	let paymentType = $state<string>('');
-	let paymentProvider = $state<string>('');
+	let paymentType = $state<string>($form.paymentType || '');
+	let paymentProvider = $state<string>($form.paymentProvider || '');
 
 	// Make tags reactive so new tags appear immediately
 	let allTags = $state(tags);
-
-	const { form, errors, enhance, submitting } = superForm(data);
 
 	const paymentTypes = [
 		{ value: 'cash', label: 'Cash' },
@@ -118,60 +120,26 @@
 		}
 
 		if (template.tags && template.tags.length > 0) {
-			selectedTagIds = template.tags.map((t: any) => t.id);
+			selectedTagNames = template.tags.map((t: any) => t.name);
 		}
 	}
 
-	function handleTagsChange(tagIds: string[]) {
-		selectedTagIds = tagIds;
+	function handleTagsChange(tagNames: string[]) {
+		selectedTagNames = tagNames;
 	}
 
+	// Tags are auto-created on submission with Twitter-style system
 	async function handleCreateTag(name: string): Promise<any> {
-		try {
-			const formData = new FormData();
-			formData.append('name', name);
-			formData.append('color', '#6B7280'); // Default color
-
-			const response = await fetch(`/vaults/${vaultId}/tags`, {
-				method: 'POST',
-				body: formData
-			});
-
-			if (response.ok) {
-				const result = await response.json();
-				console.log('Create tag result:', result);
-
-				// Handle SvelteKit action response format
-				if (result.type === 'success' && result.data) {
-					// Parse if data is string (devalue serialization)
-					let data = result.data;
-					if (typeof data === 'string') {
-						try {
-							data = JSON.parse(data);
-						} catch (e) {
-							console.error('Failed to parse data:', e);
-							return null;
-						}
-					}
-
-					// Check if data is the direct response object
-					if (data.success && data.tag) {
-						allTags = [...allTags, data.tag];
-						return data.tag;
-					}
-
-					// Check if data is array format (devalue)
-					if (Array.isArray(data) && data[2]) {
-						const newTag = data[2];
-						allTags = [...allTags, newTag];
-						return newTag;
-					}
-				}
-			}
-		} catch (error) {
-			console.error('Error creating tag:', error);
-		}
-		return null;
+		// Twitter-style tags are auto-created on use
+		// Just return a mock tag object to update the UI
+		const newTag = {
+			name: name.toLowerCase().trim(),
+			usageCount: 0,
+			createdAt: new Date().toISOString(),
+			createdBy: ''
+		};
+		allTags = [...allTags, newTag];
+		return newTag;
 	}
 
 	function handleCancel() {
@@ -257,7 +225,7 @@
 	<!-- Hidden fields for payment and tags -->
 	<input type="hidden" name="paymentType" value={paymentType} />
 	<input type="hidden" name="paymentProvider" value={paymentProvider} />
-	<input type="hidden" name="tagIds" value={selectedTagIds.join(',')} />
+	<input type="hidden" name="tagNames" value={selectedTagNames.join(',')} />
 
 	<div class="grid grid-cols-2 gap-2">
 		<div>
@@ -309,7 +277,7 @@
 			name="date"
 			type="datetime-local"
 			bind:value={$form.date}
-			class="w-full h-8 text-sm"
+			class="w-full h-8 text-sm dark:[color-scheme:dark]"
 			aria-invalid={$errors.date ? 'true' : undefined}
 		/>
 		{#if $errors.date}
@@ -343,8 +311,8 @@
 		>
 			<CaretDown class="w-4 h-4 transition-transform {showAdvancedOptions ? 'rotate-180' : ''}" />
 			<span>Advanced Options</span>
-			{#if (paymentType || selectedTagIds.length > 0) && !showAdvancedOptions}
-				<span class="text-xs text-primary">({paymentType ? '1' : '0'}{selectedTagIds.length > 0 ? ` + ${selectedTagIds.length} tags` : ''})</span>
+			{#if (paymentType || selectedTagNames.length > 0) && !showAdvancedOptions}
+				<span class="text-xs text-primary">({paymentType ? '1' : '0'}{selectedTagNames.length > 0 ? ` + ${selectedTagNames.length} tags` : ''})</span>
 			{/if}
 		</button>
 
@@ -392,7 +360,7 @@
 					</label>
 					<TagSelector
 						availableTags={allTags}
-						bind:selectedTagIds={selectedTagIds}
+						bind:selectedTagNames={selectedTagNames}
 						onTagsChange={handleTagsChange}
 						onCreateTag={handleCreateTag}
 						allowCreate={true}

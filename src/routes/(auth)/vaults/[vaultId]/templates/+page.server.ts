@@ -21,10 +21,10 @@ export const load: PageServerLoad = async ({ locals, platform, params }) => {
 		// Get vault to verify access
 		const vault = await getVault(locals.currentUser.id, vaultId, platform.env.DB);
 
-		// Load templates, tags, categories, payment types and providers
+		// Load templates, tags (popular), categories, payment types and providers
 		const [templates, tags, categories, paymentTypes, paymentProviders] = await Promise.all([
 			getTemplates(locals.currentUser.id, vaultId, platform.env.DB),
-			getTags(vaultId, platform.env.DB),
+			getTags(platform.env.DB, { limit: 100 }), // Get top 100 popular tags
 			getCategories(vaultId, platform.env.DB),
 			getPaymentTypes(platform.env.DB),
 			getPaymentProviders(platform.env.DB)
@@ -58,7 +58,7 @@ export const actions = {
 		const formData = await request.formData();
 
 		try {
-			const tagIds = formData.get('tagIds')?.toString().split(',').filter(Boolean) || [];
+			const tagNames = formData.get('tagNames')?.toString().split(',').filter(Boolean) || [];
 
 			const template = await createTemplate(
 				locals.currentUser.id,
@@ -73,7 +73,7 @@ export const actions = {
 					note: formData.get('note')?.toString(),
 					icon: formData.get('icon')?.toString() || '📝',
 					iconType: formData.get('iconType')?.toString() || 'emoji',
-					tagIds
+					tagNames
 				},
 				platform.env.DB
 			);
@@ -102,7 +102,7 @@ export const actions = {
 		}
 
 		try {
-			const tagIds = formData.get('tagIds')?.toString().split(',').filter(Boolean) || [];
+			const tagNames = formData.get('tagNames')?.toString().split(',').filter(Boolean) || [];
 
 			const template = await updateTemplate(
 				locals.currentUser.id,
@@ -117,7 +117,7 @@ export const actions = {
 					note: formData.get('note')?.toString(),
 					icon: formData.get('icon')?.toString(),
 					iconType: formData.get('iconType')?.toString(),
-					tagIds
+					tagNames
 				},
 				platform.env.DB
 			);

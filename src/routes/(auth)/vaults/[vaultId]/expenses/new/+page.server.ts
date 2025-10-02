@@ -17,7 +17,7 @@ export const load: PageServerLoad = async ({platform, locals, params}) => {
 
     const [categories, tags, templates] = await Promise.all([
         getCategories(vaultId, platform.env.DB),
-        getTags(vaultId, platform.env.DB),
+        getTags(platform.env.DB, { limit: 100 }), // Get top 100 popular tags
         getTemplates(locals.currentUser.id, vaultId, platform.env.DB)
     ]);
 
@@ -44,15 +44,15 @@ export const actions: Actions = {
 			return fail(400, { form });
 		}
 
-        // Parse tagIds from comma-separated string
-        const tagIds = form.data.tagIds
-            ? form.data.tagIds.split(',').filter(Boolean)
+        // Parse tagNames from comma-separated string
+        const tagNames = form.data.tagNames
+            ? form.data.tagNames.split(',').filter(Boolean)
             : [];
 
         const data = {
             ...form.data,
             vaultId,
-            tagIds,
+            tagNames,
             paymentType: form.data.paymentType || undefined,
             paymentProvider: form.data.paymentProvider || undefined
         }

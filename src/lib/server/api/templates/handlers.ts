@@ -4,6 +4,7 @@ import { expenseTemplates, expenseTemplateTags, tags, categories } from "$lib/se
 import { and, eq, desc, isNull, inArray } from "drizzle-orm";
 import { initialAuditFields, updateAuditFields } from "$lib/server/utils/audit";
 import { createId } from '@paralleldrive/cuid2';
+import { getOrCreateTag, incrementTagUsage, decrementTagUsage } from "$lib/server/api/tags/handlers";
 
 export type ExpenseTemplate = typeof expenseTemplates.$inferSelect & {
 	category?: typeof categories.$inferSelect | null;
@@ -45,7 +46,7 @@ export const getTemplates = async (
 				tag: tags
 			})
 			.from(expenseTemplateTags)
-			.innerJoin(tags, eq(expenseTemplateTags.tagId, tags.id))
+			.innerJoin(tags, eq(expenseTemplateTags.tagName, tags.name))
 			.where(inArray(expenseTemplateTags.templateId, templateIds))
 		: [];
 
@@ -95,7 +96,7 @@ export const getTemplate = async (
 	const templateTagsList = await client
 		.select({ tag: tags })
 		.from(expenseTemplateTags)
-		.innerJoin(tags, eq(expenseTemplateTags.tagId, tags.id))
+		.innerJoin(tags, eq(expenseTemplateTags.tagName, tags.name))
 		.where(eq(expenseTemplateTags.templateId, templateId));
 
 	return {
@@ -118,13 +119,13 @@ export const createTemplate = async (
 		note?: string;
 		icon?: string;
 		iconType?: string;
-		tagIds?: string[];
+		tagNames?: string[];
 	},
 	db: D1Database
 ) => {
 	const client = drizzle(db, { schema });
 
-	const { tagIds, ...templateData } = data;
+	const { tagNames, ...templateData } = data;
 	const templateId = createId();
 
 	const template = await client
@@ -138,13 +139,21 @@ export const createTemplate = async (
 		.returning();
 
 	// Add tags if provided
-	if (tagIds && tagIds.length > 0) {
+	if (tagNames && tagNames.length > 0) {
+		// Get or create tags and increment usage
+		for (const tagName of tagNames) {
+			await getOrCreateTag(tagName, userId, db);
+			await incrementTagUsage(tagName, db);
+		}
+
+		// Insert junction table entries
 		await client
 			.insert(expenseTemplateTags)
 			.values(
-				tagIds.map(tagId => ({
+				tagNames.map(tagName => ({
 					templateId,
-					tagId,
+					tagName,
+					color: '#6B7280', // Default color
 					createdAt: new Date().toISOString()
 				}))
 			);
@@ -166,13 +175,13 @@ export const updateTemplate = async (
 		note?: string;
 		icon?: string;
 		iconType?: string;
-		tagIds?: string[];
+		tagNames?: string[];
 	},
 	db: D1Database
 ) => {
 	const client = drizzle(db, { schema });
 
-	const { tagIds, ...templateData } = data;
+	const { tagNames, ...templateData } = data;
 
 	const updatedTemplate = await client
 		.update(expenseTemplates)
@@ -190,20 +199,39 @@ export const updateTemplate = async (
 		.returning();
 
 	// Update tags if provided
-	if (tagIds !== undefined) {
+	if (tagNames !== undefined) {
+		// Get old tags to decrement their usage
+		const oldTags = await client
+			.select({ tagName: expenseTemplateTags.tagName })
+			.from(expenseTemplateTags)
+			.where(eq(expenseTemplateTags.templateId, templateId));
+
+		// Decrement usage for old tags
+		for (const { tagName } of oldTags) {
+			await decrementTagUsage(tagName, db);
+		}
+
 		// Remove existing tags
 		await client
 			.delete(expenseTemplateTags)
 			.where(eq(expenseTemplateTags.templateId, templateId));
 
 		// Add new tags
-		if (tagIds.length > 0) {
+		if (tagNames.length > 0) {
+			// Get or create tags and increment usage
+			for (const tagName of tagNames) {
+				await getOrCreateTag(tagName, userId, db);
+				await incrementTagUsage(tagName, db);
+			}
+
+			// Insert junction table entries
 			await client
 				.insert(expenseTemplateTags)
 				.values(
-					tagIds.map(tagId => ({
+					tagNames.map(tagName => ({
 						templateId,
-						tagId,
+						tagName,
+						color: '#6B7280', // Default color
 						createdAt: new Date().toISOString()
 					}))
 				);
@@ -220,7 +248,23 @@ export const deleteTemplate = async (
 ) => {
 	const client = drizzle(db, { schema });
 
-	// Soft delete
+	// Get tags to decrement their usage
+	const templateTags = await client
+		.select({ tagName: expenseTemplateTags.tagName })
+		.from(expenseTemplateTags)
+		.where(eq(expenseTemplateTags.templateId, templateId));
+
+	// Decrement usage for all tags
+	for (const { tagName } of templateTags) {
+		await decrementTagUsage(tagName, db);
+	}
+
+	// Delete tag associations
+	await client
+		.delete(expenseTemplateTags)
+		.where(eq(expenseTemplateTags.templateId, templateId));
+
+	// Soft delete template
 	const deletedTemplate = await client
 		.update(expenseTemplates)
 		.set({
