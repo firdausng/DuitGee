@@ -92,7 +92,7 @@ const router = new Hono<App.Api>()
 	.route('/', expensesApi)
 	.route('/', categoriesApi)
 	.route('/', categoryGroupsApi)
-	.route('/', notificationApi)
+	.route('/notifications', notificationApi)
 	.route('/users', usersApi)
 	.route('/vaults', vaultsApi)
 	.route('/vault-members', vaultMembersApi)
@@ -106,12 +106,12 @@ api.get(
     openAPIRouteHandler(router, {
         documentation: {
             info: {
-                title: 'Honey Bear API',
+                title: 'DuitGee API',
                 version: '1.0.0',
-                description: 'Honey Bear API',
+                description: 'DuitGee API',
             },
             servers: [
-                { url: 'http://localhost:9000/api', description: 'Local Server' },
+                { url: 'http://localhost:5173/api', description: 'Local Server' },
             ],
             components: {
                 securitySchemes: {
@@ -136,7 +136,7 @@ api.get(
     Scalar({
         url: '/openapi.json',
         theme: 'purple',
-        pageTitle: 'Honey Bear API',
+        pageTitle: 'DuitGee API',
     })
 )
 
