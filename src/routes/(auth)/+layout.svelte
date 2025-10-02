@@ -192,9 +192,7 @@
 				<div class="flex items-center justify-between h-12">
 					<!-- Logo & Brand -->
 					<div class="flex items-center space-x-3">
-						<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-							<span class="text-primary-foreground font-bold text-sm">DG</span>
-						</div>
+                        <img src="/favicon.svg" alt="DuitGee" class="w-8 h-8" />
 						<h1 class="font-display text-lg font-semibold text-foreground">DuitGee</h1>
 					</div>
 

@@ -49,9 +49,9 @@
         fetchInvitationCount();
 
         // Refresh count every 5 minutes
-        const interval = setInterval(fetchInvitationCount, 5 * 60 * 1000);
-
-        return () => clearInterval(interval);
+        // const interval = setInterval(fetchInvitationCount, 5 * 60 * 1000);
+        //
+        // return () => clearInterval(interval);
     });
 </script>
 
