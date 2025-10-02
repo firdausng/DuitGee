@@ -477,100 +477,112 @@
 						{#each statsData.recentExpenses as expense (expense.id)}
 							<div class="py-2 px-3 -mx-3 rounded-md transition-colors {expense.creator ? getMemberColor(expense.creator.id) : 'bg-background'}" transition:slide={{ duration: 200 }}>
 								<!-- Desktop Layout -->
-								<div class="hidden sm:flex items-center justify-between gap-3">
-									<div class="flex items-center gap-2 flex-1 min-w-0">
+								<div class="hidden sm:block">
+									<div class="flex items-start justify-between gap-4 mb-2">
+										<div class="flex items-start gap-2 flex-1">
+											<div class="w-3 h-3 rounded-full flex-shrink-0 mt-0.5" style="background-color: {expense.category?.color}"></div>
+											{#if expense.note}
+												<p class="text-sm text-foreground flex-1">{expense.note}</p>
+											{:else}
+												<div class="flex-1"></div>
+											{/if}
+										</div>
+										<span class="text-xs text-muted-foreground flex-shrink-0">{formatDate(expense.date)}</span>
+									</div>
+									<div class="flex items-center gap-2 mb-2">
 										<div class="flex items-center gap-1.5 flex-shrink-0">
-											<div class="w-3 h-3 rounded-full" style="background-color: {expense.category?.color}"></div>
 											{#if expense.category?.icon}
 												<IconDisplay icon={expense.category.icon} iconType={expense.category.iconType} />
 											{/if}
 										</div>
 										<div class="flex-1 min-w-0">
 											<div class="flex items-center gap-2">
-												<span class="text-sm font-medium text-foreground truncate">
-													{expense.note || ''}
-												</span>
 												<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-muted text-muted-foreground flex-shrink-0">
 													{expense.category?.name}
 												</span>
 											</div>
-											<div class="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-												<span>{formatDate(expense.date)}</span>
-												{#if expense.creator}
-													<span>•</span>
+											{#if expense.creator}
+												<div class="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
 													<span class="truncate">by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName} (${expense.creator.email})` : expense.creator.email}</span>
-												{/if}
-											</div>
+												</div>
+											{/if}
 										</div>
 									</div>
-									<div class="flex items-center gap-2 flex-shrink-0">
+									<div class="flex items-center justify-between">
 										<p class="text-sm font-semibold text-foreground">
 											{formatCurrency(expense.amount)}
 										</p>
-										<Button
-											variant="ghost"
-											size="sm"
-											onclick={() => goto(`/vaults/${data.vaultId}/expenses/${expense.id}/edit`)}
-											class="h-7 w-7 p-0"
-										>
-											<Pencil class="w-3.5 h-3.5" />
-										</Button>
-										<Button
-											variant="ghost"
-											size="sm"
-											onclick={() => confirmDeleteExpense(expense.id)}
-											class="h-7 w-7 p-0"
-										>
-											<Trash class="w-3.5 h-3.5 text-destructive" />
-										</Button>
-									</div>
-								</div>
-
-								<!-- Mobile Layout -->
-								<div class="sm:hidden">
-									<div class="flex items-start justify-between gap-2">
-										<div class="flex items-start gap-2 flex-1 min-w-0">
-											<div class="flex items-center gap-1 flex-shrink-0 mt-0.5">
-												<div class="w-2.5 h-2.5 rounded-full" style="background-color: {expense.category?.color}"></div>
-												{#if expense.category?.icon}
-													<IconDisplay icon={expense.category.icon} iconType={expense.category.iconType} />
-												{/if}
-											</div>
-											<div class="flex-1 min-w-0">
-												<h3 class="text-sm font-medium text-foreground truncate leading-tight">
-													{expense.note || ''}
-												</h3>
-												<div class="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-													<span>{expense.category?.name}</span>
-													<span>•</span>
-													<span>{new Date(expense.date).toLocaleDateString()}</span>
-												</div>
-												{#if expense.creator}
-													<div class="text-xs text-muted-foreground mt-0.5 truncate">
-														by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName} (${expense.creator.email})` : expense.creator.email}
-													</div>
-												{/if}
-											</div>
-										</div>
-										<div class="flex items-center gap-1.5 flex-shrink-0">
-											<p class="text-sm font-semibold text-foreground">
-												{formatCurrency(expense.amount)}
-											</p>
+										<div class="flex gap-2">
 											<Button
 												variant="ghost"
 												size="sm"
 												onclick={() => goto(`/vaults/${data.vaultId}/expenses/${expense.id}/edit`)}
-												class="h-7 w-7 p-0"
+												class="h-8 w-8 p-0"
 											>
-												<Pencil class="w-3 h-3" />
+												<Pencil class="w-4 h-4" />
 											</Button>
 											<Button
 												variant="ghost"
 												size="sm"
 												onclick={() => confirmDeleteExpense(expense.id)}
-												class="h-7 w-7 p-0"
+												class="h-8 w-8 p-0"
 											>
-												<Trash class="w-3 h-3 text-destructive" />
+												<Trash class="w-4 h-4 text-destructive" />
+											</Button>
+										</div>
+									</div>
+								</div>
+
+								<!-- Mobile Layout -->
+								<div class="sm:hidden">
+									<div class="flex items-start justify-between gap-2 mb-2">
+										<div class="flex items-start gap-2 flex-1">
+											<div class="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-0.5" style="background-color: {expense.category?.color}"></div>
+											{#if expense.note}
+												<p class="text-sm text-foreground flex-1">{expense.note}</p>
+											{:else}
+												<div class="flex-1"></div>
+											{/if}
+										</div>
+										<span class="text-xs text-muted-foreground flex-shrink-0">{new Date(expense.date).toLocaleDateString()}</span>
+									</div>
+									<div class="flex items-start gap-2 mb-2">
+										<div class="flex items-center gap-1 flex-shrink-0 mt-0.5">
+											{#if expense.category?.icon}
+												<IconDisplay icon={expense.category.icon} iconType={expense.category.iconType} />
+											{/if}
+										</div>
+										<div class="flex-1 min-w-0">
+											<div class="flex items-center gap-1 text-xs text-muted-foreground">
+												<span>{expense.category?.name}</span>
+											</div>
+											{#if expense.creator}
+												<div class="text-xs text-muted-foreground mt-0.5 truncate">
+													by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName} (${expense.creator.email})` : expense.creator.email}
+												</div>
+											{/if}
+										</div>
+									</div>
+									<div class="flex items-center justify-between">
+										<p class="text-sm font-semibold text-foreground">
+											{formatCurrency(expense.amount)}
+										</p>
+										<div class="flex gap-1.5">
+											<Button
+												variant="ghost"
+												size="sm"
+												onclick={() => goto(`/vaults/${data.vaultId}/expenses/${expense.id}/edit`)}
+												class="h-8 w-8 p-0"
+											>
+												<Pencil class="w-4 h-4" />
+											</Button>
+											<Button
+												variant="ghost"
+												size="sm"
+												onclick={() => confirmDeleteExpense(expense.id)}
+												class="h-8 w-8 p-0"
+											>
+												<Trash class="w-4 h-4 text-destructive" />
 											</Button>
 										</div>
 									</div>
