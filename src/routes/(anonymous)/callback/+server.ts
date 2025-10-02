@@ -20,7 +20,7 @@ export const GET: RequestHandler = async ({  platform, url, locals, cookies }) =
         throw new Error("No Session")
     }
 
-    const user = await getUserByEmail(authResponse.user.email, platform.env.DB);
+    const user = await getUserByEmail(authResponse.user.email, platform.env.DB, platform.env.KV);
     console.log("[callback] getUserByEmail", user);
     if(!user){
         // console.log("[callback] user not in the system, redirect to unauthorized");

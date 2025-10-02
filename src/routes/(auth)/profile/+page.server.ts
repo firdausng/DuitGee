@@ -37,7 +37,7 @@ export const actions: Actions = {
             console.log('Profile update requested:', form.data);
 
             // Update user in the database
-            const updatedUser = await updateUser(locals.currentUser.id, form.data, platform.env.DB);
+            const updatedUser = await updateUser(locals.currentUser.id, form.data, platform.env.DB, platform.env.KV);
 
             if (!updatedUser) {
                 form.errors._errors = ['Failed to update profile. User not found.'];

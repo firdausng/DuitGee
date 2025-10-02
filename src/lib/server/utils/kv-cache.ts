@@ -1,4 +1,5 @@
 import type { UserVault } from "$lib/types/vaults";
+import type { User } from "$lib/server/api/users/schema";
 
 /**
  * KV Cache utilities for storing and retrieving cached data
@@ -6,6 +7,7 @@ import type { UserVault } from "$lib/types/vaults";
  * Cache Keys:
  * - user_vaults:{userId} - User's vault list with members
  * - expense:{expenseId} - Individual expense data
+ * - user_by_email:{email} - User data by email
  */
 
 const DEFAULT_TTL = 300; // 5 minutes
@@ -123,5 +125,55 @@ export async function invalidateExpenseCache(expenseId: string, kv?: KVNamespace
         console.log(`[KV Cache] INVALIDATED expense:${expenseId}`);
     } catch (error) {
         console.warn(`[KV Cache] Error invalidating expense:${expenseId}`, error);
+    }
+}
+
+/**
+ * Get user by email from KV cache
+ */
+export async function getUserByEmailFromCache(email: string, kv?: KVNamespace): Promise<User | null> {
+    if (!kv) return null;
+
+    try {
+        const cached = await kv.get(`user_by_email:${email}`, 'json');
+        if (cached) {
+            console.log(`[KV Cache] HIT for user_by_email:${email}`);
+            return cached as User;
+        }
+        console.log(`[KV Cache] MISS for user_by_email:${email}`);
+        return null;
+    } catch (error) {
+        console.warn(`[KV Cache] Error reading user_by_email:${email}`, error);
+        return null;
+    }
+}
+
+/**
+ * Store user by email in KV cache
+ */
+export async function setUserByEmailCache(email: string, user: User, kv?: KVNamespace, ttl: number = DEFAULT_TTL): Promise<void> {
+    if (!kv) return;
+
+    try {
+        await kv.put(`user_by_email:${email}`, JSON.stringify(user), {
+            expirationTtl: ttl
+        });
+        console.log(`[KV Cache] SET user_by_email:${email} (TTL: ${ttl}s)`);
+    } catch (error) {
+        console.warn(`[KV Cache] Error writing user_by_email:${email}`, error);
+    }
+}
+
+/**
+ * Invalidate user by email cache
+ */
+export async function invalidateUserByEmailCache(email: string, kv?: KVNamespace): Promise<void> {
+    if (!kv) return;
+
+    try {
+        await kv.delete(`user_by_email:${email}`);
+        console.log(`[KV Cache] INVALIDATED user_by_email:${email}`);
+    } catch (error) {
+        console.warn(`[KV Cache] Error invalidating user_by_email:${email}`, error);
     }
 }

@@ -4,6 +4,7 @@ import { users, vaults, vaultMembers } from "$lib/server/db/schema";
 import { and, eq, desc, sql } from "drizzle-orm";
 import { createId } from '@paralleldrive/cuid2';
 import type {CreateUser, UpdateUser, User} from "$lib/server/api/users/schema";
+import { getUserByEmailFromCache, setUserByEmailCache, invalidateUserByEmailCache } from "$lib/server/utils/kv-cache";
 
 export const getUsers = async (db: D1Database, options?: {
 	page?: number;
@@ -59,7 +60,13 @@ export const getUser = async (userId: string, db: D1Database) => {
 	return user[0];
 };
 
-export const getUserByEmail = async (email: string, db: D1Database) => {
+export const getUserByEmail = async (email: string, db: D1Database, kv?: KVNamespace) => {
+    // Try to get from KV cache first
+    const cached = await getUserByEmailFromCache(email, kv);
+    if (cached) {
+        return cached;
+    }
+
     const client = drizzle(db, { schema });
 
     console.log(`[getUserByEmail.handler] get user by email: ${email}`);
@@ -75,6 +82,11 @@ export const getUserByEmail = async (email: string, db: D1Database) => {
         .from(users)
         .where(eq(users.email, email))
         .limit(1);
+
+    // Cache the result in KV
+    if (user[0]) {
+        await setUserByEmailCache(email, user[0], kv);
+    }
 
     return user[0];
 };
@@ -101,7 +113,7 @@ export const createUser = async (data: CreateUser, db: D1Database) => {
 	}
 };
 
-export const updateUser = async (userId: string, data: UpdateUser, db: D1Database) => {
+export const updateUser = async (userId: string, data: UpdateUser, db: D1Database, kv?: KVNamespace) => {
 	const client = drizzle(db, { schema });
 
 	const updatedUser = await client
@@ -112,6 +124,11 @@ export const updateUser = async (userId: string, data: UpdateUser, db: D1Databas
 		})
 		.where(eq(users.id, userId))
 		.returning();
+
+	// Invalidate user by email cache
+	if (updatedUser[0]) {
+		await invalidateUserByEmailCache(updatedUser[0].email, kv);
+	}
 
 	return updatedUser[0];
 };

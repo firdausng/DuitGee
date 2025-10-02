@@ -82,7 +82,7 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
             throw error(404, 'Vault not found or access denied');
         }
 
-        const abc = await getVault(locals.currentUser.id, vaultId, platform?.env?.DB);
+        const {members} = await getVault(locals.currentUser.id, vaultId, platform?.env?.DB);
 
         // Format vaults for the store
         const availableVaults = userVaults.map(v => ({
@@ -109,7 +109,7 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
             role: currentVaultData.vault.ownerId === locals.currentUser.id ? 'owner' : currentVaultData.membership?.role as 'admin' | 'member'| 'owner',
             owner: currentVaultData.owner,
             membership: currentVaultData.membership,
-            members: abc.members,
+            members: members,
         };
 
         // Load dashboard stats data

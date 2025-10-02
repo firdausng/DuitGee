@@ -43,7 +43,7 @@ export const actions: Actions = {
 		}
 
 		try {
-			const user = await updateUser(id, form.data, platform.env.DB);
+			const user = await updateUser(id, form.data, platform.env.DB, platform.env.KV);
 
 			if (!user) {
 				throw error(404, 'User not found');

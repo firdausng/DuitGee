@@ -83,7 +83,7 @@ export const checkSessionHandler: Handle = async ({ event, resolve }) => {
         successSession = session;
     }
 
-    const appUser = await getUserByEmail(successSession.user.email, event.platform.env.DB);
+    const appUser = await getUserByEmail(successSession.user.email, event.platform.env.DB, event.platform.env.KV);
     if(!appUser){
         console.warn(`[checkSessionHandler] user with ${successSession.user.email} not exist, creating user with default personal vault`);
         await createUserWithDefaultVault({

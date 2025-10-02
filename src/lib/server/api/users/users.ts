@@ -52,7 +52,7 @@ export const usersApi = new Hono<App.Api>()
 		const id = c.req.param('id');
 		const data = c.req.valid('json');
 
-		const user = await updateUser(id, data, c.env.DB);
+		const user = await updateUser(id, data, c.env.DB, c.env.KV);
 
 		if (!user) {
 			return c.json({ error: 'User not found' }, 404);
