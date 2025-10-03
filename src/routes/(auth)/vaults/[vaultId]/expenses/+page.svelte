@@ -404,11 +404,13 @@
 											{expense.category?.name}
 										</span>
 									</div>
-									{#if expense.creator}
-										<div class="flex items-center space-x-2 text-xs text-muted-foreground">
-											<span>by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName} (${expense.creator.email})` : expense.creator.email}</span>
-										</div>
-									{/if}
+									<div class="flex items-center space-x-2 text-xs text-muted-foreground">
+										{#if expense.creator}
+											<span>by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName}` : expense.creator.email}</span>
+										{:else}
+											<span class="italic">Vault</span>
+										{/if}
+									</div>
 								</div>
 							</div>
 							<div class="flex items-center justify-between">
@@ -464,11 +466,13 @@
 											{expense.category?.name}
 										</span>
 									</div>
-									{#if expense.creator}
-										<div class="text-xs text-muted-foreground mt-0.5 truncate">
-											by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName} (${expense.creator.email})` : expense.creator.email}
-										</div>
-									{/if}
+									<div class="text-xs text-muted-foreground mt-0.5 truncate">
+										{#if expense.creator}
+											by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName}` : expense.creator.email}
+										{:else}
+											<span class="italic">Vault</span>
+										{/if}
+									</div>
 								</div>
 							</div>
 							<div class="flex items-center justify-between">

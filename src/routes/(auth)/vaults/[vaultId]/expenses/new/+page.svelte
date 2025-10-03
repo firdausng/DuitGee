@@ -30,6 +30,10 @@
 			categories={data.categories}
 			tags={data.tags}
 			templates={data.templates}
+			members={data.members}
+			paymentTypes={data.paymentTypes}
+			paymentProviders={data.paymentProviders}
+			currentUserId={data.currentUserId}
 			vaultId={data.vaultId}
 		/>
 	</div>

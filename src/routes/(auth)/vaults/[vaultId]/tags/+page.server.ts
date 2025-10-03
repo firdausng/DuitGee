@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { getTags, createTag, updateTag, deleteTag } from '$lib/server/api/tags/handlers';
+import {getTags, getOrCreateTag, decrementTagUsage} from '$lib/server/api/tags/handlers';
 import { getVault } from '$lib/server/api/vaults/handlers';
 
 export const load: PageServerLoad = async ({ locals, platform, params }) => {
@@ -19,7 +19,7 @@ export const load: PageServerLoad = async ({ locals, platform, params }) => {
 		const vault = await getVault(locals.currentUser.id, vaultId, platform.env.DB);
 
 		// Load tags
-		const tags = await getTags(vaultId, platform.env.DB);
+		const tags = await getTags(platform.env.DB);
 
 		return {
 			vault: vault.vault,
@@ -45,35 +45,16 @@ export const actions = {
 		const formData = await request.formData();
 
 		try {
-			const tag = await createTag(
+			const tag = await getOrCreateTag(
+                formData.get('name') as string,
 				locals.currentUser.id,
-				{
-					vaultId,
-					name: formData.get('name')?.toString() || '',
-					color: formData.get('color')?.toString() || '#6B7280',
-					icon: formData.get('icon')?.toString(),
-					iconType: formData.get('iconType')?.toString() || 'emoji'
-				},
 				platform.env.DB
 			);
 
 			// Convert to plain object to avoid serialization issues
 			return {
 				success: true,
-				tag: {
-					id: tag.id,
-					vaultId: tag.vaultId,
-					name: tag.name,
-					color: tag.color,
-					icon: tag.icon,
-					iconType: tag.iconType,
-					createdAt: tag.createdAt,
-					createdBy: tag.createdBy,
-					updatedAt: tag.updatedAt,
-					updatedBy: tag.updatedBy,
-					deletedAt: tag.deletedAt,
-					deletedBy: tag.deletedBy
-				}
+				tag
 			};
 		} catch (err) {
 			console.error('Error creating tag:', err);
@@ -98,19 +79,14 @@ export const actions = {
 		}
 
 		try {
-			const tag = await updateTag(
-				locals.currentUser.id,
-				tagId,
-				{
-					name: formData.get('name')?.toString(),
-					color: formData.get('color')?.toString(),
-					icon: formData.get('icon')?.toString(),
-					iconType: formData.get('iconType')?.toString()
-				},
-				platform.env.DB
-			);
+            const tag = await getOrCreateTag(
+                formData.get('name') as string,
+                locals.currentUser.id,
+                platform.env.DB
+            );
 
-			return { success: true, tag };
+
+            return { success: true, tag };
 		} catch (err) {
 			console.error('Error updating tag:', err);
 			return { success: false, error: 'Failed to update tag' };
@@ -127,14 +103,14 @@ export const actions = {
 		}
 
 		const formData = await request.formData();
-		const tagId = formData.get('id')?.toString();
+		const tagName = formData.get('name')?.toString();
 
-		if (!tagId) {
-			return { success: false, error: 'Tag ID required' };
+		if (!tagName) {
+			return { success: false, error: 'Tag tagName required' };
 		}
 
 		try {
-			await deleteTag(locals.currentUser.id, tagId, platform.env.DB);
+			await decrementTagUsage(tagName, platform.env.DB);
 			return { success: true };
 		} catch (err) {
 			console.error('Error deleting tag:', err);

@@ -64,6 +64,20 @@
       "when": 1759420335555,
       "tag": "0008_nappy_exodus",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1759443082290,
+      "tag": "0009_handy_gambit",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1759444367820,
+      "tag": "0010_sad_katie_power",
+      "breakpoints": true
     }
   ]
 }

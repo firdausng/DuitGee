@@ -3,7 +3,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { getTemplates, createTemplate, updateTemplate, deleteTemplate } from '$lib/server/api/templates/handlers';
 import { getTags } from '$lib/server/api/tags/handlers';
 import { getCategories } from '$lib/server/api/categories/handlers';
-import { getVault } from '$lib/server/api/vaults/handlers';
+import { getVault, getVaultMembers } from '$lib/server/api/vaults/handlers';
 import { getPaymentTypes, getPaymentProviders } from '$lib/server/api/payments/handlers';
 
 export const load: PageServerLoad = async ({ locals, platform, params }) => {
@@ -21,13 +21,14 @@ export const load: PageServerLoad = async ({ locals, platform, params }) => {
 		// Get vault to verify access
 		const vault = await getVault(locals.currentUser.id, vaultId, platform.env.DB);
 
-		// Load templates, tags (popular), categories, payment types and providers
-		const [templates, tags, categories, paymentTypes, paymentProviders] = await Promise.all([
+		// Load templates, tags (popular), categories, payment types, providers, and members
+		const [templates, tags, categories, paymentTypes, paymentProviders, allMembers] = await Promise.all([
 			getTemplates(locals.currentUser.id, vaultId, platform.env.DB),
 			getTags(platform.env.DB, { limit: 100 }), // Get top 100 popular tags
 			getCategories(vaultId, platform.env.DB),
 			getPaymentTypes(platform.env.DB),
-			getPaymentProviders(platform.env.DB)
+			getPaymentProviders(platform.env.DB),
+			getVaultMembers(vaultId, platform.env.DB)
 		]);
 
 		return {
@@ -36,7 +37,9 @@ export const load: PageServerLoad = async ({ locals, platform, params }) => {
 			tags,
 			categories,
 			paymentTypes,
-			paymentProviders
+			paymentProviders,
+			members: allMembers,
+			currentUserId: locals.currentUser.id
 		};
 	} catch (err) {
 		console.error('Error loading templates:', err);
@@ -60,6 +63,7 @@ export const actions = {
 		try {
 			const tagNames = formData.get('tagNames')?.toString().split(',').filter(Boolean) || [];
 
+			const defaultUserIdValue = formData.get('defaultUserId')?.toString();
 			const template = await createTemplate(
 				locals.currentUser.id,
 				{
@@ -73,6 +77,7 @@ export const actions = {
 					note: formData.get('note')?.toString(),
 					icon: formData.get('icon')?.toString() || '📝',
 					iconType: formData.get('iconType')?.toString() || 'emoji',
+					defaultUserId: defaultUserIdValue !== undefined ? (defaultUserIdValue || undefined) : undefined,
 					tagNames
 				},
 				platform.env.DB
@@ -104,6 +109,7 @@ export const actions = {
 		try {
 			const tagNames = formData.get('tagNames')?.toString().split(',').filter(Boolean) || [];
 
+			const defaultUserIdValue = formData.get('defaultUserId')?.toString();
 			const template = await updateTemplate(
 				locals.currentUser.id,
 				templateId,
@@ -117,6 +123,7 @@ export const actions = {
 					note: formData.get('note')?.toString(),
 					icon: formData.get('icon')?.toString(),
 					iconType: formData.get('iconType')?.toString(),
+					defaultUserId: defaultUserIdValue !== undefined ? (defaultUserIdValue || undefined) : undefined,
 					tagNames
 				},
 				platform.env.DB

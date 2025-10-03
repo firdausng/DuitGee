@@ -7,7 +7,6 @@
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import Textarea from '$lib/components/ui/Textarea.svelte';
 	import TagSelector from '$lib/components/TagSelector.svelte';
-	import TemplateSelector from '$lib/components/TemplateSelector.svelte';
 	import { goto } from '$app/navigation';
 	import CaretDown from 'phosphor-svelte/lib/CaretDown';
 
@@ -29,16 +28,51 @@
 			createdBy: string;
 		}>;
 		templates?: Array<any>;
+		members?: Array<{
+			userId: string;
+			firstName?: string;
+			lastName?: string;
+			email: string;
+			role: string;
+			status: string;
+		}>;
+		paymentTypes?: Array<{
+			id: string;
+			code: string;
+			name: string;
+			icon?: string;
+		}>;
+		paymentProviders?: Array<{
+			id: string;
+			name: string;
+			type?: string;
+			icon?: string;
+			color?: string;
+		}>;
+		currentUserId?: string;
 		isEdit?: boolean;
 		vaultId: string;
 	}
 
-	let { data, categories, tags = [], templates = [], isEdit = false, vaultId }: Props = $props();
+	let { data, categories, tags = [], templates = [], members = [], paymentTypes = [], paymentProviders = [], currentUserId, isEdit = false, vaultId }: Props = $props();
 
 	// State for searchable categories
 	let allCategories = $state(categories);
 	let searchableCategories = $state(categories);
 	let isSearching = $state(false);
+
+	// State for searchable templates
+	let allTemplates = $state(templates);
+	let searchableTemplates = $state(templates);
+	let isSearchingTemplates = $state(false);
+	let selectedTemplateId = $state<string>('');
+
+	// Watch for template selection changes
+	$effect(() => {
+		if (selectedTemplateId) {
+			handleTemplateSelect(selectedTemplateId);
+		}
+	});
 
 	const { form, errors, enhance, submitting } = superForm(data);
 
@@ -53,16 +87,10 @@
 	// Make tags reactive so new tags appear immediately
 	let allTags = $state(tags);
 
-	const paymentTypes = [
-		{ value: 'cash', label: 'Cash' },
-		{ value: 'e_wallet', label: 'E-Wallet' },
-		{ value: 'credit_card', label: 'Credit Card' },
-		{ value: 'debit_card', label: 'Debit Card' },
-		{ value: 'bank_transfer', label: 'Bank Transfer' }
-	];
-
-	const eWalletProviders = ['GoPay', 'OVO', 'Dana', 'ShopeePay', 'LinkAja'];
-	const bankProviders = ['BCA', 'Mandiri', 'BNI', 'BRI', 'Permata', 'CIMB'];
+	// Get selected payment type to filter providers
+	let selectedPaymentType = $derived(
+		paymentTypes.find(pt => pt.code === paymentType)
+	);
 
 	let showProviderSelect = $derived(
 		paymentType === 'e_wallet' ||
@@ -72,10 +100,16 @@
 	);
 
 	let providerOptions = $derived(() => {
-		if (paymentType === 'e_wallet') return eWalletProviders;
+		if (!selectedPaymentType) return [];
+
+		if (paymentType === 'e_wallet') {
+			return paymentProviders.filter(p => p.type === 'e_wallet');
+		}
 		if (paymentType === 'bank_transfer' ||
 			paymentType === 'credit_card' ||
-			paymentType === 'debit_card') return bankProviders;
+			paymentType === 'debit_card') {
+			return paymentProviders.filter(p => p.type === 'bank');
+		}
 		return [];
 	});
 
@@ -103,11 +137,23 @@
 		'pp_cimb': 'CIMB'
 	};
 
-	function handleTemplateSelect(template: any) {
+	function handleTemplateSelect(templateId: string) {
+		const template = allTemplates.find(t => t.id === templateId);
+		if (!template) return;
+
 		// Pre-fill form with template data
 		if (template.categoryId) $form.categoryId = template.categoryId;
 		if (template.defaultAmount) $form.amount = template.defaultAmount;
 		if (template.note) $form.note = template.note;
+
+		// Handle defaultUserId - if template has "__creator__", use current user
+		if (template.defaultUserId !== undefined) {
+			if (template.defaultUserId === '__creator__') {
+				$form.userId = currentUserId || '';
+			} else {
+				$form.userId = template.defaultUserId;
+			}
+		}
 
 		// Map payment type ID to code
 		if (template.paymentTypeId) {
@@ -122,6 +168,10 @@
 		if (template.tags && template.tags.length > 0) {
 			selectedTagNames = template.tags.map((t: any) => t.name);
 		}
+
+		// Clear template selection after applying
+		selectedTemplateId = '';
+		searchableTemplates = allTemplates;
 	}
 
 	function handleTagsChange(tagNames: string[]) {
@@ -168,7 +218,7 @@
 		$form.date = formatDateForInput($form.date);
 	}
 
-	// Client-side search function
+	// Client-side search function for categories
 	function searchCategories(searchTerm: string) {
 		if (!searchTerm.trim()) {
 			searchableCategories = allCategories;
@@ -208,20 +258,66 @@
 
 		searchableCategories = filtered;
 	}
+
+	// Client-side search function for templates
+	function searchTemplates(searchTerm: string) {
+		if (!searchTerm.trim()) {
+			searchableTemplates = allTemplates;
+			return;
+		}
+
+		const term = searchTerm.toLowerCase();
+
+		// Filter templates by name and note
+		const filtered = allTemplates.filter(template => {
+			return (
+				template.name.toLowerCase().includes(term) ||
+				template.note?.toLowerCase().includes(term)
+			);
+		});
+
+		// Sort by relevance (exact match first, then by usage count)
+		filtered.sort((a, b) => {
+			// Exact name match comes first
+			if (a.name.toLowerCase() === term) return -1;
+			if (b.name.toLowerCase() === term) return 1;
+
+			// Name starts with term
+			if (a.name.toLowerCase().startsWith(term) && !b.name.toLowerCase().startsWith(term)) return -1;
+			if (b.name.toLowerCase().startsWith(term) && !a.name.toLowerCase().startsWith(term)) return 1;
+
+			// Fall back to usage count (already sorted from database)
+			return b.usageCount - a.usageCount;
+		});
+
+		searchableTemplates = filtered;
+	}
 </script>
 
-<!-- Template Selector (only for new expenses, not edit) -->
-{#if !isEdit && templates.length > 0}
-	<div class="mb-4">
-		<TemplateSelector
-			templates={templates}
-			onSelectTemplate={handleTemplateSelect}
-			maxVisible={4}
-		/>
-	</div>
-{/if}
-
 <form method="POST" use:enhance class="space-y-3">
+	<!-- Template Selector (only for new expenses, not edit) -->
+	{#if !isEdit && templates.length > 0}
+		<div>
+			<label for="templateId" class="block text-xs font-medium text-muted-foreground mb-1">
+				Quick Template <span class="text-xs text-muted-foreground/60">(optional)</span>
+			</label>
+			<SearchableSelect
+				name="templateId"
+				bind:value={selectedTemplateId}
+				options={searchableTemplates.map(t => ({
+					id: t.id,
+					name: t.name,
+					icon: t.icon,
+					color: t.category?.color || '#6B7280'
+				}))}
+				placeholder="Choose template..."
+				searchPlaceholder="Search templates..."
+				onSearch={searchTemplates}
+				isLoading={isSearchingTemplates}
+				class="w-full h-8 text-sm"
+			/>
+		</div>
+	{/if}
 	<!-- Hidden fields for payment and tags -->
 	<input type="hidden" name="paymentType" value={paymentType} />
 	<input type="hidden" name="paymentProvider" value={paymentProvider} />
@@ -285,6 +381,31 @@
 		{/if}
 	</div>
 
+	<div>
+		<label for="userId" class="block text-xs font-medium text-muted-foreground mb-1">
+			Who spent? <span class="text-xs text-muted-foreground/60">(optional)</span>
+		</label>
+		<Select
+			id="userId"
+			name="userId"
+			bind:value={$form.userId}
+			class="w-full h-8 text-sm"
+		>
+			<option value="">-- Vault Expense --</option>
+			{#each members as member}
+				<option value={member.userId}>
+					{member.firstName && member.lastName
+						? `${member.firstName} ${member.lastName}`
+						: member.email}
+					{member.role === 'owner' ? ' (Owner)' : ''}
+				</option>
+			{/each}
+		</Select>
+		{#if $errors.userId}
+			<p class="mt-0.5 text-xs text-destructive">{$errors.userId}</p>
+		{/if}
+	</div>
+
     <div>
         <label for="note" class="block text-xs font-medium text-muted-foreground mb-1">
             What did you spend on?
@@ -330,7 +451,7 @@
 					>
 						<option value="">Select payment type...</option>
 						{#each paymentTypes as type}
-							<option value={type.value}>{type.label}</option>
+							<option value={type.code}>{type.name}</option>
 						{/each}
 					</select>
 				</div>
@@ -344,7 +465,12 @@
 						<SearchableSelect
 							name="paymentProvider"
 							bind:value={paymentProvider}
-							options={providerOptions().map(p => ({ id: p, name: p, color: '#6B7280' }))}
+							options={providerOptions().map(p => ({
+								id: p.name,
+								name: p.name,
+								color: p.color || '#6B7280',
+								icon: p.icon
+							}))}
 							placeholder="Choose provider"
 							searchPlaceholder="Search providers..."
 							onSearch={(term) => {}}

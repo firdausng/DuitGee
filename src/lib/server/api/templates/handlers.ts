@@ -18,7 +18,7 @@ export const getTemplates = async (
 ): Promise<ExpenseTemplate[]> => {
 	const client = drizzle(db, { schema });
 
-	// Get templates with category
+	// Get templates with category - show ALL templates in the vault ordered by usage
 	const templatesList = await client
 		.select({
 			template: expenseTemplates,
@@ -28,7 +28,6 @@ export const getTemplates = async (
 		.leftJoin(categories, eq(expenseTemplates.categoryId, categories.id))
 		.where(
 			and(
-				eq(expenseTemplates.userId, userId),
 				eq(expenseTemplates.vaultId, vaultId),
 				isNull(expenseTemplates.deletedAt)
 			)
@@ -74,6 +73,7 @@ export const getTemplate = async (
 ): Promise<ExpenseTemplate | undefined> => {
 	const client = drizzle(db, { schema });
 
+	// Get template without userId filter - any vault member can view templates
 	const result = await client
 		.select({
 			template: expenseTemplates,
@@ -84,7 +84,6 @@ export const getTemplate = async (
 		.where(
 			and(
 				eq(expenseTemplates.id, templateId),
-				eq(expenseTemplates.userId, userId),
 				isNull(expenseTemplates.deletedAt)
 			)
 		)
@@ -107,7 +106,7 @@ export const getTemplate = async (
 };
 
 export const createTemplate = async (
-	userId: string,
+	creatorUserId: string,
 	data: {
 		vaultId: string;
 		name: string;
@@ -120,6 +119,7 @@ export const createTemplate = async (
 		icon?: string;
 		iconType?: string;
 		tagNames?: string[];
+		defaultUserId?: string; // The user this template should assign expenses to
 	},
 	db: D1Database
 ) => {
@@ -133,8 +133,8 @@ export const createTemplate = async (
 		.values({
 			id: templateId,
 			...templateData,
-			userId,
-			...initialAuditFields({ userId })
+			userId: creatorUserId, // Template creator - always set
+			...initialAuditFields({ userId: creatorUserId })
 		})
 		.returning();
 
@@ -142,7 +142,7 @@ export const createTemplate = async (
 	if (tagNames && tagNames.length > 0) {
 		// Get or create tags and increment usage
 		for (const tagName of tagNames) {
-			await getOrCreateTag(tagName, userId, db);
+			await getOrCreateTag(tagName, creatorUserId, db);
 			await incrementTagUsage(tagName, db);
 		}
 
@@ -163,7 +163,7 @@ export const createTemplate = async (
 };
 
 export const updateTemplate = async (
-	userId: string,
+	updaterUserId: string,
 	templateId: string,
 	data: {
 		name?: string;
@@ -176,6 +176,7 @@ export const updateTemplate = async (
 		icon?: string;
 		iconType?: string;
 		tagNames?: string[];
+		defaultUserId?: string; // The user this template should assign expenses to
 	},
 	db: D1Database
 ) => {
@@ -187,12 +188,11 @@ export const updateTemplate = async (
 		.update(expenseTemplates)
 		.set({
 			...templateData,
-			...updateAuditFields({ userId })
+			...updateAuditFields({ userId: updaterUserId })
 		})
 		.where(
 			and(
 				eq(expenseTemplates.id, templateId),
-				eq(expenseTemplates.userId, userId),
 				isNull(expenseTemplates.deletedAt)
 			)
 		)
@@ -220,7 +220,7 @@ export const updateTemplate = async (
 		if (tagNames.length > 0) {
 			// Get or create tags and increment usage
 			for (const tagName of tagNames) {
-				await getOrCreateTag(tagName, userId, db);
+				await getOrCreateTag(tagName, creatorUserId, db);
 				await incrementTagUsage(tagName, db);
 			}
 

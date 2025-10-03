@@ -4,6 +4,7 @@ export const expenseSchema = v.object({
 	note: v.optional(v.string()),
 	amount: v.pipe(v.number(), v.minValue(0.01, 'Amount must be positive')),
 	categoryId: v.pipe(v.string(), v.minLength(1, 'Category is required')),
+	userId: v.optional(v.string()), // Optional - if null, it's a vault-level expense
 	//vaultId: v.pipe(v.string(), v.minLength(1, 'Vault is required')), // Required vault
 	date: v.pipe(v.string(), v.isoDateTime()),
 	paymentType: v.optional(v.string()),

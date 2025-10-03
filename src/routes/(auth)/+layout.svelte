@@ -136,6 +136,32 @@
 	const vaultNavigation = $derived(getVaultNavigation());
 	const isInVault = $derived(vaultNavigation.length > 0);
 
+	// Get current vault ID if in a vault
+	const currentVaultId = $derived.by(() => {
+		const segments = data.pathname.split('/').filter(Boolean);
+		if (segments[0] === 'vaults' && segments[1] && segments[1] !== 'new') {
+			return segments[1];
+		}
+		return null;
+	});
+
+	// Determine FAB behavior based on current page
+	const fabContext = $derived.by(() => {
+		const segments = data.pathname.split('/').filter(Boolean);
+
+		// Check for specific pages that override default FAB behavior
+		if (segments[2] === 'statistics') {
+			return { type: 'custom', page: 'statistics' };
+		}
+
+		// Default behavior: create expense
+		if (currentVaultId) {
+			return { type: 'direct', action: () => goto(`/vaults/${currentVaultId}/expenses/new`) };
+		}
+
+		return { type: 'dropdown' };
+	});
+
 	// Dropdown state for vault menu
 	let showVaultDropdown = $state(false);
 
@@ -581,63 +607,77 @@
 	</main>
 
 	<!-- Floating Action Button -->
-	<div class="fixed bottom-6 right-6 z-40">
-		<div class="relative">
-			<!-- FAB Button -->
-			<button
-				onclick={() => showFabDropdown = !showFabDropdown}
-				class="w-14 h-14 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center group hover:from-orange-600 hover:to-red-600"
-				title="Add Expense"
-			>
-				<Plus class="w-6 h-6 transition-transform duration-300 {showFabDropdown ? 'rotate-45' : ''}" weight="bold" />
-			</button>
+	{#if fabContext.type !== 'custom'}
+		<div class="fixed bottom-6 right-6 z-40">
+			<div class="relative">
+				<!-- FAB Button -->
+				{#if fabContext.type === 'direct'}
+					<!-- Direct action when in vault -->
+					<button
+						onclick={fabContext.action}
+						class="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center group hover:from-orange-600 hover:to-red-600 touch-manipulation"
+						title="Add Expense"
+					>
+						<Plus class="w-6 h-6 sm:w-7 sm:h-7" weight="bold" />
+					</button>
+				{:else}
+					<!-- Dropdown when not in vault -->
+					<button
+						onclick={() => showFabDropdown = !showFabDropdown}
+						class="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center group hover:from-orange-600 hover:to-red-600 touch-manipulation"
+						title="Add Expense"
+					>
+						<Plus class="w-6 h-6 sm:w-7 sm:h-7 transition-transform duration-300 {showFabDropdown ? 'rotate-45' : ''}" weight="bold" />
+					</button>
 
-			<!-- FAB Dropdown -->
-			{#if showFabDropdown}
-				<div class="absolute bottom-full right-0 mb-4 w-72 bg-background border border-border rounded-lg shadow-xl z-50 animate-in slide-in-from-bottom-2 duration-200">
-					<div class="py-3">
-						<div class="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">
-							Add Expense To
-						</div>
-						{#each suggestedVaults as vault, index}
-							<button
-								onclick={() => handleQuickAdd(vault.vault.id)}
-								class="w-full flex items-center px-4 py-3 text-sm transition-colors hover:bg-accent group"
-							>
-								<div class="w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm transition-transform group-hover:scale-105" style="background-color: {vault.vault.color}20; border: 1px solid {vault.vault.color}">
-									{vault.vault.icon}
+					<!-- FAB Dropdown -->
+					{#if showFabDropdown}
+						<div class="absolute bottom-full right-0 mb-4 w-72 sm:w-80 bg-background border border-border rounded-lg shadow-xl z-50 animate-in slide-in-from-bottom-2 duration-200">
+							<div class="py-3">
+								<div class="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">
+									Add Expense To
 								</div>
-								<div class="flex-1 text-left">
-									<div class="font-medium text-foreground">{vault.vault.name}</div>
-									<div class="text-xs text-muted-foreground">
-										{vault.vault.isPersonal ? 'Personal' : 'Shared'} vault
-										{#if index === 0}
-											• Suggested
-										{/if}
-									</div>
-								</div>
-								<div class="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-									<CaretRight class="w-4 h-4" />
-								</div>
-							</button>
-						{/each}
+								{#each suggestedVaults as vault, index}
+									<button
+										onclick={() => handleQuickAdd(vault.vault.id)}
+										class="w-full flex items-center px-4 py-3 sm:py-4 text-sm transition-colors hover:bg-accent active:bg-accent group min-h-[56px] touch-manipulation"
+									>
+										<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mr-3 text-sm transition-transform group-hover:scale-105" style="background-color: {vault.vault.color}20; border: 1px solid {vault.vault.color}">
+											<IconDisplay icon={vault.vault.icon} iconType={vault.vault.iconType} size="sm" />
+										</div>
+										<div class="flex-1 text-left">
+											<div class="font-medium text-foreground">{vault.vault.name}</div>
+											<div class="text-xs text-muted-foreground">
+												{vault.vault.isPersonal ? 'Personal' : 'Shared'} vault
+												{#if index === 0}
+													• Suggested
+												{/if}
+											</div>
+										</div>
+										<div class="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+											<CaretRight class="w-4 h-4" />
+										</div>
+									</button>
+								{/each}
 
-						{#if data.vaults.length > 5}
-							<div class="border-t border-border mt-2 pt-2">
-								<button
-									onclick={() => { showFabDropdown = false; goto('/vaults'); }}
-									class="w-full flex items-center px-4 py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-								>
-									<div class="w-8 h-8 rounded-full bg-muted flex items-center justify-center mr-3 text-xs">
-										⋯
+								{#if data.vaults.length > 5}
+									<div class="border-t border-border mt-2 pt-2">
+										<button
+											onclick={() => { showFabDropdown = false; goto('/vaults'); }}
+											class="w-full flex items-center px-4 py-3 sm:py-4 text-sm text-muted-foreground hover:text-foreground hover:bg-accent active:bg-accent transition-colors min-h-[56px] touch-manipulation"
+										>
+											<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center mr-3 text-xs">
+												⋯
+											</div>
+											<span>View all vaults ({data.vaults.length})</span>
+										</button>
 									</div>
-									<span>View all vaults ({data.vaults.length})</span>
-								</button>
+								{/if}
 							</div>
-						{/if}
-					</div>
-				</div>
-			{/if}
+						</div>
+					{/if}
+				{/if}
+			</div>
 		</div>
-	</div>
+	{/if}
 </div>

@@ -28,9 +28,17 @@
 
 	let isExpanded = $state(false);
 
-	// Sort by usage count and recent usage
-	let sortedTemplates = $derived(
-		[...templates].sort((a, b) => b.usageCount - a.usageCount).slice(0, maxVisible)
+	// Templates are already sorted by database (usageCount DESC, lastUsedAt DESC)
+	// Just limit the visible count for initial display
+	let visibleTemplates = $derived(
+		maxVisible ? templates.slice(0, maxVisible) : templates
+	);
+
+	let hasMore = $derived(templates.length > maxVisible);
+	let showAll = $state(false);
+
+	let displayedTemplates = $derived(
+		showAll ? templates : visibleTemplates
 	);
 
 	function formatCurrency(amount: number): string {
@@ -42,7 +50,7 @@
 	}
 </script>
 
-{#if sortedTemplates.length > 0}
+{#if templates.length > 0}
 	<div class="border rounded-md">
 		<!-- Collapsible Header -->
 		<button
@@ -53,6 +61,7 @@
 			<div class="flex items-center gap-2">
 				<Lightning class="w-3.5 h-3.5 text-primary" weight="fill" />
 				<span class="text-xs font-medium text-foreground">Quick Templates</span>
+				<span class="text-xs text-muted-foreground">({templates.length})</span>
 			</div>
 			<CaretDown class="w-3.5 h-3.5 text-muted-foreground transition-transform {isExpanded ? 'rotate-180' : ''}" />
 		</button>
@@ -62,7 +71,7 @@
 				<!-- Horizontal Scroll for all screen sizes -->
 				<div class="overflow-x-auto px-2 py-2">
 					<div class="flex gap-2">
-						{#each sortedTemplates as template}
+						{#each displayedTemplates as template}
 							<button
 								type="button"
 								onclick={() => onSelectTemplate(template)}
@@ -80,6 +89,18 @@
 								</div>
 							</button>
 						{/each}
+
+						{#if hasMore && !showAll}
+							<button
+								type="button"
+								onclick={() => showAll = true}
+								class="flex-shrink-0 px-2.5 py-1.5 bg-primary/10 hover:bg-primary/20 rounded border border-primary/20 hover:border-primary/40 transition-all"
+							>
+								<div class="text-xs font-medium text-primary whitespace-nowrap">
+									Show All ({templates.length - maxVisible} more)
+								</div>
+							</button>
+						{/if}
 					</div>
 				</div>
 			</div>

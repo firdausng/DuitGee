@@ -37,6 +37,15 @@
 		color?: string;
 	};
 
+	type Member = {
+		userId: string;
+		firstName?: string;
+		lastName?: string;
+		email: string;
+		role: string;
+		status: string;
+	};
+
 	interface Props {
 		template?: {
 			id?: string;
@@ -50,11 +59,14 @@
 			icon?: string;
 			iconType?: string;
 			tagNames?: string[]; // Changed from tagIds to tagNames
+			defaultUserId?: string;
 		};
 		categories: Category[];
 		tags: Tag[];
 		paymentTypes: PaymentType[];
 		paymentProviders: PaymentProvider[];
+		members?: Member[];
+		currentUserId?: string;
 		vaultId: string;
 		onSubmit: (data: any) => void;
 		onCancel: () => void;
@@ -67,6 +79,8 @@
 		tags,
 		paymentTypes,
 		paymentProviders,
+		members = [],
+		currentUserId,
 		vaultId,
 		onSubmit,
 		onCancel,
@@ -87,7 +101,8 @@
 		note: template?.note || '',
 		icon: template?.icon || '📝',
 		iconType: template?.iconType || 'emoji',
-		tagNames: template?.tagNames || [] // Changed from tagIds to tagNames
+		tagNames: template?.tagNames || [], // Changed from tagIds to tagNames
+		defaultUserId: template?.defaultUserId !== undefined ? template.defaultUserId : '__creator__' // Default to expense creator
 	});
 
 	// State for searchable categories
@@ -224,6 +239,33 @@
 			placeholder="Optional description..."
 			class="w-full px-3 py-2 border rounded-md bg-background text-foreground resize-none"
 		></textarea>
+	</div>
+
+	<!-- Default User/Creator -->
+	<div>
+		<label for="defaultUserId" class="block text-sm font-medium text-foreground mb-1">
+			Default User <span class="text-xs text-muted-foreground">(Who will this expense be for?)</span>
+		</label>
+		<select
+			id="defaultUserId"
+			bind:value={formData.defaultUserId}
+			class="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+		>
+			<option value="__creator__">User who creates the expense (Default)</option>
+			<option value="">Vault Expense</option>
+			<option value={currentUserId}>Myself</option>
+			{#each members.filter(m => m.userId !== currentUserId) as member}
+				<option value={member.userId}>
+					{member.firstName && member.lastName
+						? `${member.firstName} ${member.lastName}`
+						: member.email}
+					{member.role === 'owner' ? ' (Owner)' : ''}
+				</option>
+			{/each}
+		</select>
+		<p class="text-xs text-muted-foreground mt-1">
+			Who the expense will be assigned to by default when using this template
+		</p>
 	</div>
 
 	<!-- Category -->

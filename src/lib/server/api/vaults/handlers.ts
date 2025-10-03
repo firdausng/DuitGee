@@ -137,6 +137,74 @@ export const getVaultByEmail = async (userEmail: string, vaultId: string, db: D1
     return getVault(user[0].id, vaultId, db);
 };
 
+// Get vault members (owner + active members)
+export const getVaultMembers = async (vaultId: string, db: D1Database) => {
+    const client = drizzle(db, { schema });
+
+    // Get vault owner
+    const vaultData = await client
+        .select({
+            ownerId: vaults.ownerId,
+            ownerFirstName: users.firstName,
+            ownerLastName: users.lastName,
+            ownerEmail: users.email
+        })
+        .from(vaults)
+        .leftJoin(users, eq(vaults.ownerId, users.id))
+        .where(eq(vaults.id, vaultId))
+        .limit(1);
+
+    // Fetch vault members
+    const vaultMembers_list = await client
+        .select({
+            userId: vaultMembers.userId,
+            role: vaultMembers.role,
+            status: vaultMembers.status,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            email: users.email
+        })
+        .from(vaultMembers)
+        .leftJoin(users, eq(vaultMembers.userId, users.id))
+        .where(
+            and(
+                eq(vaultMembers.vaultId, vaultId),
+                eq(vaultMembers.status, 'active')
+            )
+        );
+
+    // Combine owner and members
+    const membersMap = new Map();
+
+    // Add owner first
+    if (vaultData[0]) {
+        membersMap.set(vaultData[0].ownerId, {
+            userId: vaultData[0].ownerId,
+            firstName: vaultData[0].ownerFirstName || undefined,
+            lastName: vaultData[0].ownerLastName || undefined,
+            email: vaultData[0].ownerEmail || '',
+            role: 'owner' as const,
+            status: 'active' as const
+        });
+    }
+
+    // Add other members
+    vaultMembers_list.forEach(m => {
+        if (!membersMap.has(m.userId)) {
+            membersMap.set(m.userId, {
+                userId: m.userId,
+                firstName: m.firstName || undefined,
+                lastName: m.lastName || undefined,
+                email: m.email || '',
+                role: m.role,
+                status: m.status
+            });
+        }
+    });
+
+    return Array.from(membersMap.values());
+};
+
 // Get a specific vault with member details
 export const getVault = async (userId: string, vaultId: string, db: D1Database) => {
     console.log(`[getVault] Called with userId: ${userId}, vaultId: ${vaultId}`);

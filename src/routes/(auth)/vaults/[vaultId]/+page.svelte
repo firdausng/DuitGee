@@ -334,8 +334,18 @@
 		<!-- Period Summary Header -->
 		<div class="bg-gradient-to-r from-primary to-accent rounded-lg p-3 sm:p-6 mb-4 sm:mb-6 text-primary-foreground shadow-lg">
 			<div class="flex flex-col gap-3 sm:gap-4">
-				<!-- Title -->
-				<h2 class="text-sm sm:text-lg font-semibold">Expenses for {getPeriodLabel(currentPeriod)}</h2>
+				<!-- Title and More Details Button -->
+				<div class="flex items-center justify-between">
+					<h2 class="text-sm sm:text-lg font-semibold">Expenses for {getPeriodLabel(currentPeriod)}</h2>
+					<Button
+						onclick={() => goto(`/vaults/${data.vaultId}/statistics`)}
+						variant="ghost"
+						size="sm"
+						class="text-primary-foreground hover:bg-primary-foreground/10 text-xs sm:text-sm"
+					>
+						More Details
+					</Button>
+				</div>
 
 				<!-- Stats Grid - Mobile Optimized -->
 				<div class="grid grid-cols-2 gap-3">
@@ -501,11 +511,13 @@
 													{expense.category?.name}
 												</span>
 											</div>
-											{#if expense.creator}
-												<div class="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-													<span class="truncate">by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName} (${expense.creator.email})` : expense.creator.email}</span>
-												</div>
-											{/if}
+											<div class="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+												{#if expense.creator}
+													<span class="truncate">by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName}` : expense.creator.email}</span>
+												{:else}
+													<span class="italic">Vault</span>
+												{/if}
+											</div>
 										</div>
 									</div>
 									<div class="flex items-center justify-between">
@@ -556,11 +568,13 @@
 											<div class="flex items-center gap-1 text-xs text-muted-foreground">
 												<span>{expense.category?.name}</span>
 											</div>
-											{#if expense.creator}
-												<div class="text-xs text-muted-foreground mt-0.5 truncate">
-													by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName} (${expense.creator.email})` : expense.creator.email}
-												</div>
-											{/if}
+											<div class="text-xs text-muted-foreground mt-0.5 truncate">
+												{#if expense.creator}
+													by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName}` : expense.creator.email}
+												{:else}
+													<span class="italic">Vault</span>
+												{/if}
+											</div>
 										</div>
 									</div>
 									<div class="flex items-center justify-between">

@@ -7,6 +7,8 @@ import {createExpense} from "$lib/server/api/expenses/handlers";
 import {getCategories} from "$lib/server/api/categories/handlers";
 import {getTags} from "$lib/server/api/tags/handlers";
 import {getTemplates} from "$lib/server/api/templates/handlers";
+import {getVaultMembers} from "$lib/server/api/vaults/handlers";
+import {getPaymentTypes, getPaymentProviders} from "$lib/server/api/payments/handlers";
 
 export const load: PageServerLoad = async ({platform, locals, params}) => {
     if(platform === undefined){
@@ -15,19 +17,30 @@ export const load: PageServerLoad = async ({platform, locals, params}) => {
 
     let {vaultId} = params;
 
-    const [categories, tags, templates] = await Promise.all([
+    const [categories, tags, templates, allMembers, paymentTypes, paymentProviders] = await Promise.all([
         getCategories(vaultId, platform.env.DB),
         getTags(platform.env.DB, { limit: 100 }), // Get top 100 popular tags
-        getTemplates(locals.currentUser.id, vaultId, platform.env.DB)
+        getTemplates(locals.currentUser.id, vaultId, platform.env.DB),
+        getVaultMembers(vaultId, platform.env.DB),
+        getPaymentTypes(platform.env.DB),
+        getPaymentProviders(platform.env.DB)
     ]);
 
 	const form = await superValidate(valibot(expenseSchema));
+
+	// Set default userId to current user
+	form.data.userId = locals.currentUser.id;
+
 	return {
         form,
         categories,
         tags,
         templates,
-        vaultId
+        members: allMembers,
+        currentUserId: locals.currentUser.id,
+        vaultId,
+        paymentTypes,
+        paymentProviders
     };
 };
 

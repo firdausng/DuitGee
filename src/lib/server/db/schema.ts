@@ -95,7 +95,7 @@ export const expenses = sqliteTable('expenses', {
 	note: text('description'),
 	amount: real('amount').notNull(),
 	categoryId: text('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
-	userId: text('user_id').notNull(), // User ID as string, no FK constraint for microservice compatibility
+	userId: text('user_id'), // Optional - null means vault-level expense (e.g., family/shared expense)
 	vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }), // required vault
 	date: text('date').notNull().$defaultFn(() => formatISO(new Date())), // ISO string format like audit fields
 	// Payment information - references to payment tables
@@ -103,7 +103,7 @@ export const expenses = sqliteTable('expenses', {
 	paymentProviderId: text('payment_provider_id').references(() => paymentProviders.id, { onDelete: 'set null' }),
     // Audit fields
     createdAt: text('created_at').$defaultFn(() => formatISO(new Date())),
-    createdBy: text('created_by').notNull(), // User ID as string, no FK constraint
+    createdBy: text('created_by').notNull(), // User ID as string, no FK constraint - who created the record (different from userId which is who the expense is for)
     updatedAt: text('updated_at').$defaultFn(() => formatISO(new Date())),
     updatedBy: text('updated_by'), // User ID as string, no FK constraint
     deletedAt: text('deleted_at'),
@@ -132,7 +132,7 @@ export const expenseTags = sqliteTable('expense_tags', {
 // Expense templates - reusable expense configurations
 export const expenseTemplates = sqliteTable('expense_templates', {
 	id: text('id').primaryKey().$defaultFn(() => createId()),
-	userId: text('user_id').notNull(), // User ID as string, no FK constraint
+	userId: text('user_id').notNull(), // Template creator/owner - never null
 	vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
 	name: text('name').notNull(),
 	description: text('description'),
@@ -143,6 +143,7 @@ export const expenseTemplates = sqliteTable('expense_templates', {
 	note: text('note'),
 	icon: text('icon').default('📝'),
 	iconType: text('icon_type').default('emoji'),
+	defaultUserId: text('default_user_id'), // Who the expense should be assigned to: "__creator__", null (vault), or specific user ID
 	// Usage tracking
 	usageCount: integer('usage_count').notNull().default(0),
 	lastUsedAt: text('last_used_at'),

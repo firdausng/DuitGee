@@ -35,7 +35,8 @@
 	function handleEdit(template: any) {
 		selectedTemplate = {
 			...template,
-			tagIds: template.tags?.map((t: any) => t.id) || []
+			tagNames: template.tags?.map((t: any) => t.name) || [],
+			defaultUserId: template.defaultUserId
 		};
 		showEditDialog = true;
 	}
@@ -53,7 +54,12 @@
 
 		// Add all form fields
 		Object.entries(formData).forEach(([key, value]) => {
-			if (value !== undefined && value !== null && value !== '') {
+			// Special handling for defaultUserId - allow empty string for vault expenses
+			if (key === 'defaultUserId') {
+				if (value !== undefined && value !== null) {
+					body.append(key, String(value));
+				}
+			} else if (value !== undefined && value !== null && value !== '') {
 				body.append(key, Array.isArray(value) ? value.join(',') : String(value));
 			}
 		});
@@ -237,6 +243,8 @@
 				tags={data.tags}
 				paymentTypes={data.paymentTypes}
 				paymentProviders={data.paymentProviders}
+				members={data.members}
+				currentUserId={data.currentUserId}
 				vaultId={data.vault.id}
 				onSubmit={submitTemplate}
 				onCancel={cancelDialog}
@@ -260,6 +268,8 @@
 				tags={data.tags}
 				paymentTypes={data.paymentTypes}
 				paymentProviders={data.paymentProviders}
+				members={data.members}
+				currentUserId={data.currentUserId}
 				vaultId={data.vault.id}
 				onSubmit={submitTemplate}
 				onCancel={cancelDialog}

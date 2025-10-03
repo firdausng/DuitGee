@@ -123,26 +123,6 @@
 		<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
 			{#each data.tags as tag}
 				<div class="bg-background border rounded-lg p-4 hover:shadow-md transition-shadow">
-					<!-- Tag Display -->
-					<div class="flex items-center gap-2 mb-3">
-						<div
-							class="w-8 h-8 rounded-full flex items-center justify-center text-lg"
-							style="background-color: {tag.color}20; border: 2px solid {tag.color}"
-						>
-							{tag.icon || '🏷️'}
-						</div>
-						<h3 class="font-medium text-foreground truncate flex-1">{tag.name}</h3>
-					</div>
-
-					<!-- Color Badge -->
-					<div class="flex items-center gap-2 mb-3">
-						<div
-							class="w-4 h-4 rounded-full border-2 border-white dark:border-gray-800"
-							style="background-color: {tag.color}"
-						></div>
-						<span class="text-xs text-muted-foreground font-mono">{tag.color}</span>
-					</div>
-
 					<!-- Actions -->
 					<div class="flex gap-2 pt-3 border-t">
 						<Button

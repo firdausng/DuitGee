@@ -221,3 +221,163 @@ When using `<select>` with period/filter changes that trigger navigation:
 - some data need to be seeded
 - store all seed sql in `seed` folder
 - sql file will be run manually, so do try to run it
+
+## Template System (Expense Templates)
+
+### Database Schema
+**Template Table** (`expenseTemplates` in `src/lib/server/db/schema.ts`):
+- `userId` (NOT NULL) - Template creator/owner, always set to creator's ID
+- `defaultUserId` (optional) - Who the expense should be assigned to when using template:
+  - `"__creator__"` - Dynamic, assigns to whoever uses the template (default)
+  - `null` or empty - Creates vault-level expense
+  - Specific user ID - Always assigns to that user
+- `vaultId` - Template belongs to a vault
+- Other fields: `name`, `description`, `categoryId`, `defaultAmount`, `paymentTypeId`, `paymentProviderId`, `note`, `icon`, `iconType`
+- Usage tracking: `usageCount`, `lastUsedAt`
+- Tags: Junction table `expenseTemplateTags` links to `tags` table
+
+### Migration 0010
+**File**: `migrations/0010_sad_katie_power.sql`
+- Makes `userId` NOT NULL (template creator)
+- Adds `defaultUserId` field for default expense assignment
+- Migrates data:
+  - Old `userId` (was optional, meant default expense user) → new `defaultUserId`
+  - New `userId` (template creator) ← `COALESCE(old_userId, created_by)`
+
+### API Handlers Architecture
+**All Drizzle queries MUST be in handlers** (`src/lib/server/api/*/handlers.ts`), NOT in page.server.ts files.
+
+**Template Handlers** (`src/lib/server/api/templates/handlers.ts`):
+- `getTemplates(userId, vaultId, db)` - Returns ALL templates in vault (not filtered by userId)
+  - Ordered by `usageCount DESC, lastUsedAt DESC` (most used first)
+  - Includes category and tags relations
+- `getTemplate(userId, templateId, db)` - Get single template (no userId filter, vault-wide access)
+- `createTemplate(creatorUserId, data, db)` - Create new template
+  - Always sets `userId = creatorUserId` (template owner)
+  - Sets `defaultUserId` from form data
+- `updateTemplate(updaterUserId, templateId, data, db)` - Update template
+  - Only creator can edit (filters by userId in WHERE clause)
+- `deleteTemplate(userId, templateId, db)` - Soft delete template
+  - Only creator can delete (filters by userId in WHERE clause)
+- `incrementTemplateUsage(templateId, db)` - Increment usage counter when template is used
+
+**Vault Members Handler** (`src/lib/server/api/vaults/handlers.ts`):
+- `getVaultMembers(vaultId, db)` - Get vault owner + active members
+  - Returns unified list with owner first
+  - Used by templates and expenses pages
+
+### UI Components
+
+**Template Selector** (REPLACED):
+- Old: Horizontal scrollable component `TemplateSelector.svelte`
+- New: SearchableSelect dropdown (same as category field)
+
+**ExpenseForm** (`src/lib/components/ExpenseForm.svelte`):
+- Template dropdown appears at top of form (before amount/category)
+- Uses `SearchableSelect` component
+- Client-side search by template name and note
+- Shows all vault templates, ordered by most used
+- When template selected:
+  - Pre-fills: category, amount, note, payment info, tags
+  - Handles `defaultUserId`:
+    - `"__creator__"` → sets to current user
+    - empty → vault expense (no user assigned)
+    - user ID → specific user
+  - Clears template selection after applying (allows re-selection)
+- Reactive: Uses `$effect(() => { if (selectedTemplateId) handleTemplateSelect() })`
+
+**ExpenseTemplateForm** (`src/lib/components/ExpenseTemplateForm.svelte`):
+- Form for creating/editing templates
+- Default User dropdown with options:
+  - "User who creates the expense (Default)" → `__creator__`
+  - "Vault Expense" → empty string
+  - "Myself" → template creator's ID
+  - Other members → specific member IDs
+- Field name: `defaultUserId` (not `userId`)
+
+### Page Server Files
+
+**Templates Page** (`src/routes/(auth)/vaults/[vaultId]/templates/+page.server.ts`):
+- Load function:
+  - Uses handlers: `getVault`, `getTemplates`, `getTags`, `getCategories`, `getPaymentTypes`, `getPaymentProviders`, `getVaultMembers`
+  - NO direct Drizzle queries
+- Actions:
+  - `create`: Extracts `defaultUserId` from form, passes to `createTemplate`
+  - `update`: Extracts `defaultUserId` from form, passes to `updateTemplate`
+  - `delete`: Calls `deleteTemplate`
+
+**Expense New Page** (`src/routes/(auth)/vaults/[vaultId]/expenses/new/+page.server.ts`):
+- Load function:
+  - Uses handlers: `getCategories`, `getTags`, `getTemplates`, `getVaultMembers`
+  - NO direct Drizzle queries
+  - Sets default `userId` to current user in form
+
+**Templates Page Component** (`src/routes/(auth)/vaults/[vaultId]/templates/+page.svelte`):
+- Submit function:
+  - Special handling for `defaultUserId` - allows empty string (vault expense option)
+  - Uses FormData to submit to server actions
+- Edit function:
+  - Maps `template.tags` to `tagNames` array
+  - Includes `defaultUserId` in form data
+
+### Key Concepts
+
+**Template Ownership vs Expense Assignment**:
+1. **Template Creator** (`userId`): Who created the template - never null
+2. **Default Expense User** (`defaultUserId`): Who expense should be assigned to when using template
+   - Can be `"__creator__"`, empty, or specific user ID
+   - This is what gets applied to the expense when template is used
+
+**Vault-Wide Templates**:
+- All vault members can see and use all templates in the vault
+- Templates are ordered by usage count (most used first)
+- Only template creator can edit/delete their own templates
+- Permissions handled in handlers (WHERE clauses filter by userId for updates/deletes)
+
+**Searchable Interface**:
+- Templates use same SearchableSelect component as categories
+- Client-side filtering by name and note
+- Relevance sorting: exact match → starts with → usage count
+
+### Running Seeds
+
+**Malaysian Banks Seed** (`seed/0004_seed_malaysian_banks.sql`):
+```bash
+npx wrangler d1 execute duitgee --local --file=./seed/0004_seed_malaysian_banks.sql
+```
+
+Includes:
+- 20 Malaysian banks (Maybank, CIMB, Public Bank, RHB, Hong Leong, AmBank, UOB, OCBC, HSBC, Standard Chartered, Islamic banks, etc.)
+- 5 Malaysian e-wallets (Touch 'n Go eWallet, Boost, GrabPay, MAE by Maybank, BigPay)
+
+### Common Patterns
+
+**Handler Function Pattern**:
+```typescript
+export const getSomething = async (userId: string, vaultId: string, db: D1Database) => {
+    const client = drizzle(db, { schema });
+    // Query logic here
+    return results;
+};
+```
+
+**Page Server Load Pattern**:
+```typescript
+export const load: PageServerLoad = async ({ locals, platform, params }) => {
+    const [data1, data2, data3] = await Promise.all([
+        getHandler1(...),
+        getHandler2(...),
+        getHandler3(...)
+    ]);
+    return { data1, data2, data3 };
+};
+```
+
+**Svelte 5 Runes Pattern**:
+```typescript
+let state = $state(initialValue);
+let derived = $derived(computation);
+$effect(() => {
+    // Side effect when dependencies change
+});
+```
