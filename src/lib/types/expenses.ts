@@ -1,6 +1,6 @@
 // Type definitions for expense-related objects
 
-import type {Category} from "$lib/server/api/categories/schema";
+import type {Category} from "$lib/schemas/expense";
 
 export interface CategoryGroup {
 	id: string;

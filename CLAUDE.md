@@ -274,29 +274,61 @@ When using `<select>` with period/filter changes that trigger navigation:
 
 **Template Selector** (REPLACED):
 - Old: Horizontal scrollable component `TemplateSelector.svelte`
-- New: SearchableSelect dropdown (same as category field)
+- New: Template grid on expenses/new page (before showing expense form)
 
-**ExpenseForm** (`src/lib/components/ExpenseForm.svelte`):
-- Template dropdown appears at top of form (before amount/category)
-- Uses `SearchableSelect` component
-- Client-side search by template name and note
-- Shows all vault templates, ordered by most used
-- When template selected:
-  - Pre-fills: category, amount, note, payment info, tags
-  - Handles `defaultUserId`:
-    - `"__creator__"` → sets to current user
-    - empty → vault expense (no user assigned)
-    - user ID → specific user
-  - Clears template selection after applying (allows re-selection)
-- Reactive: Uses `$effect(() => { if (selectedTemplateId) handleTemplateSelect() })`
+**Expense Forms**:
+- **CreateExpenseForm** (`src/lib/components/CreateExpenseForm.svelte`):
+  - For creating new expenses
+  - All fields start empty/with defaults
+  - Uses bits-ui components (Combobox, Select) with icons
+  - No template functionality (templates handled at page level)
 
-**ExpenseTemplateForm** (`src/lib/components/ExpenseTemplateForm.svelte`):
-- Form for creating/editing templates
-- Default User dropdown with options:
-  - "User who creates the expense (Default)" → `__creator__`
-  - "Vault Expense" → empty string
-  - "Myself" → template creator's ID
-  - Other members → specific member IDs
+- **EditExpenseForm** (if exists):
+  - For editing existing expenses
+  - Pre-filled with expense data
+
+**Template Forms**:
+- **CreateExpenseTemplateForm** (`src/lib/components/CreateExpenseTemplateForm.svelte`):
+  - For creating new templates
+  - All fields start empty/with defaults
+  - Uses bits-ui Select components with IconDisplay
+  - Category: Select with category icons
+  - Payment Type: Select with payment type icons
+  - Payment Provider: Select with dynamic filtering (e_wallet vs bank) and provider icons
+  - Default User: Select with predefined options
+
+- **EditExpenseTemplateForm** (`src/lib/components/EditExpenseTemplateForm.svelte`):
+  - For editing existing templates
+  - Pre-filled with template data
+  - Same components as CreateExpenseTemplateForm but with initial values
+  - Uses bits-ui Select components with IconDisplay throughout
+
+**Component Patterns**:
+- Separate create/edit forms (don't reuse same component for both)
+- bits-ui components: Combobox for searchable fields, Select for fixed options
+- IconDisplay component used to show icons in dropdowns
+- Payment provider filtering based on payment type:
+  ```typescript
+  let paymentProviderForPaymentType = $derived.by(()=>{
+      if(!selectedPaymentType) return [];
+      if(selectedPaymentType?.code === 'cash') return [];
+      if(selectedPaymentType?.code === 'e_wallet') {
+          return paymentProviders.filter(p => p.type === 'e_wallet').map(p => ({
+              ...p, value: p.id, label: p.name,
+          }));
+      }
+      return paymentProviders.filter(p => p.type === 'bank').map(p => ({
+          ...p, value: p.id, label: p.name,
+      }));
+  })
+  ```
+- When payment type changes, clear payment provider selection
+
+**Default User Options** (for templates):
+- "User who creates the expense (Default)" → `__creator__`
+- "Vault Expense" → empty string
+- "Myself" → template creator's ID
+- Other members → specific member IDs
 - Field name: `defaultUserId` (not `userId`)
 
 ### Page Server Files

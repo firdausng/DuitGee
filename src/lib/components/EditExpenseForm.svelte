@@ -79,7 +79,7 @@
         selectedUserId === ""
             ? "Vault Expense"
             : members.find(m => m.userId === selectedUserId)
-                ? `${members.find(m => m.userId === selectedUserId)?.firstName ?? ''} ${members.find(m => m.userId === selectedUserId)?.lastName ?? ''} (${members.find(m => m.userId === selectedUserId)?.email})`
+                ? `${members.find(m => m.userId === selectedUserId)?.firstName} ${members.find(m => m.userId === selectedUserId)?.lastName}`
                 : "Select a user"
     );
 
@@ -147,7 +147,8 @@
         paymentProvider = newValue;
     }
 
-    let showAdvancedOptions = $state(false);
+    // Show advanced options by default if payment info exists
+    let showAdvancedOptions = $state($form.paymentType?.length > 0 || $form.paymentProvider?.length > 0);
 
     function handleCancel() {
         if (onCancel) {
@@ -167,10 +168,8 @@
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     }
 
-    // Set default date to current date and time
-    if (!$form.date) {
-        $form.date = formatDateForInput(new Date());
-    } else {
+    // Format existing date for editing
+    if ($form.date) {
         $form.date = formatDateForInput($form.date);
     }
 </script>
@@ -353,6 +352,7 @@
                                     <div class="flex gap-4 border-b border-border-input pb-2">
                                         <p>{member.email} {member.role === 'owner' ? '(Owner)' : '(member)'}</p>
                                     </div>
+
                                     {#if selected}
                                         <div class="ml-auto">
                                             <Check aria-label="check" />
@@ -532,7 +532,7 @@
     <!-- Actions -->
     <div class="flex gap-3 pt-4">
         <Button type="submit" variant="default" disabled={$submitting} class="flex-1">
-            {$submitting ? 'Creating...' : 'Create Expense'}
+            {$submitting ? 'Updating...' : 'Update Expense'}
         </Button>
         <Button type="button" variant="outline" onclick={handleCancel} disabled={$submitting}>
             Cancel

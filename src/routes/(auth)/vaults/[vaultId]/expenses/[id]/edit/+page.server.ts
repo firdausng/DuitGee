@@ -5,6 +5,9 @@ import { fail, redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from "./$types";
 import {getCategories} from "$lib/server/api/categories/handlers";
 import {getExpense, updateExpense} from "$lib/server/api/expenses/handlers";
+import {getPaymentTypes} from "$lib/server/api/payments/handlers";
+import {getVaultMembers} from "$lib/server/api/vaults/handlers";
+import {getConfigurations} from "$lib/server/api/app-configurations/handlers";
 
 export const load: PageServerLoad = async ({ params, fetch, locals, cookies, platform }) => {
     if(platform === undefined){
@@ -14,9 +17,10 @@ export const load: PageServerLoad = async ({ params, fetch, locals, cookies, pla
     const { id, vaultId } = params;
 
 	try {
-        const [categories, expense] = await Promise.all([
-            getCategories(),
-            getExpense(vaultId, id, platform.env.DB)
+        const [configuration, expense, members] = await Promise.all([
+            getConfigurations(),
+            getExpense(vaultId, id, platform.env.DB),
+            getVaultMembers(vaultId, platform.env.DB)
         ]);
 
         if (!expense) {
@@ -37,7 +41,8 @@ export const load: PageServerLoad = async ({ params, fetch, locals, cookies, pla
 		const formData = {
 			note: expense.note || '',
 			amount: expense.amount,
-			categoryId: expense.category?.id,
+			categoryName: expense.category?.name,
+			userId: expense.userId || '',
 			date: formatDateForInput(expense.date),
 			paymentType: expense.paymentType || '',
 			paymentProvider: expense.paymentProvider || '',
@@ -49,11 +54,16 @@ export const load: PageServerLoad = async ({ params, fetch, locals, cookies, pla
 		const form = await superValidate(formData, valibot(updateExpenseSchema));
 		return {
             form,
-            categories,
+            categories: configuration.categoryData.categories,
+            paymentTypes: configuration.paymentData.paymentTypes,
+            paymentProviders: configuration.paymentData.paymentProviders,
+            members,
+            currentUserId: locals.currentUser.id,
             expense,
             vaultId
         };
 	} catch (err) {
+        console.error('Error loading expense:', err);
 		throw error(500, 'Failed to load expense');
 	}
 };

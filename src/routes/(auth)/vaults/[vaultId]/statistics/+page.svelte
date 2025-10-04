@@ -44,7 +44,7 @@
 
 		if (filterCategory) {
 			result = result.filter(expense =>
-				expense.category?.id === filterCategory
+				expense.category?.name === filterCategory
 			);
 		}
 
@@ -113,40 +113,11 @@
 		// Get unique category IDs
 		const categoryIds = new Set(
 			expenses
-				.filter(e => e.category?.id)
-				.map(e => e.category!.id)
+				.filter(e => e.category?.name)
+				.map(e => e.category!.name)
 		);
 
-		return data.categories.filter(cat => categoryIds.has(cat.id));
-	});
-
-	const availableTags = $derived.by(() => {
-		let expenses = data.expenses;
-
-		// Apply other filters first
-		if (filterCategory) {
-			expenses = expenses.filter(expense =>
-				expense.category?.id === filterCategory
-			);
-		}
-		if (filterNote) {
-			expenses = expenses.filter(expense =>
-				expense.note?.toLowerCase().includes(filterNote.toLowerCase())
-			);
-		}
-		if (filterMember) {
-			expenses = expenses.filter(expense =>
-				expense.creator?.id === filterMember
-			);
-		}
-
-		// Get unique tag names
-		const tagNames = new Set<string>();
-		expenses.forEach(expense => {
-			expense.tags?.forEach(tag => tagNames.add(tag.name));
-		});
-
-		return data.tags.filter(tag => tagNames.has(tag.name));
+		return data.categories.filter(cat => categoryIds.has(cat.name));
 	});
 
 	const availableMembers = $derived.by(() => {
@@ -155,12 +126,7 @@
 		// Apply other filters first
 		if (filterCategory) {
 			expenses = expenses.filter(expense =>
-				expense.category?.id === filterCategory
-			);
-		}
-		if (filterTag) {
-			expenses = expenses.filter(expense =>
-				expense.tags?.some(tag => tag.name === filterTag)
+				expense.category?.name === filterCategory
 			);
 		}
 		if (filterNote) {
@@ -202,7 +168,7 @@
 		const categoryStats = new Map<string, { name: string; color: string; icon?: string; iconType?: string; amount: number; count: number }>();
 		filteredExpenses.forEach(expense => {
 			if (expense.category) {
-				const existing = categoryStats.get(expense.category.id) || {
+				const existing = categoryStats.get(expense.category.name) || {
 					name: expense.category.name,
 					color: expense.category.color,
 					icon: expense.category.icon,
@@ -212,24 +178,7 @@
 				};
 				existing.amount += expense.amount;
 				existing.count += 1;
-				categoryStats.set(expense.category.id, existing);
-			}
-		});
-
-		// Group by tag
-		const tagStats = new Map<string, { name: string; amount: number; count: number }>();
-		filteredExpenses.forEach(expense => {
-			if (expense.tags && expense.tags.length > 0) {
-				expense.tags.forEach(tag => {
-					const existing = tagStats.get(tag.name) || {
-						name: tag.name,
-						amount: 0,
-						count: 0
-					};
-					existing.amount += expense.amount;
-					existing.count += 1;
-					tagStats.set(tag.name, existing);
-				});
+				categoryStats.set(expense.category.name, existing);
 			}
 		});
 
@@ -294,9 +243,6 @@
 			byCategory: Array.from(categoryStats.entries())
 				.map(([id, stats]) => ({ id, ...stats }))
 				.sort((a, b) => b.amount - a.amount),
-			byTag: Array.from(tagStats.entries())
-				.map(([name, stats]) => stats)
-				.sort((a, b) => b.amount - a.amount),
 			byTime: Array.from(timeStats.entries())
 				.map(([period, stats]) => ({ period, ...stats }))
 				.sort((a, b) => a.period.localeCompare(b.period)),
@@ -309,14 +255,6 @@
 		statistics.byCategory.map(cat => ({
 			...cat,
 			percentage: statistics.total > 0 ? (cat.amount / statistics.total) * 100 : 0
-		}))
-	);
-
-	// Calculate percentages for tag distribution
-	const tagChartData = $derived(
-		statistics.byTag.map(tag => ({
-			...tag,
-			percentage: statistics.total > 0 ? (tag.amount / statistics.total) * 100 : 0
 		}))
 	);
 
@@ -486,7 +424,7 @@
 			const categoryMap = new Map<string, { name: string; color: string; amount: number; count: number }>();
 			expenses.forEach(expense => {
 				if (expense.category) {
-					const existing = categoryMap.get(expense.category.id) || {
+					const existing = categoryMap.get(expense.category.name) || {
 						name: expense.category.name,
 						color: expense.category.color,
 						amount: 0,
@@ -494,7 +432,7 @@
 					};
 					existing.amount += expense.amount;
 					existing.count += 1;
-					categoryMap.set(expense.category.id, existing);
+					categoryMap.set(expense.category.name, existing);
 				}
 			});
 			const categories = Array.from(categoryMap.entries()).map(([id, stats]) => ({ id, ...stats }));
@@ -650,19 +588,7 @@
 				<Select id="category-filter" bind:value={filterCategory}>
 					<option value="">All Categories</option>
 					{#each availableCategories as category}
-						<option value={category.id}>{category.name}</option>
-					{/each}
-				</Select>
-			</div>
-
-			<div>
-				<label for="tag-filter" class="block text-sm font-medium text-foreground mb-2">
-					Tag {availableTags.length > 0 ? `(${availableTags.length})` : ''}
-				</label>
-				<Select id="tag-filter" bind:value={filterTag}>
-					<option value="">All Tags</option>
-					{#each availableTags as tag}
-						<option value={tag.name}>{tag.name}</option>
+						<option value={category.name}>{category.name}</option>
 					{/each}
 				</Select>
 			</div>
@@ -715,7 +641,7 @@
 						onclick={() => filterCategory = ''}
 						class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-accent rounded-md hover:bg-accent/80 transition-colors"
 					>
-						<span>Category: {data.categories.find(c => c.id === filterCategory)?.name}</span>
+						<span>Category: {data.categories.find(c => c.name === filterCategory)?.name}</span>
 						<X class="w-3 h-3" />
 					</button>
 				{/if}
@@ -1055,65 +981,6 @@
 		</div>
 	{/if}
 
-	<!-- Tag Distribution -->
-	{#if statistics.byTag.length > 0}
-		<div class="bg-background rounded-lg border border-border shadow-sm p-4 sm:p-6 mb-6 touch-manipulation">
-			<h2 class="text-base sm:text-lg font-semibold text-foreground mb-4">Expenses by Tag (Top 10)</h2>
-
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-				<!-- Pie Chart -->
-				<div class="flex items-center justify-center py-4">
-					<svg viewBox="0 0 200 200" class="w-full max-w-[280px] sm:max-w-[300px] touch-manipulation">
-						{#each tagChartData.slice(0, 10) as tag, index}
-							{@const startAngle = tagChartData
-								.slice(0, index)
-								.reduce((sum, t) => sum + (t.percentage * 3.6), 0)}
-							{@const endAngle = startAngle + (tag.percentage * 3.6)}
-							{@const color = generateColor(index, Math.min(tagChartData.length, 10))}
-							<path
-								d={getPieSlicePath(100, 100, 80, startAngle, endAngle)}
-								fill={color}
-								stroke="white"
-								stroke-width="2"
-								class="hover:opacity-80 active:opacity-70 transition-opacity cursor-pointer"
-							>
-								<title>#{tag.name}: {formatCurrency(tag.amount)} ({tag.percentage.toFixed(1)}%)</title>
-							</path>
-						{/each}
-					</svg>
-				</div>
-
-				<!-- Bar Chart -->
-				<div class="space-y-3 sm:space-y-4">
-					{#each tagChartData.slice(0, 10) as tag, index}
-						{@const color = generateColor(index, Math.min(tagChartData.length, 10))}
-						<div>
-							<div class="flex items-center justify-between mb-2">
-								<div class="flex items-center gap-2">
-									<div
-										class="w-3 h-3 rounded-full"
-										style="background-color: {color}"
-									></div>
-									<span class="text-sm font-medium text-foreground">#{tag.name}</span>
-								</div>
-								<div class="text-right">
-									<div class="text-sm font-semibold text-foreground">{formatCurrency(tag.amount)}</div>
-									<div class="text-xs text-muted-foreground">{tag.count} items · {tag.percentage.toFixed(1)}%</div>
-								</div>
-							</div>
-							<div class="w-full bg-muted rounded-full h-2">
-								<div
-									class="h-2 rounded-full transition-all duration-300"
-									style="width: {tag.percentage}%; background-color: {color}"
-								></div>
-							</div>
-						</div>
-					{/each}
-				</div>
-			</div>
-		</div>
-	{/if}
-
 	<!-- Time Period Trend -->
 	{#if statistics.byTime.length > 0}
 		<div class="bg-background rounded-lg border border-border shadow-sm p-4 sm:p-6 mb-6 touch-manipulation">
@@ -1296,20 +1163,7 @@
 						<Select id="mobile-category-filter" bind:value={filterCategory}>
 							<option value="">All Categories</option>
 							{#each availableCategories as category}
-								<option value={category.id}>{category.name}</option>
-							{/each}
-						</Select>
-					</div>
-
-					<!-- Tag Filter -->
-					<div>
-						<label for="mobile-tag-filter" class="block text-sm font-medium text-foreground mb-2">
-							Tag {availableTags.length > 0 ? `(${availableTags.length})` : ''}
-						</label>
-						<Select id="mobile-tag-filter" bind:value={filterTag}>
-							<option value="">All Tags</option>
-							{#each availableTags as tag}
-								<option value={tag.name}>{tag.name}</option>
+								<option value={category.name}>{category.name}</option>
 							{/each}
 						</Select>
 					</div>
@@ -1366,7 +1220,7 @@
 										onclick={() => filterCategory = ''}
 										class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-accent rounded-md hover:bg-accent/80 transition-colors touch-manipulation"
 									>
-										<span>Category: {data.categories.find(c => c.id === filterCategory)?.name}</span>
+										<span>Category: {data.categories.find(c => c.name === filterCategory)?.name}</span>
 										<X class="w-3 h-3" />
 									</button>
 								{/if}

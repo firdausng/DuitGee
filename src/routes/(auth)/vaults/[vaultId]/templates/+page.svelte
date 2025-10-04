@@ -36,8 +36,7 @@
 	}
 
 	function handleEdit(template: ExpenseTemplate) {
-        console.log('template', template);
-        console.log('data.templates', data.templates);
+        console.log('data.members', data.members);
 		selectedTemplate = {
 			...template,
 			defaultUserId: template.defaultUserId
