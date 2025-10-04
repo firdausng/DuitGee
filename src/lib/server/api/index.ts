@@ -12,7 +12,6 @@ import { usersApi } from './users/users';
 import { vaultsApi } from './vaults/vaults';
 import { vaultMembersApi } from './vault-members/vault-members';
 import { notificationApi } from "$lib/server/api/notifications/notifications";
-import { tagsApi } from "$lib/server/api/tags/tags";
 import { templatesApi } from "$lib/server/api/templates/templates";
 import {AuthService} from "$lib/server/auth-service.svelte";
 import {jwk} from "hono/jwk";
@@ -96,7 +95,6 @@ const router = new Hono<App.Api>()
 	.route('/users', usersApi)
 	.route('/vaults', vaultsApi)
 	.route('/vault-members', vaultMembersApi)
-	.route('/tags', tagsApi)
 	.route('/', templatesApi);
 
 export const api = new Hono<App.Api>().route('/api', router);

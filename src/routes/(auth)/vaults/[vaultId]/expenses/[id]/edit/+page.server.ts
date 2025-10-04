@@ -1,11 +1,10 @@
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
-import { expenseSchema } from '$lib/schemas/expense';
+import {type UpdateExpense, updateExpenseSchema} from '$lib/schemas/expense';
 import { fail, redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from "./$types";
 import {getCategories} from "$lib/server/api/categories/handlers";
 import {getExpense, updateExpense} from "$lib/server/api/expenses/handlers";
-import {getTags} from "$lib/server/api/tags/handlers";
 
 export const load: PageServerLoad = async ({ params, fetch, locals, cookies, platform }) => {
     if(platform === undefined){
@@ -15,9 +14,8 @@ export const load: PageServerLoad = async ({ params, fetch, locals, cookies, pla
     const { id, vaultId } = params;
 
 	try {
-        const [categories, tags, expense] = await Promise.all([
-            getCategories(vaultId, platform.env.DB),
-            getTags(platform.env.DB, { limit: 100 }),
+        const [categories, expense] = await Promise.all([
+            getCategories(),
             getExpense(vaultId, id, platform.env.DB)
         ]);
 
@@ -48,11 +46,10 @@ export const load: PageServerLoad = async ({ params, fetch, locals, cookies, pla
 
         console.log('formData', formData);
 
-		const form = await superValidate(formData, valibot(expenseSchema));
+		const form = await superValidate(formData, valibot(updateExpenseSchema));
 		return {
             form,
             categories,
-            tags,
             expense,
             vaultId
         };
@@ -67,20 +64,14 @@ export const actions: Actions = {
             throw new Error("No platform")
         }
         const { id, vaultId } = params;
-		const form = await superValidate(request, valibot(expenseSchema));
+		const form = await superValidate(request, valibot(updateExpenseSchema));
 
 		if (!form.valid) {
 			return fail(400, { form });
 		}
 
-		// Parse tagNames from comma-separated string
-		const tagNames = form.data.tagNames
-			? form.data.tagNames.split(',').filter(Boolean)
-			: [];
-
-		const data = {
+		const data: UpdateExpense = {
 			...form.data,
-			tagNames,
 			paymentType: form.data.paymentType || undefined,
 			paymentProvider: form.data.paymentProvider || undefined
 		};

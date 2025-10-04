@@ -10,21 +10,7 @@ import {
 	incrementTemplateUsage
 } from "$lib/server/api/templates/handlers";
 import { describeRoute, resolver } from 'hono-openapi';
-
-const templateSchema = v.object({
-	name: v.pipe(v.string(), v.minLength(1, 'Name must be 1 or more characters long.')),
-	description: v.optional(v.string()),
-	categoryId: v.optional(v.string()),
-	defaultAmount: v.optional(v.number()),
-	paymentTypeId: v.optional(v.string()),
-	paymentProviderId: v.optional(v.string()),
-	note: v.optional(v.string()),
-	icon: v.optional(v.string()),
-	iconType: v.optional(v.string()),
-	tagIds: v.optional(v.array(v.string()))
-});
-
-const updateTemplateSchema = v.partial(templateSchema);
+import {createExpenseTemplateSchema, updateExpenseTemplateSchema} from "$lib/schemas/expense";
 
 const TEMPLATE_TAG = ['Template'];
 const commonTemplateConfig = {
@@ -49,7 +35,7 @@ export const templatesApi = new Hono<App.Api>()
 		async (c) => {
 		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
-		const templatesList = await getTemplates(userId, vaultId, c.env.DB);
+		const templatesList = await getTemplates(vaultId, c.env.DB);
 
 		return c.json(templatesList);
 	})
@@ -67,7 +53,7 @@ export const templatesApi = new Hono<App.Api>()
 				},
 			},
 		}),
-		vValidator('json', templateSchema),
+		vValidator('json', createExpenseTemplateSchema),
 		async (c) => {
 		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
@@ -98,7 +84,7 @@ export const templatesApi = new Hono<App.Api>()
 		const userId = c.get('userEmail') as string;
 		const id = c.req.param('id');
 
-		const template = await getTemplate(userId, id, c.env.DB);
+		const template = await getTemplate(id, c.env.DB);
 
 		if (!template) {
 			return c.json({ error: 'Template not found' }, 404);
@@ -123,7 +109,7 @@ export const templatesApi = new Hono<App.Api>()
 				},
 			},
 		}),
-		vValidator('json', updateTemplateSchema),
+		vValidator('json', updateExpenseTemplateSchema),
 		async (c) => {
 		const userId = c.get('userEmail') as string;
 		const id = c.req.param('id');

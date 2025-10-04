@@ -2,12 +2,7 @@ import { Hono } from 'hono';
 import * as v from "valibot";
 import { vValidator } from "@hono/valibot-validator";
 import {
-	createExpense,
-	deleteExpense,
-	getExpenses,
 	getExpense,
-	updateExpense,
-	getExpensesSummary,
 	createExpenseByEmail,
 	deleteExpenseByEmail,
 	getExpensesByEmail,

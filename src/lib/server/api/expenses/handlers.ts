@@ -1,42 +1,23 @@
-import { drizzle } from "drizzle-orm/d1";
+import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
-import { expenses, categories, categoryGroups, vaults, vaultMembers, users, expenseTags, expenseTemplates, paymentTypes, paymentProviders } from "$lib/server/db/schema";
-import { and, eq, desc, sum, sql, or, isNull, inArray } from "drizzle-orm";
-import { requireVaultPermission } from "$lib/server/utils/permissions";
-import { initialAuditFields, updateAuditFields } from "$lib/server/utils/audit";
-import { formatISO } from "date-fns";
-import { setExpenseCache, invalidateExpenseCache } from "$lib/server/utils/kv-cache";
-import { createId } from '@paralleldrive/cuid2';
-import { getOrCreateTag, incrementTagUsage, decrementTagUsage } from "$lib/server/api/tags/handlers";
+import {expenses, expenseTemplates, users, vaultMembers, vaults} from "$lib/server/db/schema";
+import {and, desc, eq, isNull, or, sql, sum} from "drizzle-orm";
+import {requireVaultPermission} from "$lib/server/utils/permissions";
+import {initialAuditFields, updateAuditFields} from "$lib/server/utils/audit";
+import {formatISO} from "date-fns";
+import {invalidateExpenseCache, setExpenseCache} from "$lib/server/utils/kv-cache";
+import {createId} from '@paralleldrive/cuid2';
 import type {
-	ExpensesResponse,
-	Expense,
-	GetExpensesOptions,
-	ExpensesSummary,
-	GetExpensesSummaryOptions
+    Expense,
+    ExpensesResponse,
+    ExpensesSummary,
+    GetExpensesOptions,
+    GetExpensesSummaryOptions
 } from "$lib/types/expenses";
+import {categoryData} from "$lib/configuration/categories";
+import {paymentData} from "$lib/configuration/paymentTypes";
+import type {CreateExpense, UpdateExpense} from "$lib/schemas/expense";
 
-// Helper function to get payment type ID from code
-async function getPaymentTypeIdByCode(code: string, db: D1Database): Promise<string | undefined> {
-	const client = drizzle(db, { schema });
-	const result = await client
-		.select({ id: paymentTypes.id })
-		.from(paymentTypes)
-		.where(eq(paymentTypes.code, code))
-		.limit(1);
-	return result[0]?.id;
-}
-
-// Helper function to get payment provider ID from name
-async function getPaymentProviderIdByName(name: string, db: D1Database): Promise<string | undefined> {
-	const client = drizzle(db, { schema });
-	const result = await client
-		.select({ id: paymentProviders.id })
-		.from(paymentProviders)
-		.where(eq(paymentProviders.name, name))
-		.limit(1);
-	return result[0]?.id;
-}
 
 export const getExpenses = async (
 	userId: string,
@@ -96,9 +77,6 @@ export const getExpenses = async (
 		);
 	}
 
-	if (categoryId) {
-		whereClause = and(whereClause, eq(expenses.categoryId, categoryId));
-	}
 	if (startDate && endDate) {
 		whereClause = and(
 			whereClause,
@@ -115,8 +93,6 @@ export const getExpenses = async (
 	const expensesList = await client
 		.select()
 		.from(expenses)
-		.leftJoin(categories, eq(expenses.categoryId, categories.id))
-		.leftJoin(categoryGroups, eq(categories.groupId, categoryGroups.id))
 		.leftJoin(vaults, eq(expenses.vaultId, vaults.id))
 		.leftJoin(users, eq(expenses.userId, users.id))
 		.where(whereClause)
@@ -131,37 +107,7 @@ export const getExpenses = async (
 		.where(whereClause);
 
 	// Get all expense IDs to fetch tags
-	const expenseIds = expensesList.map(row => row.expenses.id);
-
-	// Fetch tags for all expenses in one query
-	const allTags = expenseIds.length > 0 ? await client
-		.select({
-			expenseId: expenseTags.expenseId,
-			name: schema.tags.name,
-			usageCount: schema.tags.usageCount,
-			createdAt: schema.tags.createdAt,
-			createdBy: schema.tags.createdBy
-		})
-		.from(expenseTags)
-		.leftJoin(schema.tags, eq(expenseTags.tagName, schema.tags.name))
-		.where(inArray(expenseTags.expenseId, expenseIds))
-		: [];
-
-	// Group tags by expense ID
-	const tagsByExpense = new Map<string, Array<{ name: string; usageCount: number; createdAt: string; createdBy: string }>>();
-	allTags.forEach(tag => {
-		if (!tagsByExpense.has(tag.expenseId)) {
-			tagsByExpense.set(tag.expenseId, []);
-		}
-		if (tag.name) {
-			tagsByExpense.get(tag.expenseId)!.push({
-				name: tag.name,
-				usageCount: tag.usageCount!,
-				createdAt: tag.createdAt!,
-				createdBy: tag.createdBy!
-			});
-		}
-	});
+	// const expenseIds = expensesList.map(row => row.expenses.id);
 
 	// Transform the raw data to match our Expense type
 	const transformedExpenses: Expense[] = expensesList.map(row => ({
@@ -179,27 +125,13 @@ export const getExpenses = async (
 			iconType: (row.vaults.iconType as 'emoji' | 'phosphor') || 'emoji',
 			isPersonal: row.vaults.isPersonal
 		} : null,
-		category: row.categories?.id ? {
-			id: row.categories.id,
-			name: row.categories.name,
-			color: row.categories.color,
-			icon: row.categories.icon || undefined,
-			iconType: (row.categories.iconType as 'emoji' | 'phosphor') || 'emoji',
-			group: row.category_groups?.id ? {
-				id: row.category_groups.id,
-				name: row.category_groups.name,
-				icon: row.category_groups.icon || undefined,
-				iconType: (row.category_groups.iconType as 'emoji' | 'phosphor') || 'emoji',
-				color: row.category_groups.color
-			} : null
-		} : null,
+        category: categoryData.categories.find(c => c.name === row.expenses.categoryName) || null,
 		creator: row.users?.id ? {
 			id: row.users.id,
 			firstName: row.users.firstName || undefined,
 			lastName: row.users.lastName || undefined,
 			email: row.users.email
 		} : null,
-		tags: tagsByExpense.get(row.expenses.id) || []
 	}));
 
 	return {
@@ -224,10 +156,8 @@ export const getExpense = async (
 	const expenseResult = await client
 		.select()
 		.from(expenses)
-		.leftJoin(categories, eq(expenses.categoryId, categories.id))
-		.leftJoin(categoryGroups, eq(categories.groupId, categoryGroups.id))
-		.leftJoin(schema.paymentTypes, eq(expenses.paymentTypeId, schema.paymentTypes.id))
-		.leftJoin(schema.paymentProviders, eq(expenses.paymentProviderId, schema.paymentProviders.id))
+		// .leftJoin(schema.paymentTypes, eq(expenses.paymentTypeId, schema.paymentTypes.id))
+		// .leftJoin(schema.paymentProviders, eq(expenses.paymentProviderId, schema.paymentProviders.id))
 		.where(
 			and(
 				eq(expenses.id, expenseId),
@@ -240,57 +170,28 @@ export const getExpense = async (
 		return undefined;
 	}
 
-	const row = expenseResult[0];
+    // expenseResult
 
-	// Get associated tags
-	const tagResults = await client
-		.select({
-			name: schema.tags.name,
-			usageCount: schema.tags.usageCount,
-			createdAt: schema.tags.createdAt,
-			createdBy: schema.tags.createdBy
-		})
-		.from(expenseTags)
-		.leftJoin(schema.tags, eq(expenseTags.tagName, schema.tags.name))
-		.where(eq(expenseTags.expenseId, expenseId));
+	const row = expenseResult[0];
 
 	// Transform to match our Expense type with additional fields
 	return {
-		id: row.expenses.id,
-		note: row.expenses.note,
-		amount: row.expenses.amount,
-		date: row.expenses.date,
-		createdAt: row.expenses.createdAt,
-		vaultId: row.expenses.vaultId || undefined,
-		paymentTypeId: row.expenses.paymentTypeId || undefined,
-		paymentProviderId: row.expenses.paymentProviderId || undefined,
-		paymentType: row.payment_types?.code || undefined,
-		paymentProvider: row.payment_providers?.name || undefined,
+		id: row.id,
+		note: row.note,
+		amount: row.amount,
+		date: row.date,
+		createdAt: row.createdAt,
+		vaultId: row.vaultId || undefined,
+        paymentTypeName: row.paymentType,
+        paymentProviderName: row.paymentProvider,
+        paymentType: paymentData.paymentTypes.find(p => p.name === row.paymentType)?.code || null,
+        paymentProvider: paymentData.paymentProviders.find(p => p.name === row.paymentProvider)?.name || null,
 		vault: null, // Not included in this query
-		category: row.categories?.id ? {
-			id: row.categories.id,
-			name: row.categories.name,
-			color: row.categories.color,
-			icon: row.categories.icon || undefined,
-			iconType: (row.categories.iconType as 'emoji' | 'phosphor') || 'emoji',
-			group: row.category_groups?.id ? {
-				id: row.category_groups.id,
-				name: row.category_groups.name,
-				icon: row.category_groups.icon || undefined,
-				iconType: (row.category_groups.iconType as 'emoji' | 'phosphor') || 'emoji',
-				color: row.category_groups.color
-			} : null
-		} : null,
-		tags: tagResults.filter(t => t.name).map(t => ({
-			name: t.name!,
-			usageCount: t.usageCount!,
-			createdAt: t.createdAt!,
-			createdBy: t.createdBy!
-		}))
+        category: categoryData.categories.find(c => c.name === row.categoryName) || null,
 	};
 };
 
-export const createExpense = async (userId: string, data: any, db: D1Database, kv?: KVNamespace) => {
+export const createExpense = async (userId: string, data: CreateExpense, db: D1Database, kv?: KVNamespace) => {
 	const client = drizzle(db, { schema });
 
 	// Check if user has permission to create expenses in this vault
@@ -299,26 +200,15 @@ export const createExpense = async (userId: string, data: any, db: D1Database, k
 
 	// Generate expense ID and prepare data
 	const expenseId = createId();
-	const { tagNames, templateId, paymentType, paymentProvider, ...expenseFields } = data;
-
-	// Convert payment type code to ID
-	let paymentTypeId: string | undefined;
-	if (paymentType) {
-		paymentTypeId = await getPaymentTypeIdByCode(paymentType, db);
-	}
-
-	// Convert payment provider name to ID
-	let paymentProviderId: string | undefined;
-	if (paymentProvider) {
-		paymentProviderId = await getPaymentProviderIdByName(paymentProvider, db);
-	}
+	const { templateId, paymentType, paymentProvider, ...expenseFields } = data;
 
 	const expenseData = {
 		id: expenseId,
 		...expenseFields,
 		userId,
-		paymentTypeId,
-		paymentProviderId,
+		categoryName: categoryData.categories.find(c => c.name === data.categoryName)?.name || null,
+        paymentType: paymentData.paymentTypes.find(p => p.name === paymentType)?.name || null,
+		paymentProvider: paymentData.paymentProviders.find(p => p.name === paymentProvider)?.name || null,
 		date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
 		...initialAuditFields({ userId })
 	};
@@ -331,24 +221,6 @@ export const createExpense = async (userId: string, data: any, db: D1Database, k
 		.insert(expenses)
 		.values(expenseData)
 		.returning();
-
-	// Handle tag associations if provided
-	if (tagNames && tagNames.length > 0) {
-		// Get or create tags and increment usage
-		for (const tagName of tagNames) {
-			await getOrCreateTag(tagName, userId, db);
-			await incrementTagUsage(tagName, db);
-		}
-
-		// Insert junction table entries
-		const tagEntries = tagNames.map((tagName: string) => ({
-			expenseId,
-			tagName,
-			color: '#6B7280', // Default color
-			createdAt: formatISO(new Date())
-		}));
-		await client.insert(expenseTags).values(tagEntries);
-	}
 
 	// Increment template usage if expense was created from a template
 	if (templateId) {
@@ -364,43 +236,19 @@ export const createExpense = async (userId: string, data: any, db: D1Database, k
 	return expense[0];
 };
 
-export const updateExpense = async (userId: string, vaultId: string, expenseId: string, data: any, db: D1Database, kv?: KVNamespace) => {
+export const updateExpense = async (userId: string, vaultId: string, expenseId: string, data: UpdateExpense, db: D1Database, kv?: KVNamespace) => {
 	const client = drizzle(db, { schema });
 
 	// Check if user has admin permissions to edit expenses
 	await requireVaultPermission(userId, vaultId, 'canEditExpenses', db);
 
-	// Extract tags and payment fields from data
-	const { tagNames, paymentType, paymentProvider, ...expenseFields } = data;
+    data.date = data.date ? new Date(data.date).toISOString() : new Date().toISOString();
 
-	// Convert payment type code to ID
-	let paymentTypeId: string | undefined;
-	if (paymentType) {
-		paymentTypeId = await getPaymentTypeIdByCode(paymentType, db);
-	}
-
-	// Convert payment provider name to ID
-	let paymentProviderId: string | undefined;
-	if (paymentProvider) {
-		paymentProviderId = await getPaymentProviderIdByName(paymentProvider, db);
-	}
-
-	// Format date if provided
-	const updateData: any = { ...expenseFields };
-	if (updateData.date) {
-		updateData.date = new Date(updateData.date).toISOString();
-	}
-	if (paymentTypeId !== undefined) {
-		updateData.paymentTypeId = paymentTypeId;
-	}
-	if (paymentProviderId !== undefined) {
-		updateData.paymentProviderId = paymentProviderId;
-	}
-
+    
 	const updatedExpense = await client
 		.update(expenses)
 		.set({
-			...updateData,
+			...data,
 			...updateAuditFields({ userId })
 		})
 		.where(
@@ -410,43 +258,6 @@ export const updateExpense = async (userId: string, vaultId: string, expenseId: 
 			)
 		)
 		.returning();
-
-	// Update tag associations if provided
-	if (tagNames !== undefined) {
-		// Get old tags to decrement their usage
-		const oldTags = await client
-			.select({ tagName: expenseTags.tagName })
-			.from(expenseTags)
-			.where(eq(expenseTags.expenseId, expenseId));
-
-		// Decrement usage for old tags
-		for (const { tagName } of oldTags) {
-			await decrementTagUsage(tagName, db);
-		}
-
-		// Delete existing tags
-		await client
-			.delete(expenseTags)
-			.where(eq(expenseTags.expenseId, expenseId));
-
-		// Insert new tags
-		if (tagNames.length > 0) {
-			// Get or create tags and increment usage
-			for (const tagName of tagNames) {
-				await getOrCreateTag(tagName, userId, db);
-				await incrementTagUsage(tagName, db);
-			}
-
-			// Insert junction table entries
-			const tagEntries = tagNames.map((tagName: string) => ({
-				expenseId,
-				tagName,
-				color: '#6B7280', // Default color
-				createdAt: formatISO(new Date())
-			}));
-			await client.insert(expenseTags).values(tagEntries);
-		}
-	}
 
 	// Invalidate expense cache after update
 	await invalidateExpenseCache(expenseId, kv);
@@ -459,22 +270,6 @@ export const deleteExpense = async (userId: string, vaultId: string, expenseId: 
 
 	// Check if user has admin permissions to delete expenses
 	await requireVaultPermission(userId, vaultId, 'canDeleteExpenses', db);
-
-	// Get tags to decrement their usage
-	const expenseTags_toDelete = await client
-		.select({ tagName: expenseTags.tagName })
-		.from(expenseTags)
-		.where(eq(expenseTags.expenseId, expenseId));
-
-	// Decrement usage for all tags
-	for (const { tagName } of expenseTags_toDelete) {
-		await decrementTagUsage(tagName, db);
-	}
-
-	// Delete tag associations
-	await client
-		.delete(expenseTags)
-		.where(eq(expenseTags.expenseId, expenseId));
 
 	// Delete the expense
 	const deletedExpense = await client
@@ -565,20 +360,22 @@ export const getExpensesSummary = async (
 
 	const summary = await client
 		.select({
-			categoryName: categories.name,
-			categoryColor: categories.color,
+            categoryName: expenses.categoryName,
 			total: sum(expenses.amount).mapWith(Number)
 		})
 		.from(expenses)
-		.leftJoin(categories, eq(expenses.categoryId, categories.id))
 		.leftJoin(vaults, eq(expenses.vaultId, vaults.id))
-		.where(whereClause)
-		.groupBy(categories.id);
+		.where(whereClause);
 
-	const totalAmount = summary.reduce((acc, item) => acc + item.total, 0);
+    const summaryWithCategoryData = summary.map(item => ({
+        ...item,
+        categoryColor: categoryData.categories.find(c => c.name === item.categoryName)?.color || '#6B7280'
+    }))
+
+	const totalAmount = summaryWithCategoryData.reduce((acc, item) => acc + item.total, 0);
 
 	return {
-		summary,
+		summary: summaryWithCategoryData,
 		totalAmount
 	};
 };
@@ -587,7 +384,7 @@ export const getMemberSpending = async (
 	userId: string,
 	db: D1Database,
 	options?: GetExpensesSummaryOptions & { vaultId?: string }
-): Promise<Array<{ userId: string; userName: string; totalAmount: number; expenseCount: number }>> => {
+): Promise<Array<{ userId: string|null; userName: string|null; totalAmount: number; expenseCount: number }>> => {
 	const client = drizzle(db, { schema });
 	const { startDate, endDate, vaultId } = options || {};
 
@@ -680,7 +477,7 @@ export const getExpensesByVault = async (
 	options?: GetExpensesByVaultOptions
 ): Promise<Expense[]> => {
 	const client = drizzle(db, { schema });
-	const { limit = 10000, categoryId, tagName, note, startDate, endDate, memberIds } = options || {};
+	const { limit = 10000, categoryId, note, startDate, endDate, memberIds } = options || {};
 
 	// Verify user has access to the vault
 	const vaultAccess = await client
@@ -708,10 +505,6 @@ export const getExpensesByVault = async (
 	// Build where clause
 	let whereClause = eq(expenses.vaultId, vaultId);
 
-	if (categoryId) {
-		whereClause = and(whereClause, eq(expenses.categoryId, categoryId));
-	}
-
 	if (startDate && endDate) {
 		whereClause = and(
 			whereClause,
@@ -736,98 +529,38 @@ export const getExpensesByVault = async (
 	const expensesList = await client
 		.select()
 		.from(expenses)
-		.leftJoin(categories, eq(expenses.categoryId, categories.id))
-		.leftJoin(categoryGroups, eq(categories.groupId, categoryGroups.id))
+		// .leftJoin(categories, eq(expenses.categoryId, categories.id))
+		// .leftJoin(categoryGroups, eq(categories.groupId, categoryGroups.id))
 		.leftJoin(vaults, eq(expenses.vaultId, vaults.id))
 		.leftJoin(users, eq(expenses.userId, users.id))
 		.where(whereClause)
 		.orderBy(desc(expenses.date))
 		.limit(limit);
 
-	// Get all expense IDs to fetch tags
-	const expenseIds = expensesList.map(row => row.expenses.id);
-
-	// Fetch tags for all expenses in one query
-	const allTags = expenseIds.length > 0 ? await client
-		.select({
-			expenseId: expenseTags.expenseId,
-			name: schema.tags.name,
-			usageCount: schema.tags.usageCount,
-			createdAt: schema.tags.createdAt,
-			createdBy: schema.tags.createdBy
-		})
-		.from(expenseTags)
-		.leftJoin(schema.tags, eq(expenseTags.tagName, schema.tags.name))
-		.where(inArray(expenseTags.expenseId, expenseIds))
-		: [];
-
-	// Group tags by expense ID
-	const tagsByExpense = new Map<string, Array<{ name: string; usageCount: number; createdAt: string; createdBy: string }>>();
-	allTags.forEach(tag => {
-		if (!tagsByExpense.has(tag.expenseId)) {
-			tagsByExpense.set(tag.expenseId, []);
-		}
-		if (tag.name) {
-			tagsByExpense.get(tag.expenseId)!.push({
-				name: tag.name,
-				usageCount: tag.usageCount!,
-				createdAt: tag.createdAt!,
-				createdBy: tag.createdBy!
-			});
-		}
-	});
-
-	// Filter by tag if specified (after fetching)
-	let filteredExpensesList = expensesList;
-	if (tagName) {
-		const expenseIdsWithTag = new Set(
-			allTags
-				.filter(tag => tag.name === tagName)
-				.map(tag => tag.expenseId)
-		);
-		filteredExpensesList = expensesList.filter(row => expenseIdsWithTag.has(row.expenses.id));
-	}
-
 	// Transform the raw data to match our Expense type
-	const transformedExpenses: Expense[] = filteredExpensesList.map(row => ({
-		id: row.expenses.id,
-		note: row.expenses.note,
-		amount: row.expenses.amount,
-		date: row.expenses.date,
-		createdAt: row.expenses.createdAt,
-		vaultId: row.expenses.vaultId || undefined,
-		vault: row.vaults?.id ? {
-			id: row.vaults.id,
-			name: row.vaults.name,
-			color: row.vaults.color,
-			icon: row.vaults.icon || undefined,
-			iconType: (row.vaults.iconType as 'emoji' | 'phosphor') || 'emoji',
-			isPersonal: row.vaults.isPersonal
-		} : null,
-		category: row.categories?.id ? {
-			id: row.categories.id,
-			name: row.categories.name,
-			color: row.categories.color,
-			icon: row.categories.icon || undefined,
-			iconType: (row.categories.iconType as 'emoji' | 'phosphor') || 'emoji',
-			group: row.category_groups?.id ? {
-				id: row.category_groups.id,
-				name: row.category_groups.name,
-				icon: row.category_groups.icon || undefined,
-				iconType: (row.category_groups.iconType as 'emoji' | 'phosphor') || 'emoji',
-				color: row.category_groups.color
-			} : null
-		} : null,
-		creator: row.users?.id ? {
-			id: row.users.id,
-			firstName: row.users.firstName || undefined,
-			lastName: row.users.lastName || undefined,
-			email: row.users.email
-		} : null,
-		tags: tagsByExpense.get(row.expenses.id) || []
-	}));
-
-	return transformedExpenses;
+    return expensesList.map(row => ({
+        id: row.expenses.id,
+        note: row.expenses.note,
+        amount: row.expenses.amount,
+        date: row.expenses.date,
+        createdAt: row.expenses.createdAt,
+        vaultId: row.expenses.vaultId || undefined,
+        vault: row.vaults?.id ? {
+            id: row.vaults.id,
+            name: row.vaults.name,
+            color: row.vaults.color,
+            icon: row.vaults.icon || undefined,
+            iconType: (row.vaults.iconType as 'emoji' | 'phosphor') || 'emoji',
+            isPersonal: row.vaults.isPersonal
+        } : null,
+        category: categoryData.categories.find(c => c.name === row.expenses.categoryName) || null,
+        creator: row.users?.id ? {
+            id: row.users.id,
+            firstName: row.users.firstName || undefined,
+            lastName: row.users.lastName || undefined,
+            email: row.users.email
+        } : null,
+    }));
 };
 
 // Email-based wrapper functions for API consistency
@@ -928,7 +661,7 @@ export const getMemberSpendingByEmail = async (
 	userEmail: string,
 	db: D1Database,
 	options?: GetExpensesSummaryOptions & { vaultId?: string }
-): Promise<Array<{ userId: string; userName: string; totalAmount: number; expenseCount: number }>> => {
+): Promise<Array<{ userId: string|null; userName: string|null; totalAmount: number; expenseCount: number }>> => {
 	const client = drizzle(db, { schema });
 
 	// Find user by email first

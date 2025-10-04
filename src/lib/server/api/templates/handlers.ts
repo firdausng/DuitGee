@@ -1,18 +1,12 @@
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
-import { expenseTemplates, expenseTemplateTags, tags, categories } from "$lib/server/db/schema";
-import { and, eq, desc, isNull, inArray } from "drizzle-orm";
+import { expenseTemplates } from "$lib/server/db/schema";
+import { and, eq, desc, isNull, sql } from "drizzle-orm";
 import { initialAuditFields, updateAuditFields } from "$lib/server/utils/audit";
 import { createId } from '@paralleldrive/cuid2';
-import { getOrCreateTag, incrementTagUsage, decrementTagUsage } from "$lib/server/api/tags/handlers";
-
-export type ExpenseTemplate = typeof expenseTemplates.$inferSelect & {
-	category?: typeof categories.$inferSelect | null;
-	tags?: Array<typeof tags.$inferSelect>;
-};
+import type {CreateExpenseTemplate, ExpenseTemplate, UpdateExpenseTemplate} from "$lib/schemas/expense";
 
 export const getTemplates = async (
-	userId: string,
 	vaultId: string,
 	db: D1Database
 ): Promise<ExpenseTemplate[]> => {
@@ -20,12 +14,8 @@ export const getTemplates = async (
 
 	// Get templates with category - show ALL templates in the vault ordered by usage
 	const templatesList = await client
-		.select({
-			template: expenseTemplates,
-			category: categories
-		})
+		.select()
 		.from(expenseTemplates)
-		.leftJoin(categories, eq(expenseTemplates.categoryId, categories.id))
 		.where(
 			and(
 				eq(expenseTemplates.vaultId, vaultId),
@@ -34,40 +24,10 @@ export const getTemplates = async (
 		)
 		.orderBy(desc(expenseTemplates.usageCount), desc(expenseTemplates.lastUsedAt));
 
-	// Get template IDs
-	const templateIds = templatesList.map(t => t.template.id);
-
-	// Get all tags for these templates
-	const templateTagsList = templateIds.length > 0
-		? await client
-			.select({
-				templateId: expenseTemplateTags.templateId,
-				tag: tags
-			})
-			.from(expenseTemplateTags)
-			.innerJoin(tags, eq(expenseTemplateTags.tagName, tags.name))
-			.where(inArray(expenseTemplateTags.templateId, templateIds))
-		: [];
-
-	// Group tags by template
-	const tagsByTemplate = new Map<string, Array<typeof tags.$inferSelect>>();
-	for (const { templateId, tag } of templateTagsList) {
-		if (!tagsByTemplate.has(templateId)) {
-			tagsByTemplate.set(templateId, []);
-		}
-		tagsByTemplate.get(templateId)!.push(tag);
-	}
-
-	// Combine templates with their tags
-	return templatesList.map(({ template, category }) => ({
-		...template,
-		category,
-		tags: tagsByTemplate.get(template.id) || []
-	}));
+	return templatesList;
 };
 
 export const getTemplate = async (
-	userId: string,
 	templateId: string,
 	db: D1Database
 ): Promise<ExpenseTemplate | undefined> => {
@@ -75,12 +35,8 @@ export const getTemplate = async (
 
 	// Get template without userId filter - any vault member can view templates
 	const result = await client
-		.select({
-			template: expenseTemplates,
-			category: categories
-		})
+		.select()
 		.from(expenseTemplates)
-		.leftJoin(categories, eq(expenseTemplates.categoryId, categories.id))
 		.where(
 			and(
 				eq(expenseTemplates.id, templateId),
@@ -91,73 +47,27 @@ export const getTemplate = async (
 
 	if (!result[0]) return undefined;
 
-	// Get tags for this template
-	const templateTagsList = await client
-		.select({ tag: tags })
-		.from(expenseTemplateTags)
-		.innerJoin(tags, eq(expenseTemplateTags.tagName, tags.name))
-		.where(eq(expenseTemplateTags.templateId, templateId));
-
-	return {
-		...result[0].template,
-		category: result[0].category,
-		tags: templateTagsList.map(t => t.tag)
-	};
+	return result[0];
 };
 
 export const createTemplate = async (
 	creatorUserId: string,
-	data: {
-		vaultId: string;
-		name: string;
-		description?: string;
-		categoryId?: string;
-		defaultAmount?: number;
-		paymentTypeId?: string;
-		paymentProviderId?: string;
-		note?: string;
-		icon?: string;
-		iconType?: string;
-		tagNames?: string[];
-		defaultUserId?: string; // The user this template should assign expenses to
-	},
+	data: CreateExpenseTemplate,
 	db: D1Database
 ) => {
 	const client = drizzle(db, { schema });
 
-	const { tagNames, ...templateData } = data;
 	const templateId = createId();
 
 	const template = await client
 		.insert(expenseTemplates)
 		.values({
 			id: templateId,
-			...templateData,
+			...data,
 			userId: creatorUserId, // Template creator - always set
 			...initialAuditFields({ userId: creatorUserId })
 		})
 		.returning();
-
-	// Add tags if provided
-	if (tagNames && tagNames.length > 0) {
-		// Get or create tags and increment usage
-		for (const tagName of tagNames) {
-			await getOrCreateTag(tagName, creatorUserId, db);
-			await incrementTagUsage(tagName, db);
-		}
-
-		// Insert junction table entries
-		await client
-			.insert(expenseTemplateTags)
-			.values(
-				tagNames.map(tagName => ({
-					templateId,
-					tagName,
-					color: '#6B7280', // Default color
-					createdAt: new Date().toISOString()
-				}))
-			);
-	}
 
 	return template[0];
 };
@@ -165,29 +75,15 @@ export const createTemplate = async (
 export const updateTemplate = async (
 	updaterUserId: string,
 	templateId: string,
-	data: {
-		name?: string;
-		description?: string;
-		categoryId?: string;
-		defaultAmount?: number;
-		paymentTypeId?: string;
-		paymentProviderId?: string;
-		note?: string;
-		icon?: string;
-		iconType?: string;
-		tagNames?: string[];
-		defaultUserId?: string; // The user this template should assign expenses to
-	},
+	data: UpdateExpenseTemplate,
 	db: D1Database
 ) => {
 	const client = drizzle(db, { schema });
 
-	const { tagNames, ...templateData } = data;
-
 	const updatedTemplate = await client
 		.update(expenseTemplates)
 		.set({
-			...templateData,
+			...data,
 			...updateAuditFields({ userId: updaterUserId })
 		})
 		.where(
@@ -197,47 +93,6 @@ export const updateTemplate = async (
 			)
 		)
 		.returning();
-
-	// Update tags if provided
-	if (tagNames !== undefined) {
-		// Get old tags to decrement their usage
-		const oldTags = await client
-			.select({ tagName: expenseTemplateTags.tagName })
-			.from(expenseTemplateTags)
-			.where(eq(expenseTemplateTags.templateId, templateId));
-
-		// Decrement usage for old tags
-		for (const { tagName } of oldTags) {
-			await decrementTagUsage(tagName, db);
-		}
-
-		// Remove existing tags
-		await client
-			.delete(expenseTemplateTags)
-			.where(eq(expenseTemplateTags.templateId, templateId));
-
-		// Add new tags
-		if (tagNames.length > 0) {
-			// Get or create tags and increment usage
-			for (const tagName of tagNames) {
-				await getOrCreateTag(tagName, creatorUserId, db);
-				await incrementTagUsage(tagName, db);
-			}
-
-			// Insert junction table entries
-			await client
-				.insert(expenseTemplateTags)
-				.values(
-					tagNames.map(tagName => ({
-						templateId,
-						tagName,
-						color: '#6B7280', // Default color
-						createdAt: new Date().toISOString()
-					}))
-				);
-		}
-	}
-
 	return updatedTemplate[0];
 };
 
@@ -247,22 +102,6 @@ export const deleteTemplate = async (
 	db: D1Database
 ) => {
 	const client = drizzle(db, { schema });
-
-	// Get tags to decrement their usage
-	const templateTags = await client
-		.select({ tagName: expenseTemplateTags.tagName })
-		.from(expenseTemplateTags)
-		.where(eq(expenseTemplateTags.templateId, templateId));
-
-	// Decrement usage for all tags
-	for (const { tagName } of templateTags) {
-		await decrementTagUsage(tagName, db);
-	}
-
-	// Delete tag associations
-	await client
-		.delete(expenseTemplateTags)
-		.where(eq(expenseTemplateTags.templateId, templateId));
 
 	// Soft delete template
 	const deletedTemplate = await client
@@ -291,7 +130,7 @@ export const incrementTemplateUsage = async (
 	await client
 		.update(expenseTemplates)
 		.set({
-			usageCount: schema.sql`${expenseTemplates.usageCount} + 1`,
+			usageCount: sql`${expenseTemplates.usageCount} + 1`,
 			lastUsedAt: new Date().toISOString()
 		})
 		.where(eq(expenseTemplates.id, templateId));

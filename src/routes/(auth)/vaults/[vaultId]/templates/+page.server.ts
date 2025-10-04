@@ -1,10 +1,12 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { getTemplates, createTemplate, updateTemplate, deleteTemplate } from '$lib/server/api/templates/handlers';
-import { getTags } from '$lib/server/api/tags/handlers';
 import { getCategories } from '$lib/server/api/categories/handlers';
 import { getVault, getVaultMembers } from '$lib/server/api/vaults/handlers';
-import { getPaymentTypes, getPaymentProviders } from '$lib/server/api/payments/handlers';
+import {getConfigurations} from "$lib/server/api/app-configurations/handlers";
+import {superValidate} from "sveltekit-superforms";
+import {valibot} from "sveltekit-superforms/adapters";
+import {createExpenseTemplateSchema, updateExpenseTemplateSchema, updateVaultSchema} from "$lib/schemas/expense";
 
 export const load: PageServerLoad = async ({ locals, platform, params }) => {
 	if (!platform?.env?.DB) {
@@ -21,23 +23,20 @@ export const load: PageServerLoad = async ({ locals, platform, params }) => {
 		// Get vault to verify access
 		const vault = await getVault(locals.currentUser.id, vaultId, platform.env.DB);
 
+        
 		// Load templates, tags (popular), categories, payment types, providers, and members
-		const [templates, tags, categories, paymentTypes, paymentProviders, allMembers] = await Promise.all([
-			getTemplates(locals.currentUser.id, vaultId, platform.env.DB),
-			getTags(platform.env.DB, { limit: 100 }), // Get top 100 popular tags
-			getCategories(vaultId, platform.env.DB),
-			getPaymentTypes(platform.env.DB),
-			getPaymentProviders(platform.env.DB),
+		const [templates, configurations, allMembers] = await Promise.all([
+			getTemplates(vaultId, platform.env.DB),
+            getConfigurations(),
 			getVaultMembers(vaultId, platform.env.DB)
 		]);
 
 		return {
 			vault: vault.vault,
 			templates,
-			tags,
-			categories,
-			paymentTypes,
-			paymentProviders,
+			categories: configurations.categoryData.categories,
+			paymentTypes: configurations.paymentData.paymentTypes,
+			paymentProviders: configurations.paymentData.paymentProviders,
 			members: allMembers,
 			currentUserId: locals.currentUser.id
 		};
@@ -58,28 +57,16 @@ export const actions = {
 		}
 
 		const { vaultId } = params;
-		const formData = await request.formData();
+        const form = await superValidate(request, valibot(createExpenseTemplateSchema));
+
+        if (!form.valid) {
+            return { form };
+        }
 
 		try {
-			const tagNames = formData.get('tagNames')?.toString().split(',').filter(Boolean) || [];
-
-			const defaultUserIdValue = formData.get('defaultUserId')?.toString();
 			const template = await createTemplate(
 				locals.currentUser.id,
-				{
-					vaultId,
-					name: formData.get('name')?.toString() || '',
-					description: formData.get('description')?.toString(),
-					categoryId: formData.get('categoryId')?.toString(),
-					defaultAmount: formData.get('defaultAmount') ? parseFloat(formData.get('defaultAmount')!.toString()) : undefined,
-					paymentTypeId: formData.get('paymentTypeId')?.toString(),
-					paymentProviderId: formData.get('paymentProviderId')?.toString(),
-					note: formData.get('note')?.toString(),
-					icon: formData.get('icon')?.toString() || '📝',
-					iconType: formData.get('iconType')?.toString() || 'emoji',
-					defaultUserId: defaultUserIdValue !== undefined ? (defaultUserIdValue || undefined) : undefined,
-					tagNames
-				},
+                form.data,
 				platform.env.DB
 			);
 
@@ -99,33 +86,19 @@ export const actions = {
 			return { success: false, error: 'Unauthorized' };
 		}
 
-		const formData = await request.formData();
-		const templateId = formData.get('id')?.toString();
+        const form = await superValidate(request, valibot(updateExpenseTemplateSchema));
 
-		if (!templateId) {
-			return { success: false, error: 'Template ID required' };
-		}
+        console.log('form', form);
+        if (!form.valid) {
+            return { form };
+        }
 
 		try {
-			const tagNames = formData.get('tagNames')?.toString().split(',').filter(Boolean) || [];
 
-			const defaultUserIdValue = formData.get('defaultUserId')?.toString();
 			const template = await updateTemplate(
 				locals.currentUser.id,
-				templateId,
-				{
-					name: formData.get('name')?.toString(),
-					description: formData.get('description')?.toString(),
-					categoryId: formData.get('categoryId')?.toString(),
-					defaultAmount: formData.get('defaultAmount') ? parseFloat(formData.get('defaultAmount')!.toString()) : undefined,
-					paymentTypeId: formData.get('paymentTypeId')?.toString(),
-					paymentProviderId: formData.get('paymentProviderId')?.toString(),
-					note: formData.get('note')?.toString(),
-					icon: formData.get('icon')?.toString(),
-					iconType: formData.get('iconType')?.toString(),
-					defaultUserId: defaultUserIdValue !== undefined ? (defaultUserIdValue || undefined) : undefined,
-					tagNames
-				},
+                form.data.templateId,
+				form.data,
 				platform.env.DB
 			);
 

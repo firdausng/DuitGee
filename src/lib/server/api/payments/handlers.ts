@@ -1,33 +1,17 @@
-import { drizzle } from "drizzle-orm/d1";
-import * as schema from "$lib/server/db/schema";
-import { paymentTypes, paymentProviders } from "$lib/server/db/schema";
-import { eq, isNull, or, asc } from "drizzle-orm";
+import {paymentData} from "$lib/configuration/paymentTypes";
 
-export const getPaymentTypes = async (db: D1Database) => {
-	const client = drizzle(db, { schema });
-
-	return await client
-		.select()
-		.from(paymentTypes)
-		.where(eq(paymentTypes.isPublic, true))
-		.orderBy(asc(paymentTypes.name));
+export const getPaymentTypes = async () => {
+	return paymentData.paymentTypes;
 };
 
-export const getPaymentProviders = async (db: D1Database, type?: string) => {
-	const client = drizzle(db, { schema });
+export const getPaymentProviders = async (type?: string) => {
+    let providers = paymentData.paymentProviders;
+    if(type){
+        providers = paymentData.paymentProviders.filter(p => p.type === type);
+    }
+    return providers.sort((a, b) => a.name.localeCompare(b.name));
+};
 
-	let whereCondition = eq(paymentProviders.isPublic, true);
-
-	if (type) {
-		whereCondition = or(
-			eq(paymentProviders.isPublic, true),
-			eq(paymentProviders.type, type)
-		) as any;
-	}
-
-	return await client
-		.select()
-		.from(paymentProviders)
-		.where(whereCondition)
-		.orderBy(asc(paymentProviders.name));
+export const getPaymentProvidersByName = async (name: string) => {
+    return paymentData.paymentProviders.find(p => p.name === name);
 };

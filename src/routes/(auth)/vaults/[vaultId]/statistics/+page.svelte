@@ -42,12 +42,6 @@
 	const filteredExpenses = $derived.by(() => {
 		let result = data.expenses;
 
-		if (filterTag) {
-			result = result.filter(expense =>
-				expense.tags?.some(tag => tag.name === filterTag)
-			);
-		}
-
 		if (filterCategory) {
 			result = result.filter(expense =>
 				expense.category?.id === filterCategory
@@ -105,11 +99,6 @@
 		let expenses = data.expenses;
 
 		// Apply other filters first
-		if (filterTag) {
-			expenses = expenses.filter(expense =>
-				expense.tags?.some(tag => tag.name === filterTag)
-			);
-		}
 		if (filterNote) {
 			expenses = expenses.filter(expense =>
 				expense.note?.toLowerCase().includes(filterNote.toLowerCase())

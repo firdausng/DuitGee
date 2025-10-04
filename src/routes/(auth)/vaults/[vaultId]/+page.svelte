@@ -8,13 +8,14 @@
 	import Receipt from 'phosphor-svelte/lib/Receipt';
 	import Pencil from 'phosphor-svelte/lib/Pencil';
 	import Trash from 'phosphor-svelte/lib/Trash';
-    import {goto} from "$app/navigation";
+    import {goto, pushState } from "$app/navigation";
 	import { fade, slide } from 'svelte/transition';
 
     type Period = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'all';
     type TimePeriod = { id: Period, label: string, icon: string}
 
 	let { data } = $props();
+    console.log(data)
 
 	// Delete dialog state
 	let showDeleteDialog = $state(false);
@@ -117,9 +118,10 @@
 				params.set('memberIds', selectedMemberIds.join(','));
 			}
 
-			const response = await fetch(`/vaults/${data.vaultId}?${params.toString()}`, {
+			const response = await fetch(`/api/vaults/${data.vaultId}?${params.toString()}`, {
 				headers: {
-					'Accept': 'application/json'
+					'Accept': 'application/json',
+                    'Authorization': `Bearer ${authManager.authState?.accessToken}`
 				}
 			});
 
@@ -138,12 +140,12 @@
 		if (period === currentPeriod) return;
 
 		// Update URL
-		const newUrl = new URL(window.location.href);
+		const newUrl = new URL(page.url);
 		newUrl.searchParams.set('period', period);
 		if (selectedMemberIds.length > 0) {
 			newUrl.searchParams.set('memberIds', selectedMemberIds.join(','));
 		}
-		window.history.pushState({}, '', newUrl);
+		pushState(newUrl);
 
 		currentPeriod = period as Period;
 		await fetchStats();
@@ -153,27 +155,27 @@
 		// If clicking the same member, deselect it (clear filter)
 		if (selectedMemberIds.length === 1 && selectedMemberIds.includes(memberId)) {
 			selectedMemberIds = [];
-			const newUrl = new URL(window.location.href);
+			const newUrl = new URL(page.url);
 			newUrl.searchParams.delete('memberIds');
 			newUrl.searchParams.set('period', currentPeriod);
-			window.history.pushState({}, '', newUrl);
+			pushState({}, '', newUrl);
 		} else {
 			// Replace selection with this member (single selection only)
 			selectedMemberIds = [memberId];
-			const newUrl = new URL(window.location.href);
+			const newUrl = new URL(page.url);
 			newUrl.searchParams.set('period', currentPeriod);
 			newUrl.searchParams.set('memberIds', memberId);
-			window.history.pushState({}, '', newUrl);
+			pushState({}, '', newUrl);
 		}
 		await fetchStats();
 	}
 
 	async function clearMemberFilter() {
 		selectedMemberIds = [];
-		const newUrl = new URL(window.location.href);
+		const newUrl = new URL(page.url);
 		newUrl.searchParams.delete('memberIds');
 		newUrl.searchParams.set('period', currentPeriod);
-		window.history.pushState({}, '', newUrl);
+		pushState({}, '', newUrl);
 		await fetchStats();
 	}
 

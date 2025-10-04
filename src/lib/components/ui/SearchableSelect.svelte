@@ -2,29 +2,6 @@
 	import { createEventDispatcher } from 'svelte';
 	import { CaretDown, MagnifyingGlass } from 'phosphor-svelte';
 
-	interface Option {
-		id: string;
-		name: string;
-		icon?: string;
-		color?: string;
-		group?: {
-			name: string;
-			color?: string;
-		};
-	}
-
-	interface Props {
-		value?: string;
-		placeholder?: string;
-		options: Option[];
-		disabled?: boolean;
-		class?: string;
-		name?: string;
-		searchPlaceholder?: string;
-		onSearch?: (term: string) => void;
-		isLoading?: boolean;
-	}
-
 	let {
 		value = $bindable(),
 		placeholder = 'Select an option...',
@@ -35,7 +12,7 @@
 		searchPlaceholder = 'Search...',
 		onSearch,
 		isLoading = false
-	}: Props = $props();
+	}: Client.SearchableSelectProps = $props();
 
 	const dispatch = createEventDispatcher();
 

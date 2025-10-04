@@ -1,33 +1,25 @@
 <script lang="ts">
     import {type Infer, superForm, type SuperValidated} from 'sveltekit-superforms';
-    import {type ExpenseSchema} from '$lib/schemas/expense';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
 	import Textarea from '$lib/components/ui/Textarea.svelte';
-	import TagSelector from '$lib/components/TagSelector.svelte';
 	import { goto } from '$app/navigation';
 	import CaretDown from 'phosphor-svelte/lib/CaretDown';
+    import {type Category, type CreateExpense, type ExpenseTemplate} from "$lib/schemas/expense";
+    import type {PaymentProvider, PaymentType} from "$lib/configuration/paymentTypes";
 
 	interface Props {
-		data: SuperValidated<Infer<ExpenseSchema>>;
-		categories: Array<{
-			id: string;
-			name: string;
-			color: string;
-			icon?: string;
-			description?: string;
-			keywords?: string;
-			group?: { name: string; color?: string }
-		}>;
+		data: SuperValidated<CreateExpense>;
+		categories: Array<Category>;
 		tags?: Array<{
 			name: string;
 			usageCount: number;
 			createdAt: string;
 			createdBy: string;
 		}>;
-		templates?: Array<any>;
+		templates?: Array<ExpenseTemplate>;
 		members?: Array<{
 			userId: string;
 			firstName?: string;
@@ -36,19 +28,8 @@
 			role: string;
 			status: string;
 		}>;
-		paymentTypes?: Array<{
-			id: string;
-			code: string;
-			name: string;
-			icon?: string;
-		}>;
-		paymentProviders?: Array<{
-			id: string;
-			name: string;
-			type?: string;
-			icon?: string;
-			color?: string;
-		}>;
+		paymentTypes?: Array<PaymentType>;
+		paymentProviders?: Array<PaymentProvider>;
 		currentUserId?: string;
 		isEdit?: boolean;
 		vaultId: string;
@@ -61,25 +42,10 @@
 	let searchableCategories = $state(categories);
 	let isSearching = $state(false);
 
-	// State for searchable templates
-	let allTemplates = $state(templates);
-	let searchableTemplates = $state(templates);
-	let isSearchingTemplates = $state(false);
-	let selectedTemplateId = $state<string>('');
-
-	// Watch for template selection changes
-	$effect(() => {
-		if (selectedTemplateId) {
-			handleTemplateSelect(selectedTemplateId);
-		}
-	});
 
 	const { form, errors, enhance, submitting } = superForm(data);
 
-	// State for payment and tags - initialize from form data in edit mode
-	let selectedTagNames = $state<string[]>(
-		$form.tagNames ? $form.tagNames.split(',').filter(Boolean) : []
-	);
+	// State for payment - initialize from form data in edit mode
 	let showAdvancedOptions = $state(false);
 	let paymentType = $state<string>($form.paymentType || '');
 	let paymentProvider = $state<string>($form.paymentProvider || '');
@@ -137,47 +103,6 @@
 		'pp_cimb': 'CIMB'
 	};
 
-	function handleTemplateSelect(templateId: string) {
-		const template = allTemplates.find(t => t.id === templateId);
-		if (!template) return;
-
-		// Pre-fill form with template data
-		if (template.categoryId) $form.categoryId = template.categoryId;
-		if (template.defaultAmount) $form.amount = template.defaultAmount;
-		if (template.note) $form.note = template.note;
-
-		// Handle defaultUserId - if template has "__creator__", use current user
-		if (template.defaultUserId !== undefined) {
-			if (template.defaultUserId === '__creator__') {
-				$form.userId = currentUserId || '';
-			} else {
-				$form.userId = template.defaultUserId;
-			}
-		}
-
-		// Map payment type ID to code
-		if (template.paymentTypeId) {
-			paymentType = paymentTypeIdToCode[template.paymentTypeId] || '';
-		}
-
-		// Map payment provider ID to name
-		if (template.paymentProviderId) {
-			paymentProvider = paymentProviderIdToName[template.paymentProviderId] || '';
-		}
-
-		if (template.tags && template.tags.length > 0) {
-			selectedTagNames = template.tags.map((t: any) => t.name);
-		}
-
-		// Clear template selection after applying
-		selectedTemplateId = '';
-		searchableTemplates = allTemplates;
-	}
-
-	function handleTagsChange(tagNames: string[]) {
-		selectedTagNames = tagNames;
-	}
-
 	// Tags are auto-created on submission with Twitter-style system
 	async function handleCreateTag(name: string): Promise<any> {
 		// Twitter-style tags are auto-created on use
@@ -233,8 +158,7 @@
 			return (
 				cat.name.toLowerCase().includes(term) ||
 				cat.description?.toLowerCase().includes(term) ||
-				cat.keywords?.toLowerCase().includes(term) ||
-				cat.group?.name.toLowerCase().includes(term)
+				cat.group?.toLowerCase().includes(term)
 			);
 		});
 
@@ -248,10 +172,6 @@
 			if (a.name.toLowerCase().startsWith(term) && !b.name.toLowerCase().startsWith(term)) return -1;
 			if (b.name.toLowerCase().startsWith(term) && !a.name.toLowerCase().startsWith(term)) return 1;
 
-			// Keywords match
-			if (a.keywords?.toLowerCase().includes(term) && !b.keywords?.toLowerCase().includes(term)) return -1;
-			if (b.keywords?.toLowerCase().includes(term) && !a.keywords?.toLowerCase().includes(term)) return 1;
-
 			// Alphabetical as fallback
 			return a.name.localeCompare(b.name);
 		});
@@ -259,69 +179,12 @@
 		searchableCategories = filtered;
 	}
 
-	// Client-side search function for templates
-	function searchTemplates(searchTerm: string) {
-		if (!searchTerm.trim()) {
-			searchableTemplates = allTemplates;
-			return;
-		}
-
-		const term = searchTerm.toLowerCase();
-
-		// Filter templates by name and note
-		const filtered = allTemplates.filter(template => {
-			return (
-				template.name.toLowerCase().includes(term) ||
-				template.note?.toLowerCase().includes(term)
-			);
-		});
-
-		// Sort by relevance (exact match first, then by usage count)
-		filtered.sort((a, b) => {
-			// Exact name match comes first
-			if (a.name.toLowerCase() === term) return -1;
-			if (b.name.toLowerCase() === term) return 1;
-
-			// Name starts with term
-			if (a.name.toLowerCase().startsWith(term) && !b.name.toLowerCase().startsWith(term)) return -1;
-			if (b.name.toLowerCase().startsWith(term) && !a.name.toLowerCase().startsWith(term)) return 1;
-
-			// Fall back to usage count (already sorted from database)
-			return b.usageCount - a.usageCount;
-		});
-
-		searchableTemplates = filtered;
-	}
 </script>
 
 <form method="POST" use:enhance class="space-y-3">
-	<!-- Template Selector (only for new expenses, not edit) -->
-	{#if !isEdit && templates.length > 0}
-		<div>
-			<label for="templateId" class="block text-xs font-medium text-muted-foreground mb-1">
-				Quick Template <span class="text-xs text-muted-foreground/60">(optional)</span>
-			</label>
-			<SearchableSelect
-				name="templateId"
-				bind:value={selectedTemplateId}
-				options={searchableTemplates.map(t => ({
-					id: t.id,
-					name: t.name,
-					icon: t.icon,
-					color: t.category?.color || '#6B7280'
-				}))}
-				placeholder="Choose template..."
-				searchPlaceholder="Search templates..."
-				onSearch={searchTemplates}
-				isLoading={isSearchingTemplates}
-				class="w-full h-8 text-sm"
-			/>
-		</div>
-	{/if}
 	<!-- Hidden fields for payment and tags -->
 	<input type="hidden" name="paymentType" value={paymentType} />
 	<input type="hidden" name="paymentProvider" value={paymentProvider} />
-	<input type="hidden" name="tagNames" value={selectedTagNames.join(',')} />
 
 	<div class="grid grid-cols-2 gap-2">
 		<div>
@@ -350,7 +213,7 @@
 			</label>
 			<SearchableSelect
 				name="categoryId"
-				bind:value={$form.categoryId}
+				bind:value={$form.categoryName}
 				options={searchableCategories}
 				placeholder="Choose category"
 				searchPlaceholder="Search categories..."
@@ -358,8 +221,8 @@
 				isLoading={isSearching}
 				class="w-full h-8 text-sm"
 			/>
-			{#if $errors.categoryId}
-				<p class="mt-0.5 text-xs text-destructive">{$errors.categoryId}</p>
+			{#if $errors.categoryName}
+				<p class="mt-0.5 text-xs text-destructive">{$errors.categoryName}</p>
 			{/if}
 		</div>
 	</div>
@@ -432,9 +295,6 @@
 		>
 			<CaretDown class="w-4 h-4 transition-transform {showAdvancedOptions ? 'rotate-180' : ''}" />
 			<span>Advanced Options</span>
-			{#if (paymentType || selectedTagNames.length > 0) && !showAdvancedOptions}
-				<span class="text-xs text-primary">({paymentType ? '1' : '0'}{selectedTagNames.length > 0 ? ` + ${selectedTagNames.length} tags` : ''})</span>
-			{/if}
 		</button>
 
 		{#if showAdvancedOptions}
@@ -478,21 +338,6 @@
 						/>
 					</div>
 				{/if}
-
-				<!-- Tags -->
-				<div>
-					<label class="block text-xs font-medium text-muted-foreground mb-1">
-						Tags
-					</label>
-					<TagSelector
-						availableTags={allTags}
-						bind:selectedTagNames={selectedTagNames}
-						onTagsChange={handleTagsChange}
-						onCreateTag={handleCreateTag}
-						allowCreate={true}
-						placeholder="Add tags..."
-					/>
-				</div>
 			</div>
 		{/if}
 	</div>

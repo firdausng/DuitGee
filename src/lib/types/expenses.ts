@@ -1,20 +1,13 @@
 // Type definitions for expense-related objects
 
+import type {Category} from "$lib/server/api/categories/schema";
+
 export interface CategoryGroup {
 	id: string;
 	name: string;
 	icon?: string;
 	iconType?: 'emoji' | 'phosphor';
 	color: string;
-}
-
-export interface Category {
-	id: string;
-	name: string;
-	color: string;
-	icon?: string;
-	iconType?: 'emoji' | 'phosphor';
-	group?: CategoryGroup | null;
 }
 
 export interface Vault {

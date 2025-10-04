@@ -4,10 +4,10 @@ import { redirect, error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import type { PageServerLoad, Actions } from './$types.js';
 import { createNotification } from '$lib/server/api/notifications/handlers';
-import { createNotificationData } from '$lib/server/api/notifications/schema';
 import {getUserVaultsByEmail, getVault} from "$lib/server/api/vaults/handlers";
 import {getUserByEmail} from "$lib/server/api/users/handlers";
 import {getUserVaultInvitationsByEmail, inviteUserToVault} from "$lib/server/api/vault-members/handlers";
+import type {CreateNotification, NotificationType} from "$lib/schemas/expense";
 
 // Schema for inviting a user
 const inviteUserSchema = v.object({
@@ -153,3 +153,28 @@ export const actions: Actions = {
         }
     }
 };
+
+function createNotificationData(
+    userId: string,
+    type: NotificationType,
+    title: string,
+    message: string,
+    options?: {
+        relatedId?: string;
+        relatedType?: string;
+        actionUrl?: string;
+        metadata?: Record<string, any>;
+    }
+): CreateNotification {
+    return {
+        userId,
+        type,
+        title,
+        message,
+        isRead: false,
+        relatedId: options?.relatedId || null,
+        relatedType: options?.relatedType || null,
+        actionUrl: options?.actionUrl || null,
+        metadata: options?.metadata ? JSON.stringify(options.metadata) : null
+    };
+}

@@ -10,24 +10,7 @@ import {
     getUserVaultInvitationsByEmail
 } from "$lib/server/api/vault-members/handlers";
 import { describeRoute, resolver } from 'hono-openapi';
-
-// Schema for inviting a user to a vault
-const inviteUserSchema = v.object({
-    email: v.pipe(v.string(), v.email()),
-    role: v.picklist(['member', 'admin']),
-    permissions: v.picklist(['read', 'write', 'admin'])
-});
-
-// Schema for updating member role/permissions
-const updateMemberSchema = v.object({
-    role: v.optional(v.picklist(['member', 'admin'])),
-    permissions: v.optional(v.picklist(['read', 'write', 'admin']))
-});
-
-// Query schema for getUserVaultInvitationsByEmail
-const getInvitationsByEmailSchema = v.object({
-    email: v.pipe(v.string(), v.email())
-});
+import {getInvitationsByEmailSchema, inviteUserSchema, updateMemberSchema} from "$lib/schemas/expense";
 
 const VAULT_MEMBER_TAG = ['Vault Member'];
 const commonVaultMemberConfig = {
@@ -35,6 +18,7 @@ const commonVaultMemberConfig = {
 };
 
 export const vaultMembersApi = new Hono<App.Api>()
+
     .post(
         '/invite/:vaultId',
         describeRoute({

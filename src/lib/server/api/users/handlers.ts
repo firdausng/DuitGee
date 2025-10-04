@@ -2,9 +2,8 @@ import { drizzle } from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
 import { users, vaults, vaultMembers } from "$lib/server/db/schema";
 import { and, eq, desc, sql } from "drizzle-orm";
-import { createId } from '@paralleldrive/cuid2';
-import type {CreateUser, UpdateUser, User} from "$lib/server/api/users/schema";
 import { getUserByEmailFromCache, setUserByEmailCache, invalidateUserByEmailCache } from "$lib/server/utils/kv-cache";
+import type {CreateUser, UpdateUser} from "$lib/schemas/expense";
 
 export const getUsers = async (db: D1Database, options?: {
 	page?: number;

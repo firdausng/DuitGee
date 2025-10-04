@@ -1,385 +1,519 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
-	import TagSelector from '$lib/components/TagSelector.svelte';
-	import IconDisplay from '$lib/components/IconDisplay.svelte';
-	import IconPicker from '$lib/components/ui/IconPicker.svelte';
-	import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
+    import Button from '$lib/components/ui/Button.svelte';
+    import IconDisplay from '$lib/components/IconDisplay.svelte';
+    import IconPicker from '$lib/components/ui/IconPicker.svelte';
+    import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
+    import CustomCombobox from '$lib/components/ui/CustomCombobox.svelte';
+    import type {Category, CreateExpenseTemplate, ExpenseTemplate, UpdateExpenseTemplate} from "$lib/schemas/expense";
+    import type {PaymentProvider, PaymentType} from "$lib/configuration/paymentTypes";
+    import {Combobox} from "bits-ui";
+    import CaretUpDown from "phosphor-svelte/lib/CaretUpDown";
+    import Check from "phosphor-svelte/lib/Check";
+    import Cards from "phosphor-svelte/lib/Cards";
+    import CaretDoubleUp from "phosphor-svelte/lib/CaretDoubleUp";
+    import CaretDoubleDown from "phosphor-svelte/lib/CaretDoubleDown";
+    import Bank from "phosphor-svelte/lib/Bank";
+    import Wallet from "phosphor-svelte/lib/Wallet";
+    import User from "phosphor-svelte/lib/User";
+    import { Select } from "bits-ui";
 
-	type Category = {
-		id: string;
-		name: string;
-		icon?: string;
-		color: string;
-		description?: string;
-		keywords?: string;
-		group?: { name: string; color?: string };
-	};
+    type Member = {
+        userId: string;
+        firstName?: string;
+        lastName?: string;
+        email: string;
+        role: string;
+        status: string;
+    };
 
-	type Tag = {
-		name: string; // Primary key - normalized, lowercase
-		usageCount: number;
-		createdAt: string;
-		createdBy: string;
-	};
+    interface Props {
+        template?: {
+            id?: string;
+            name: string;
+            description?: string;
+            categoryName: string|null;
+            defaultAmount?: number;
+            paymentType?: string;
+            paymentProvider?: string;
+            note?: string;
+            icon?: string;
+            iconType?: string;
+            defaultUserId?: string;
+        };
+        categories: Category[];
+        paymentTypes: PaymentType[];
+        paymentProviders: PaymentProvider[];
+        members?: Member[];
+        currentUserId: string;
+        vaultId: string;
+        onSubmit: (data: UpdateExpenseTemplate) => void;
+        onCancel: () => void;
+        isSubmitting?: boolean;
+    }
 
-	type PaymentType = {
-		id: string;
-		code: string;
-		name: string;
-		icon?: string;
-	};
+    let {
+        template,
+        categories,
+        paymentTypes,
+        paymentProviders,
+        members = [],
+        currentUserId,
+        vaultId,
+        onSubmit,
+        onCancel,
+        isSubmitting = false
+    }: Props = $props();
 
-	type PaymentProvider = {
-		id: string;
-		name: string;
-		type?: string;
-		icon?: string;
-		color?: string;
-	};
+    // Form state
+    let formData: UpdateExpenseTemplate = $state({
+        name: template?.name || '',
+        description: template?.description || '',
+        defaultAmount: template?.defaultAmount || 0,
+        paymentType: template?.paymentType || '',
+        paymentProvider: template?.paymentProvider || '',
+        note: template?.note || '',
+        icon: template?.icon || '📝',
+        iconType: template?.iconType || 'emoji',
+        defaultUserId: template?.defaultUserId !== undefined ? template.defaultUserId : '__creator__', // Default to expense creator
+        userId: currentUserId,
+        categoryName: template?.categoryName ?? null ,
+        vaultId: vaultId,
+        templateId: template?.id || '',
+    });
 
-	type Member = {
-		userId: string;
-		firstName?: string;
-		lastName?: string;
-		email: string;
-		role: string;
-		status: string;
-	};
+    $effect(() => {
+        console.log("formData", formData);
+    })
 
-	interface Props {
-		template?: {
-			id?: string;
-			name: string;
-			description?: string;
-			categoryId?: string;
-			defaultAmount?: number;
-			paymentTypeId?: string;
-			paymentProviderId?: string;
-			note?: string;
-			icon?: string;
-			iconType?: string;
-			tagNames?: string[]; // Changed from tagIds to tagNames
-			defaultUserId?: string;
-		};
-		categories: Category[];
-		tags: Tag[];
-		paymentTypes: PaymentType[];
-		paymentProviders: PaymentProvider[];
-		members?: Member[];
-		currentUserId?: string;
-		vaultId: string;
-		onSubmit: (data: any) => void;
-		onCancel: () => void;
-		isSubmitting?: boolean;
-	}
+    // State for searchable categories
+    let allCategories = $state(categories.map(cat => ({
+        ...cat,
+        value: cat.name,
+        label: cat.name,
+    })));
 
-	let {
-		template,
-		categories,
-		tags,
-		paymentTypes,
-		paymentProviders,
-		members = [],
-		currentUserId,
-		vaultId,
-		onSubmit,
-		onCancel,
-		isSubmitting = false
-	}: Props = $props();
+    let categorySearchValue = $state(template?.categoryName ?? "");
+    const searchableCategories = $derived(
+        categorySearchValue === ""
+            ? allCategories
+            : allCategories.filter((category) =>
+                category.label.toLowerCase().includes(categorySearchValue.toLowerCase())
+            )
+    );
 
-	// Make tags reactive so new tags appear immediately
-	let allTags = $state(tags);
+    function getCategory() {
+        return categorySearchValue;
+    }
 
-	// Form state
-	let formData = $state({
-		name: template?.name || '',
-		description: template?.description || '',
-		categoryId: template?.categoryId || '',
-		defaultAmount: template?.defaultAmount?.toString() || '',
-		paymentTypeId: template?.paymentTypeId || '',
-		paymentProviderId: template?.paymentProviderId || '',
-		note: template?.note || '',
-		icon: template?.icon || '📝',
-		iconType: template?.iconType || 'emoji',
-		tagNames: template?.tagNames || [], // Changed from tagIds to tagNames
-		defaultUserId: template?.defaultUserId !== undefined ? template.defaultUserId : '__creator__' // Default to expense creator
-	});
+    function setCategory(newValue: string) {
+        formData.categoryName = newValue;
+        categorySearchValue = newValue;
+    }
 
-	// State for searchable categories
-	let allCategories = $state(categories);
-	let searchableCategories = $state(categories);
-	let isSearching = $state(false);
+    let defaultUser = $state(members.find((member) => member.userId === formData.defaultUserId)?.email ?? "");
+    const selectedDefaultUser = $derived(
+        defaultUser
+            ? members.find((member) => member.email === defaultUser)?.email
+            : "Select default User"
+    );
 
-	// Get selected payment type to determine which providers to show
-	let selectedPaymentType = $derived(
-		paymentTypes.find(pt => pt.id === formData.paymentTypeId)
-	);
+    function getDefaultUser() {
+        return categorySearchValue;
+    }
 
-	let showProviderInput = $derived(
-		selectedPaymentType?.code === 'e_wallet' ||
-		selectedPaymentType?.code === 'bank_transfer' ||
-		selectedPaymentType?.code === 'credit_card' ||
-		selectedPaymentType?.code === 'debit_card'
-	);
+    function setDefaultUser(newValue: string) {
+        formData.defaultUserId = newValue;
+        categorySearchValue = newValue;
+    }
 
-	let filteredProviders = $derived(() => {
-		if (!selectedPaymentType) return [];
+    // Get selected payment type to determine which providers to show
+    let paymentType = $state(formData.paymentType ?? "");
+    const selectedPaymentType = $derived(
+        paymentType
+            ? paymentTypes.find((type) => type.code === paymentType)?.code
+            : "Select a payment type"
+    );
 
-		if (selectedPaymentType.code === 'e_wallet') {
-			return paymentProviders.filter(p => p.type === 'e_wallet');
-		}
-		if (selectedPaymentType.code === 'bank_transfer' ||
-			selectedPaymentType.code === 'credit_card' ||
-			selectedPaymentType.code === 'debit_card') {
-			return paymentProviders.filter(p => p.type === 'bank');
-		}
-		return [];
-	});
+    function getPaymentType() {
+        return paymentType;
+    }
 
-	function handleSubmit(e: Event) {
-		e.preventDefault();
+    function setPaymentType(newValue: string) {
+        formData.paymentType = newValue;
+        paymentType = newValue;
+    }
 
-		const submitData = {
-			...formData,
-			defaultAmount: formData.defaultAmount ? parseFloat(formData.defaultAmount) : undefined,
-			categoryId: formData.categoryId || undefined,
-			paymentTypeId: formData.paymentTypeId || undefined,
-			paymentProviderId: formData.paymentProviderId || undefined,
-			note: formData.note || undefined,
-			description: formData.description || undefined
-		};
+    let searchPaymentProviderValue = $state(formData.paymentProvider ?? "");
 
-		onSubmit(submitData);
-	}
+    const filteredPaymentProvider = $derived(
+        searchPaymentProviderValue === ""
+            ? paymentProviders
+            : paymentProviders.filter((paymentProvider) =>
+                paymentProvider.id.toLowerCase().includes(searchPaymentProviderValue.toLowerCase())
+            )
+    );
 
-	function handleTagsChange(tagNames: string[]) {
-		formData.tagNames = tagNames;
-	}
+    let iconValue = $state(formData.icon ?? "");
+    function getIcon() {
+        return iconValue;
+    }
 
-	// Tags are auto-created on submission, no need for explicit creation
-	async function handleCreateTag(name: string): Promise<Tag | null> {
-		// Twitter-style tags are auto-created on use
-		// Just return a mock tag object to update the UI
-		const newTag: Tag = {
-			name: name.toLowerCase().trim(),
-			usageCount: 0,
-			createdAt: new Date().toISOString(),
-			createdBy: ''
-		};
-		allTags = [...allTags, newTag];
-		return newTag;
-	}
+    function setIcon(newValue: string) {
+        formData.icon = newValue;
+        iconValue = newValue;
+    }
 
-	// Client-side search function
-	function searchCategories(searchTerm: string) {
-		if (!searchTerm.trim()) {
-			searchableCategories = allCategories;
-			return;
-		}
 
-		const term = searchTerm.toLowerCase();
+    function getPaymentProvider() {
+        return searchPaymentProviderValue;
+    }
 
-		// Smart filtering with ranking
-		const filtered = allCategories.filter(cat => {
-			return (
-				cat.name.toLowerCase().includes(term) ||
-				cat.description?.toLowerCase().includes(term) ||
-				cat.keywords?.toLowerCase().includes(term) ||
-				cat.group?.name.toLowerCase().includes(term)
-			);
-		});
+    function setPaymentProvider(newValue: string) {
+        formData.paymentProvider = newValue;
+        searchPaymentProviderValue = newValue;
+    }
 
-		// Sort by relevance
-		filtered.sort((a, b) => {
-			// Exact name match comes first
-			if (a.name.toLowerCase() === term) return -1;
-			if (b.name.toLowerCase() === term) return 1;
+    function handleSubmit(e: Event) {
+        e.preventDefault();
 
-			// Name starts with term
-			if (a.name.toLowerCase().startsWith(term) && !b.name.toLowerCase().startsWith(term)) return -1;
-			if (b.name.toLowerCase().startsWith(term) && !a.name.toLowerCase().startsWith(term)) return 1;
+        const submitData: UpdateExpenseTemplate = {
+            ...formData,
+            defaultAmount: formData.defaultAmount,
+            categoryName: formData.categoryName,
+            paymentType: formData.paymentType,
+            paymentProvider: formData.paymentProvider,
+            note: formData.note,
+            description: formData.description
+        };
 
-			// Keywords match
-			if (a.keywords?.toLowerCase().includes(term) && !b.keywords?.toLowerCase().includes(term)) return -1;
-			if (b.keywords?.toLowerCase().includes(term) && !a.keywords?.toLowerCase().includes(term)) return 1;
+        console.log("submitData", submitData);
 
-			// Alphabetical as fallback
-			return a.name.localeCompare(b.name);
-		});
+        onSubmit(submitData);
+    }
 
-		searchableCategories = filtered;
-	}
 </script>
 
 <form onsubmit={handleSubmit} class="space-y-4">
-	<!-- Template Name -->
-	<div>
-		<label for="name" class="block text-sm font-medium text-foreground mb-1">
-			Template Name <span class="text-destructive">*</span>
-		</label>
-		<input
-			type="text"
-			id="name"
-			bind:value={formData.name}
-			required
-			placeholder="e.g., Morning Coffee, Lunch at Office"
-			class="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-		/>
-	</div>
+    <!-- Template Name -->
+    <div>
+        <label for="name" class="block text-sm font-medium text-foreground mb-1">
+            Template Name <span class="text-destructive">*</span>
+        </label>
+        <input
+                type="text"
+                id="name"
+                bind:value={formData.name}
+                required
+                placeholder="e.g., Morning Coffee, Lunch at Office"
+                class="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+        />
+    </div>
 
-	<!-- Description -->
-	<div>
-		<label for="description" class="block text-sm font-medium text-foreground mb-1">
-			Description
-		</label>
-		<textarea
-			id="description"
-			bind:value={formData.description}
-			rows="2"
-			placeholder="Optional description..."
-			class="w-full px-3 py-2 border rounded-md bg-background text-foreground resize-none"
-		></textarea>
-	</div>
+    <!-- Description -->
+    <div>
+        <label for="description" class="block text-sm font-medium text-foreground mb-1">
+            Description
+        </label>
+        <textarea
+                id="description"
+                bind:value={formData.description}
+                rows="2"
+                placeholder="Optional description..."
+                class="w-full px-3 py-2 border rounded-md bg-background text-foreground resize-none"
+        ></textarea>
+    </div>
 
-	<!-- Default User/Creator -->
-	<div>
-		<label for="defaultUserId" class="block text-sm font-medium text-foreground mb-1">
-			Default User <span class="text-xs text-muted-foreground">(Who will this expense be for?)</span>
-		</label>
-		<select
-			id="defaultUserId"
-			bind:value={formData.defaultUserId}
-			class="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-		>
-			<option value="__creator__">User who creates the expense (Default)</option>
-			<option value="">Vault Expense</option>
-			<option value={currentUserId}>Myself</option>
-			{#each members.filter(m => m.userId !== currentUserId) as member}
-				<option value={member.userId}>
-					{member.firstName && member.lastName
-						? `${member.firstName} ${member.lastName}`
-						: member.email}
-					{member.role === 'owner' ? ' (Owner)' : ''}
-				</option>
-			{/each}
-		</select>
-		<p class="text-xs text-muted-foreground mt-1">
-			Who the expense will be assigned to by default when using this template
-		</p>
-	</div>
+    <div class="flex gap-3">
 
-	<!-- Category -->
-	<div>
-		<label for="category" class="block text-sm font-medium text-foreground mb-1">
-			Category
-		</label>
-		<SearchableSelect
-			name="categoryId"
-			bind:value={formData.categoryId}
-			options={searchableCategories}
-			placeholder="Choose category"
-			searchPlaceholder="Search categories..."
-			onSearch={searchCategories}
-			isLoading={isSearching}
-			class="w-full"
-		/>
-	</div>
+        <Combobox.Root
+                type="single"
+                name="categoryName"
+                bind:value={getCategory, setCategory}
+                onOpenChangeComplete={(o) => {if (!o) categorySearchValue = "";}}
+        >
+            <div class="relative">
+                <Cards
+                        class="text-muted-foreground absolute start-3 top-1/2 size-6 -translate-y-1/2"
+                />
+                <Combobox.Input
+                        oninput={(e) => (categorySearchValue = e.currentTarget.value)}
+                        class="h-input rounded-9px border-border-input bg-background placeholder:text-foreground-alt/50 focus:ring-foreground focus:ring-offset-background focus:outline-hidden inline-flex w-[296px] touch-none truncate border px-11 text-base transition-colors focus:ring-2 focus:ring-offset-2 sm:text-sm"
+                        placeholder="Search a category"
+                        aria-label="Search a category"
+                />
+                <Combobox.Trigger
+                        class="absolute end-3 top-1/2 size-6 -translate-y-1/2 touch-none"
+                >
+                    <CaretUpDown class="text-muted-foreground size-6" />
+                </Combobox.Trigger>
+            </div>
+            <Combobox.Portal>
+                <Combobox.Content
+                        class="focus-override border-muted bg-background shadow-popover data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-hidden z-50 h-96 max-h-[var(--bits-combobox-content-available-height)] w-[var(--bits-combobox-anchor-width)] min-w-[var(--bits-combobox-anchor-width)] select-none rounded-xl border px-1 py-3 data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
+                        sideOffset={10}
+                >
+                    <Combobox.ScrollUpButton
+                            class="flex w-full items-center justify-center py-1"
+                    >
+                        <CaretDoubleUp class="size-3" />
+                    </Combobox.ScrollUpButton>
+                    <Combobox.Viewport class="p-1">
+                        {#each searchableCategories as categories, i (i + categories.value)}
+                            <Combobox.Item
+                                    class="rounded-button data-highlighted:bg-muted outline-hidden flex h-10 w-full select-none items-center py-3 pl-5 pr-1.5 text-sm capitalize"
+                                    value={categories.value}
+                                    label={categories.label}
+                            >
+                                {#snippet children({ selected })}
+                                    {categories.label}
+                                    {#if selected}
+                                        <div class="ml-auto">
+                                            <Check />
+                                        </div>
+                                    {/if}
+                                {/snippet}
+                            </Combobox.Item>
+                        {:else}
+          <span class="block px-5 py-2 text-sm text-muted-foreground">
+            No results found, try again.
+          </span>
+                        {/each}
+                    </Combobox.Viewport>
+                    <Combobox.ScrollDownButton
+                            class="flex w-full items-center justify-center py-1"
+                    >
+                        <CaretDoubleDown class="size-3" />
+                    </Combobox.ScrollDownButton>
+                </Combobox.Content>
+            </Combobox.Portal>
+        </Combobox.Root>
 
-	<!-- Default Amount -->
-	<div>
-		<label for="amount" class="block text-sm font-medium text-foreground mb-1">
-			Default Amount
-		</label>
-		<input
-			type="number"
-			id="amount"
-			bind:value={formData.defaultAmount}
-			step="0.01"
-			min="0"
-			placeholder="Optional default amount"
-			class="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-		/>
-	</div>
+        <!-- Default User/Creator -->
+        <Select.Root
+                type="single"
+                name="defaultUserId"
+                bind:value={getDefaultUser, setDefaultUser}
+                onValueChange={(v) => (defaultUser = v)}
+                items={members.map(member => ({
+                ...member,
+                value: member.email,
+                label: member.email,
+            }))}
+                allowDeselect={true}
+        >
+            <Select.Trigger
+                    class="h-input rounded-9px border-border-input bg-background data-placeholder:text-foreground-alt/50 inline-flex w-[296px] touch-none select-none items-center border px-[11px] text-sm transition-colors"
+                    aria-label="Select a theme"
+            >
+                <User class="text-muted-foreground mr-[9px] size-6" />
+                {selectedDefaultUser}
+                <CaretUpDown class="text-muted-foreground ml-auto size-6" />
+            </Select.Trigger>
+            <Select.Portal>
+                <Select.Content
+                        class="focus-override border-muted bg-background shadow-popover data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-hidden z-50 h-96 max-h-[var(--bits-select-content-available-height)] w-[var(--bits-select-anchor-width)] min-w-[var(--bits-select-anchor-width)] select-none rounded-xl border px-1 py-3 data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
+                        sideOffset={10}
+                >
+                    <Select.ScrollUpButton class="flex w-full items-center justify-center">
+                        <CaretDoubleUp class="size-3" />
+                    </Select.ScrollUpButton>
+                    <Select.Viewport class="p-1">
+                        {#each members as member, i ( member.email)}
+                            <Select.Item
+                                    class="rounded-button data-highlighted:bg-muted outline-hidden data-disabled:opacity-50 flex h-10 w-full select-none items-center py-3 pl-5 pr-1.5 text-sm capitalize"
+                                    value={member.email}
+                                    label={member.email}
+                                    disabled={false}
+                            >
+                                {#snippet children({ selected })}
+                                    {member.firstName} {member.lastName} ({member.email})
+                                    {#if selected}
+                                        <div class="ml-auto">
+                                            <Check aria-label="check" />
+                                        </div>
+                                    {/if}
+                                {/snippet}
+                            </Select.Item>
+                        {/each}
+                    </Select.Viewport>
+                    <Select.ScrollDownButton class="flex w-full items-center justify-center">
+                        <CaretDoubleDown class="size-3" />
+                    </Select.ScrollDownButton>
+                </Select.Content>
+            </Select.Portal>
+        </Select.Root>
+    </div>
 
-	<!-- Payment Type -->
-	<div>
-		<label for="payment-type" class="block text-sm font-medium text-foreground mb-1">
-			Payment Type
-		</label>
-		<select
-			id="payment-type"
-			bind:value={formData.paymentTypeId}
-			class="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-		>
-			<option value="">Select payment type...</option>
-			{#each paymentTypes as type}
-				<option value={type.id}>{type.name}</option>
-			{/each}
-		</select>
-	</div>
 
-	<!-- Payment Provider -->
-	{#if showProviderInput}
-		<div>
-			<label for="payment-provider" class="block text-sm font-medium text-foreground mb-1">
-				Payment Provider
-			</label>
-			<select
-				id="payment-provider"
-				bind:value={formData.paymentProviderId}
-				class="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-			>
-				<option value="">Select provider...</option>
-				{#each filteredProviders() as provider}
-					<option value={provider.id}>{provider.name}</option>
-				{/each}
-			</select>
-		</div>
-	{/if}
+    <!-- Default Amount -->
+    <div>
+        <label for="amount" class="block text-sm font-medium text-foreground mb-1">
+            Default Amount
+        </label>
+        <input
+                type="number"
+                id="amount"
+                bind:value={formData.defaultAmount}
+                step="0.01"
+                min="0"
+                placeholder="Optional default amount"
+                class="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+        />
+    </div>
 
-	<!-- Default Note -->
-	<div>
-		<label for="note" class="block text-sm font-medium text-foreground mb-1">
-			Default Note
-		</label>
-		<input
-			type="text"
-			id="note"
-			bind:value={formData.note}
-			placeholder="Optional default note"
-			class="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-		/>
-	</div>
+    <div class="flex gap-3">
+        <!-- Payment Type -->
+        <Select.Root
+                type="single"
+                bind:value={getPaymentType, setPaymentType}
+                items={paymentTypes.map(type => ({
+                    ...type,
+                    value: type.code,
+                    label: type.name,
+                }))}
+                allowDeselect={true}
+        >
+            <Select.Trigger
+                    class="h-input rounded-9px border-border-input bg-background data-placeholder:text-foreground-alt/50 inline-flex w-[296px] touch-none select-none items-center border px-[11px] text-sm transition-colors"
+                    aria-label="Select a theme"
+            >
+                <Wallet class="text-muted-foreground mr-[9px] size-6" />
+                {selectedPaymentType}
+                <CaretUpDown class="text-muted-foreground ml-auto size-6" />
+            </Select.Trigger>
+            <Select.Portal>
+                <Select.Content
+                        class="focus-override border-muted bg-background shadow-popover data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-hidden z-50 h-96 max-h-[var(--bits-select-content-available-height)] w-[var(--bits-select-anchor-width)] min-w-[var(--bits-select-anchor-width)] select-none rounded-xl border px-1 py-3 data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
+                        sideOffset={10}
+                >
+                    <Select.ScrollUpButton class="flex w-full items-center justify-center">
+                        <CaretDoubleUp class="size-3" />
+                    </Select.ScrollUpButton>
+                    <Select.Viewport class="p-1">
+                        {#each paymentTypes as paymentType, i (i + paymentType.code)}
+                            <Select.Item
+                                    class="rounded-button data-highlighted:bg-muted outline-hidden data-disabled:opacity-50 flex h-10 w-full select-none items-center py-3 pl-5 pr-1.5 text-sm capitalize"
+                                    value={paymentType.code}
+                                    label={paymentType.name}
+                                    disabled={false}
+                            >
+                                {#snippet children({ selected })}
+                                    {paymentType.name}
+                                    {#if selected}
+                                        <div class="ml-auto">
+                                            <Check aria-label="check" />
+                                        </div>
+                                    {/if}
+                                {/snippet}
+                            </Select.Item>
+                        {/each}
+                    </Select.Viewport>
+                    <Select.ScrollDownButton class="flex w-full items-center justify-center">
+                        <CaretDoubleDown class="size-3" />
+                    </Select.ScrollDownButton>
+                </Select.Content>
+            </Select.Portal>
+        </Select.Root>
 
-	<!-- Tags -->
-	<div>
-		<label class="block text-sm font-medium text-foreground mb-1">
-			Tags
-		</label>
-		<TagSelector
-			availableTags={allTags}
-			bind:selectedTagNames={formData.tagNames}
-			onTagsChange={handleTagsChange}
-			onCreateTag={handleCreateTag}
-			allowCreate={true}
-		/>
-	</div>
+        <!-- Payment Provider -->
+        {#if paymentType?.length > 0}
+            <Combobox.Root
+                    bind:value={getPaymentProvider, setPaymentProvider}
+                    type="single"
+                    name="paymentProvider"
+                    onOpenChangeComplete={(o) => {
+    if (!o) searchPaymentProviderValue = "";
+  }}
+            >
+                <div class="relative">
+                    <Bank
+                            class="text-muted-foreground absolute start-3 top-1/2 size-6 -translate-y-1/2"
+                    />
+                    <Combobox.Input
+                            oninput={(e) => (searchPaymentProviderValue = e.currentTarget.value)}
+                            class="h-input rounded-9px border-border-input bg-background placeholder:text-foreground-alt/50 focus:ring-foreground focus:ring-offset-background focus:outline-hidden inline-flex w-[296px] touch-none truncate border px-11 text-base transition-colors focus:ring-2 focus:ring-offset-2 sm:text-sm"
+                            placeholder="Search a payment provider"
+                            aria-label="Search a payment provider"
+                    />
+                    <Combobox.Trigger
+                            class="absolute end-3 top-1/2 size-6 -translate-y-1/2 touch-none"
+                    >
+                        <CaretUpDown class="text-muted-foreground size-6" />
+                    </Combobox.Trigger>
+                </div>
+                <Combobox.Portal>
+                    <Combobox.Content
+                            class="focus-override border-muted bg-background shadow-popover data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-hidden z-50 h-96 max-h-[var(--bits-combobox-content-available-height)] w-[var(--bits-combobox-anchor-width)] min-w-[var(--bits-combobox-anchor-width)] select-none rounded-xl border px-1 py-3 data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
+                            sideOffset={10}
+                    >
+                        <Combobox.ScrollUpButton
+                                class="flex w-full items-center justify-center py-1"
+                        >
+                            <CaretDoubleUp class="size-3" />
+                        </Combobox.ScrollUpButton>
+                        <Combobox.Viewport class="p-1">
+                            {#each filteredPaymentProvider as paymentProvider, i (i + paymentProvider.id)}
+                                <Combobox.Item
+                                        class="rounded-button data-highlighted:bg-muted outline-hidden flex h-10 w-full select-none items-center py-3 pl-5 pr-1.5 text-sm capitalize"
+                                        value={paymentProvider.id}
+                                        label={paymentProvider.name}
+                                >
+                                    {#snippet children({ selected })}
+                                        {paymentProvider.name}
+                                        {#if selected}
+                                            <div class="ml-auto">
+                                                <Check />
+                                            </div>
+                                        {/if}
+                                    {/snippet}
+                                </Combobox.Item>
+                            {:else}
+          <span class="block px-5 py-2 text-sm text-muted-foreground">
+            No results found, try again.
+          </span>
+                            {/each}
+                        </Combobox.Viewport>
+                        <Combobox.ScrollDownButton
+                                class="flex w-full items-center justify-center py-1"
+                        >
+                            <CaretDoubleDown class="size-3" />
+                        </Combobox.ScrollDownButton>
+                    </Combobox.Content>
+                </Combobox.Portal>
+            </Combobox.Root>
+        {/if}
+    </div>
 
-	<!-- Icon -->
-	<div>
-		<label class="block text-sm font-medium text-foreground mb-1">
-			Icon
-		</label>
-		<IconPicker bind:value={formData.icon} />
-	</div>
 
-	<!-- Actions -->
-	<div class="flex gap-3 pt-4">
-		<Button type="submit" variant="default" disabled={isSubmitting} class="flex-1">
-			{isSubmitting ? 'Saving...' : template?.id ? 'Update Template' : 'Create Template'}
-		</Button>
-		<Button type="button" variant="outline" onclick={onCancel} disabled={isSubmitting}>
-			Cancel
-		</Button>
-	</div>
+    <!-- Default Note -->
+    <div>
+        <label for="note" class="block text-sm font-medium text-foreground mb-1">
+            Default Note
+        </label>
+        <input
+                type="text"
+                id="note"
+                bind:value={formData.note}
+                placeholder="Optional default note"
+                class="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+        />
+    </div>
+
+    <!-- Icon -->
+    <div>
+        <label class="block text-sm font-medium text-foreground mb-1">
+            Icon
+        </label>
+        <IconPicker bind:value={getIcon, setIcon}/>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-3 pt-4">
+        <Button type="submit" variant="default" disabled={isSubmitting} class="flex-1">
+            {isSubmitting ? 'Saving...' : template?.id ? 'Update Template' : 'Create Template'}
+        </Button>
+        <Button type="button" variant="outline" onclick={onCancel} disabled={isSubmitting}>
+            Cancel
+        </Button>
+    </div>
 </form>

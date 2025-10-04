@@ -1,7 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { getExpensesByVault } from '$lib/server/api/expenses/handlers';
 import { getCategories } from '$lib/server/api/categories/handlers';
-import { getTags } from '$lib/server/api/tags/handlers';
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -92,16 +91,14 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
 	const allMembers = Array.from(membersMap.values());
 
 	// Fetch categories and tags for filters
-	const [categories, tags] = await Promise.all([
-		getCategories(vaultId, platform.env.DB),
-		getTags(platform.env.DB, { limit: 100 })
+	const [categories] = await Promise.all([
+		getCategories(),
 	]);
 
 	return {
 		vaultId,
 		expenses,
 		categories,
-		tags,
 		members: allMembers
 	};
 };

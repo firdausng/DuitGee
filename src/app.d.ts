@@ -2,7 +2,10 @@ import type {RequestIdVariables} from "hono/request-id";
 import type {AuthService} from "$lib/server/auth-service.svelte";
 import type {AuthenticateWithSessionCookieSuccessResponse} from "@workos-inc/node";
 import type {User as AppUser} from "$lib/server/api/users/schema";
-import type {GetUserVaultsResponse} from "$lib/types";
+import type {UserVault} from "$lib/types";
+import type {Category} from "$lib/server/api/categories/schema";
+import type {CategoryData} from "$lib/configuration/categories";
+import {PUBLIC_CATEGORIES_KEY} from "$lib/server/constants";
 
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
@@ -20,7 +23,7 @@ declare global {
             currentSession: AuthenticateWithSessionCookieSuccessResponse
             currentUser: AppUser
             isAdmin: boolean,
-            currentUserVaults: GetUserVaultsResponse
+            currentUserVaults: UserVault[]
         }
 
         // interface Error {
@@ -32,12 +35,34 @@ declare global {
             Bindings: Cloudflare.Env,
             Variables: RequestIdVariables & {
                 userEmail: string
+                [PUBLIC_CATEGORIES_KEY]: CategoryData
             }
         }
     }
 
     namespace Client {
+        interface SearchableSelectOption {
+            id: string;
+            name: string;
+            icon: string|null;
+            color: string|null;
+            group: {
+                name: string;
+                color: string|null;
+            }|null;
+        }
 
+        interface SearchableSelectProps {
+            value?: string;
+            placeholder?: string;
+            options: Option[];
+            disabled?: boolean;
+            class?: string;
+            name?: string;
+            searchPlaceholder?: string;
+            onSearch?: (term: string) => void;
+            isLoading?: boolean;
+        }
     }
 }
 

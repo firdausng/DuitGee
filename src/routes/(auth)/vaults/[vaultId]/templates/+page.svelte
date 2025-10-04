@@ -2,7 +2,8 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import Button from '$lib/components/ui/Button.svelte';
-	import ExpenseTemplateForm from '$lib/components/ExpenseTemplateForm.svelte';
+	import CreateExpenseTemplateForm from '$lib/components/CreateExpenseTemplateForm.svelte';
+	import EditExpenseTemplateForm from '$lib/components/EditExpenseTemplateForm.svelte';
 	import Dialog from '$lib/components/ui/Dialog.svelte';
 	import AlertDialog from '$lib/components/ui/AlertDialog.svelte';
 	import Plus from 'phosphor-svelte/lib/Plus';
@@ -10,13 +11,15 @@
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import Lightning from 'phosphor-svelte/lib/Lightning';
 	import Clock from 'phosphor-svelte/lib/Clock';
+    import type {CreateExpenseTemplate, ExpenseTemplate, UpdateExpenseTemplate} from "$lib/schemas/expense";
+    import {authManager} from "$lib/stores/current-session.svelte";
 
 	let { data } = $props();
 
 	let showCreateDialog = $state(false);
 	let showEditDialog = $state(false);
 	let showDeleteDialog = $state(false);
-	let selectedTemplate = $state<any>(null);
+	let selectedTemplate = $state<ExpenseTemplate|null>(null);
 	let isSubmitting = $state(false);
 
 	function formatCurrency(amount: number): string {
@@ -32,10 +35,11 @@
 		showCreateDialog = true;
 	}
 
-	function handleEdit(template: any) {
+	function handleEdit(template: ExpenseTemplate) {
+        console.log('template', template);
+        console.log('data.templates', data.templates);
 		selectedTemplate = {
 			...template,
-			tagNames: template.tags?.map((t: any) => t.name) || [],
 			defaultUserId: template.defaultUserId
 		};
 		showEditDialog = true;
@@ -46,46 +50,59 @@
 		showDeleteDialog = true;
 	}
 
-	async function submitTemplate(formData: any) {
+	async function submitCreateTemplate(formData: CreateExpenseTemplate) {
 		isSubmitting = true;
 
-		const action = showEditDialog ? '?/update' : '?/create';
-		const body = new FormData();
-
-		// Add all form fields
-		Object.entries(formData).forEach(([key, value]) => {
-			// Special handling for defaultUserId - allow empty string for vault expenses
-			if (key === 'defaultUserId') {
-				if (value !== undefined && value !== null) {
-					body.append(key, String(value));
-				}
-			} else if (value !== undefined && value !== null && value !== '') {
-				body.append(key, Array.isArray(value) ? value.join(',') : String(value));
-			}
-		});
-
-		if (showEditDialog && selectedTemplate?.id) {
-			body.append('id', selectedTemplate.id);
-		}
-
 		try {
-			const response = await fetch(action, {
-				method: 'POST',
-				body
-			});
+            const response = await fetch(`/api/vaults/${data.vault.id}/templates`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authManager.authState?.accessToken}`
+                },
+                body: JSON.stringify(formData)
+            });
 
 			if (response.ok) {
 				// Close dialog and refresh data without full page reload
 				showCreateDialog = false;
+				await invalidateAll();
+			} else {
+				console.error('Failed to create template');
+				alert('Failed to create template. Please try again.');
+			}
+		} catch (error) {
+			console.error('Error creating template:', error);
+			alert('An error occurred. Please try again.');
+		} finally {
+			isSubmitting = false;
+		}
+	}
+
+	async function submitEditTemplate(formData: UpdateExpenseTemplate) {
+		isSubmitting = true;
+
+		try {
+            const response = await fetch(`/api/vaults/${data.vault.id}/templates/${selectedTemplate!.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authManager.authState?.accessToken}`
+                },
+                body: JSON.stringify(formData)
+            });
+
+			if (response.ok) {
+				// Close dialog and refresh data without full page reload
 				showEditDialog = false;
 				selectedTemplate = null;
 				await invalidateAll();
 			} else {
-				console.error('Failed to save template');
-				alert('Failed to save template. Please try again.');
+				console.error('Failed to update template');
+				alert('Failed to update template. Please try again.');
 			}
 		} catch (error) {
-			console.error('Error saving template:', error);
+			console.error('Error updating template:', error);
 			alert('An error occurred. Please try again.');
 		} finally {
 			isSubmitting = false;
@@ -158,10 +175,10 @@
 
 					<!-- Template Details -->
 					<div class="space-y-2 mb-4">
-						{#if template.category}
+						{#if template.categoryName}
 							<div class="flex items-center gap-2">
-								<div class="w-3 h-3 rounded-full" style="background-color: {template.category.color}"></div>
-								<span class="text-sm text-muted-foreground">{template.category.name}</span>
+								<div class="w-3 h-3 rounded-full" style="background-color: {data.categories.find(c => c.name === template.categoryName)}"></div>
+								<span class="text-sm text-muted-foreground">{template.categoryName}</span>
 							</div>
 						{/if}
 
@@ -181,19 +198,6 @@
 										- {template.paymentProvider}
 									{/if}
 								</span>
-							</div>
-						{/if}
-
-						{#if template.tags && template.tags.length > 0}
-							<div class="flex flex-wrap gap-1">
-								{#each template.tags as tag}
-									<span
-										class="inline-flex items-center px-2 py-0.5 rounded-full text-xs"
-										style="background-color: {tag.color}20; color: {tag.color}"
-									>
-										{tag.name}
-									</span>
-								{/each}
 							</div>
 						{/if}
 
@@ -238,15 +242,14 @@
 		onClose={cancelDialog}
 	>
 		{#snippet children()}
-			<ExpenseTemplateForm
+			<CreateExpenseTemplateForm
 				categories={data.categories}
-				tags={data.tags}
 				paymentTypes={data.paymentTypes}
 				paymentProviders={data.paymentProviders}
 				members={data.members}
 				currentUserId={data.currentUserId}
 				vaultId={data.vault.id}
-				onSubmit={submitTemplate}
+				onSubmit={submitCreateTemplate}
 				onCancel={cancelDialog}
 				isSubmitting={isSubmitting}
 			/>
@@ -262,16 +265,15 @@
 		onClose={cancelDialog}
 	>
 		{#snippet children()}
-			<ExpenseTemplateForm
+			<EditExpenseTemplateForm
 				template={selectedTemplate}
 				categories={data.categories}
-				tags={data.tags}
 				paymentTypes={data.paymentTypes}
 				paymentProviders={data.paymentProviders}
 				members={data.members}
 				currentUserId={data.currentUserId}
 				vaultId={data.vault.id}
-				onSubmit={submitTemplate}
+				onSubmit={submitEditTemplate}
 				onCancel={cancelDialog}
 				isSubmitting={isSubmitting}
 			/>

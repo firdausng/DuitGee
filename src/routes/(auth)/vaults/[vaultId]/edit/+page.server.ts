@@ -1,7 +1,7 @@
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { error, redirect } from '@sveltejs/kit';
-import { vaultSchema } from '$lib/schemas/expense.js';
+import {updateVaultSchema} from '$lib/schemas/expense.js';
 import type { PageServerLoad, Actions } from './$types.js';
 import {getVault, updateVault} from "$lib/server/api/vaults/handlers";
 
@@ -33,7 +33,7 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
 		icon: vault.icon || '🏦',
 		iconType: (vault.iconType as 'emoji' | 'phosphor') || 'emoji',
 		isPersonal: vault.isPersonal ?? true
-	}, valibot(vaultSchema));
+	}, valibot(updateVaultSchema));
 
 	return {
 		form,
@@ -56,7 +56,7 @@ export const actions: Actions = {
             throw new Error("No platform")
         }
         const vaultId = params.vaultId;
-		const form = await superValidate(request, valibot(vaultSchema));
+		const form = await superValidate(request, valibot(updateVaultSchema));
 
 		if (!form.valid) {
 			return { form };

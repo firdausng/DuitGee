@@ -3,10 +3,11 @@ import * as schema from "$lib/server/db/schema";
 import { vaults, vaultMembers, users } from "$lib/server/db/schema";
 import { and, eq, or, desc, sql } from "drizzle-orm";
 import { createId } from '@paralleldrive/cuid2';
-import type {Vault} from "$lib/server/api/vaults/schema";
 import type {UserVault} from "$lib/types/vaults";
 import {formatISO} from "date-fns";
 import { getUserVaultsFromCache, setUserVaultsCache, invalidateUserVaultsCache, invalidateVaultMembersCache } from "$lib/server/utils/kv-cache";
+import type {CreateVault, Vault} from "$lib/schemas/expense";
+import { compareDesc } from "date-fns";
 
 // Get all vaults for a user by email (owned + member of)
 export const getUserVaultsByEmail = async (userEmail: string, db: D1Database): Promise<UserVault[]> => {
@@ -110,7 +111,9 @@ export const getUserVaults = async (userId: string, db: D1Database, kv?: KVNames
 
     // Combine and sort all vaults
     const allVaults = [...ownedVaults, ...memberVaults];
-    allVaults.sort((a, b) => new Date(b.vault.createdAt).getTime() - new Date(a.vault.createdAt).getTime());
+    allVaults.sort((a, b) =>
+        compareDesc(new Date(a.vault.createdAt!), new Date(b.vault.createdAt!))
+    );
 
     // Cache the result in KV
     await setUserVaultsCache(userId, allVaults, kv);
@@ -212,19 +215,13 @@ export const getVault = async (userId: string, vaultId: string, db: D1Database) 
 
     // First check if user has access to this vault
     const hasAccess = await client
-        .select({ id: vaults.id })
-        .from(vaults)
-        .leftJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
+        .select()
+        .from(vaultMembers)
         .where(
             and(
-                eq(vaults.id, vaultId),
-                or(
-                    eq(vaults.ownerId, userId), // Owner
-                    and(
-                        eq(vaultMembers.userId, userId),
-                        eq(vaultMembers.status, 'active')
-                    ) // Active member
-                )
+                eq(vaultMembers.vaultId, vaultId),
+                eq(vaultMembers.userId, userId),
+                eq(vaultMembers.status, 'active')
             )
         )
         .limit(1);
@@ -390,7 +387,7 @@ export const getVaultStatsByEmail = async (userEmail: string, vaultId: string, d
 };
 
 // Create a new vault
-export const createVault = async (userId: string, data: Vault, db: D1Database, kv?: KVNamespace) => {
+export const createVault = async (userId: string, data: CreateVault, db: D1Database, kv?: KVNamespace) => {
     const client = drizzle(db, { schema });
 
     console.log(`[createVault.handler] Creating vault: ${JSON.stringify({

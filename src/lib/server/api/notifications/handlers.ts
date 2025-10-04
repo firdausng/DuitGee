@@ -1,8 +1,5 @@
-import type { CreateNotification, UpdateNotification, Notification } from './schema';
+import type {CreateNotification} from "$lib/schemas/expense";
 
-/**
- * Create a new notification
- */
 export async function createNotification(
     notificationData: CreateNotification,
     db: D1Database

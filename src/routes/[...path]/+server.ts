@@ -1,5 +1,5 @@
-import type { RequestHandler } from '../../../.svelte-kit/types/src/routes';
 import {api} from '$lib/server/api';
+import type { RequestHandler } from "./$types";
 
 const handler: RequestHandler = ({ request, platform }) => {
 	return api.fetch(request, platform?.env, platform?.ctx);

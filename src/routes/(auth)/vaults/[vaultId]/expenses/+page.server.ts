@@ -3,7 +3,6 @@ import type { PageServerLoad } from "./$types";
 import {getExpenses} from "$lib/server/api/expenses/handlers";
 import {getCategories} from "$lib/server/api/categories/handlers";
 import {getVault} from "$lib/server/api/vaults/handlers";
-import {getTags} from "$lib/server/api/tags/handlers";
 
 
 export const load: PageServerLoad = async ({ locals, platform, url, cookies, params }) => {
@@ -75,7 +74,7 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
         const vault = await getVault(locals.currentUser.id, vaultId, platform.env.DB);
 
         // Load expenses, categories, and popular tags
-        const [expenses, categories, tags] = await Promise.all([
+        const [expenses, categories] = await Promise.all([
             getExpenses(locals.currentUser.id, platform.env.DB, {
                 page,
                 limit,
@@ -83,8 +82,7 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
                 endDate,
                 vaultId
             }),
-            getCategories(vault.vault.id, platform.env.DB),
-            getTags(platform.env.DB, { limit: 100 }) // Get top 100 popular tags
+            getCategories(),
         ]);
 
         return {
@@ -92,7 +90,6 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
             vaultId,
             expenses,
             categories,
-            tags,
             currentPeriod: timePeriod,
             vault
         };

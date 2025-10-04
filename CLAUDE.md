@@ -54,9 +54,13 @@ pnpm cf-typegen
 
 ## Database Setup
 
-The project uses LibSQL with Drizzle ORM. Database URL must be set in `.env`:
+- The project uses cloudflare D1 with Drizzle ORM.
+- Migration done by wrangler.
+
+### Migration
 ```
-DATABASE_URL=your_database_url
+pnpm drizzle-kit generate
+wrangler d1 migrations apply "duitgee"
 ```
 
 Schema changes should be made in `src/lib/server/db/schema.ts` followed by running `pnpm db:push` or generating migrations with `pnpm db:generate`.

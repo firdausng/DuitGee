@@ -9,7 +9,7 @@ import {
 	updateUser
 } from "$lib/server/api/users/handlers";
 import {userSchema} from "$lib/schemas/expense";
-import {updateUserSchema} from "$lib/server/api/users/schema";
+import {updateUserSchema} from "$lib/schemas/expense";
 import { describeRoute, resolver } from 'hono-openapi';
 
 const USER_TAG = ['User'];

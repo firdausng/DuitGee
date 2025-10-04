@@ -9,8 +9,8 @@ import {
     deleteNotification,
     getUnreadNotificationCount
 } from "$lib/server/api/notifications/handlers";
-import { createNotificationSchema, updateNotificationSchema } from "$lib/server/api/notifications/schema";
 import { describeRoute, resolver } from 'hono-openapi';
+import {createNotificationSchema} from "$lib/schemas/expense";
 
 // Query parameters schema for GET notifications
 const getNotificationsQuerySchema = v.object({
@@ -47,9 +47,9 @@ export const notificationApi = new Hono<App.Api>()
         const userId = c.get('userEmail') as string;
         const query = c.req.valid('query');
 
-        const limit = parseInt(query.limit as string);
-        const offset = parseInt(query.offset as string);
-        const unreadOnly = (query.unreadOnly as string) === 'true';
+        const limit = query.limit;
+        const offset = query.offset;
+        const unreadOnly = query.unreadOnly;
 
         try {
             const result = await getNotifications(userId, c.env.DB, {

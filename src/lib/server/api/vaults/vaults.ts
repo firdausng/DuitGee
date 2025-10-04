@@ -9,15 +9,8 @@ import {
     deleteVaultByEmail,
     getVaultStatsByEmail
 } from "$lib/server/api/vaults/handlers";
-import { vaultSchema } from "$lib/server/api/vaults/schema";
 import { describeRoute, resolver } from 'hono-openapi';
-
-const updateVaultSchema = v.partial(vaultSchema);
-
-// Query schema for getUserVaultsByEmail
-const getUserVaultsByEmailSchema = v.object({
-    email: v.pipe(v.string(), v.email())
-});
+import {getUserVaultsByEmailSchema, updateVaultSchema, vaultSchema} from "$lib/schemas/expense";
 
 const VAULT_TAG = ['Vault'];
 const commonVaultConfig = {

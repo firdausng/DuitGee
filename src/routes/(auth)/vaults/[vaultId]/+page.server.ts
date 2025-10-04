@@ -1,6 +1,6 @@
 import {error} from '@sveltejs/kit';
 import type { PageServerLoad } from "./$types";
-import {getUserVaults, getVault} from "$lib/server/api/vaults/handlers";
+import {getVault} from "$lib/server/api/vaults/handlers";
 import {getExpenses, getExpensesSummary, getMemberSpending} from "$lib/server/api/expenses/handlers";
 
 export const load: PageServerLoad = async ({ locals, platform, url, cookies, params }) => {
@@ -74,19 +74,19 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
         }
 
         // Get user's available vaults
-        const userVaults = await getUserVaults(locals.currentUser.id, platform?.env?.DB);
+        // const userVaults = await getUserVaults(locals.currentUser.id, platform?.env?.DB);
 
         // Find the current vault and user's role
-        const currentVaultData = userVaults.find(v => v.vault.id === vaultId);
+        const currentVaultData = locals.currentUserVaults.find(v => v.vault.id === vaultId);
 
         if (!currentVaultData) {
             throw error(404, 'Vault not found or access denied');
         }
 
-        const abc = await getVault(locals.currentUser.id, vaultId, platform?.env?.DB);
+        const getVaultWithMemberById = await getVault(locals.currentUser.id, vaultId, platform?.env?.DB);
 
         // Format vaults for the store
-        const availableVaults = userVaults.map(v => ({
+        const availableVaults = locals.currentUserVaults.map(v => ({
             id: v.vault.id,
             name: v.vault.name,
             description: v.vault.description,
@@ -110,7 +110,7 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
             role: currentVaultData.vault.ownerId === locals.currentUser.id ? 'owner' : currentVaultData.membership?.role as 'admin' | 'member'| 'owner',
             owner: currentVaultData.owner,
             membership: currentVaultData.membership,
-            members: abc.members,
+            members: getVaultWithMemberById.members,
         };
 
         // Load dashboard stats data
