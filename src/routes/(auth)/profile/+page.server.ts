@@ -1,8 +1,8 @@
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
-import { updateUserSchema } from '$lib/server/api/users/schema';
 import { updateUser } from '$lib/server/api/users/handlers';
 import type { PageServerLoad, Actions } from './$types.js';
+import {updateUserSchema} from "$lib/schemas/expense";
 
 export const load: PageServerLoad = async ({ locals }) => {
     if (!locals.currentUser) {

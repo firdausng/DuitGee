@@ -74,7 +74,7 @@
 	{#if !showForm}
 		<!-- Template Selection View -->
 		<div class="mb-4 flex items-center justify-between">
-			<h1 class="text-lg font-semibold text-foreground">Quick Start</h1>
+			<h1 class="text-lg font-semibold text-foreground">Choose Template or Skip</h1>
 			<div class="flex gap-2">
 				<Button variant="outline" size="sm" onclick={handleSkip}>
 					<X class="w-4 h-4 mr-1" />
