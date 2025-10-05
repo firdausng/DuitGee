@@ -219,6 +219,7 @@
             <input
                 id="amount"
                 name="amount"
+                autofocus
                 type="number"
                 step="0.01"
                 min="0.01"

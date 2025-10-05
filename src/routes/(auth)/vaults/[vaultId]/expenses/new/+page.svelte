@@ -3,7 +3,8 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
 	import Plus from 'phosphor-svelte/lib/Plus';
-	import X from 'phosphor-svelte/lib/X';
+	// import X from 'phosphor-svelte/lib/X';
+	import Play from 'phosphor-svelte/lib/Play';
 	import Lightning from 'phosphor-svelte/lib/Lightning';
 	import Clock from 'phosphor-svelte/lib/Clock';
 
@@ -70,22 +71,25 @@
 	<title>New Expense - Expense Tracker</title>
 </svelte:head>
 
-<div class="max-w-4xl mx-auto px-4 py-4">
+<div class="max-w-4xl mx-auto px-4 py-4 flex flex-col gap-2">
 	{#if !showForm}
 		<!-- Template Selection View -->
-		<div class="mb-4 flex items-center justify-between">
-			<h1 class="text-lg font-semibold text-foreground">Choose Template or Skip</h1>
-			<div class="flex gap-2">
-				<Button variant="outline" size="sm" onclick={handleSkip}>
-					<X class="w-4 h-4 mr-1" />
-					Skip
-				</Button>
-				<Button variant="default" size="sm" onclick={handleCreateTemplate}>
+		<div class="mb-4 flex items-center justify-end-safe">
+
+			<div class="flex gap-2 justify-end-safe">
+
+				<Button variant="outline" size="sm" onclick={handleCreateTemplate}>
 					<Plus class="w-4 h-4 mr-1" />
 					New Template
 				</Button>
+                <Button variant="default" size="sm" onclick={handleSkip}>
+                    <Play class="w-4 h-4 mr-1" />
+                    Proceed
+                </Button>
 			</div>
 		</div>
+
+        <h1 class="text-lg font-semibold text-foreground">Existing Templates</h1>
 
 		<!-- Templates Grid -->
 		{#if data.templates.length === 0}
@@ -101,48 +105,52 @@
 				</div>
 			</div>
 		{:else}
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+			<div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
+
 				{#each data.templates as template}
 					<button
 						type="button"
 						onclick={() => handleSelectTemplate(template.id)}
-						class="bg-background rounded-lg border border-border p-4 text-left hover:border-primary hover:shadow-md transition-all group"
+						class="bg-background rounded-lg border border-border p-2 md:pp-4 text-left hover:border-primary hover:shadow-md transition-all group"
 					>
 						<!-- Icon and Name -->
 						<div class="flex items-start gap-3 mb-3">
-							{#if template.icon}
-								<span class="text-2xl flex-shrink-0">{template.icon}</span>
-							{:else}
-								<Lightning class="w-6 h-6 text-muted-foreground flex-shrink-0" />
-							{/if}
 							<div class="flex-1 min-w-0">
 								<h3 class="font-medium text-foreground truncate group-hover:text-primary transition-colors">
 									{template.name}
 								</h3>
 								{#if template.categoryName}
-									<p class="text-xs text-muted-foreground truncate">
-										{template.categoryName}
-									</p>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <p class="text-xs text-muted-foreground truncate">
+                                            {template.categoryName}
+                                        </p>
+                                        {#if template.icon}
+                                            <span class="text-xs md:text-2xl flex-shrink-0">{template.icon}</span>
+                                        {:else}
+                                            <Lightning class="w-6 h-6 text-muted-foreground flex-shrink-0" />
+                                        {/if}
+                                    </div>
+
 								{/if}
 							</div>
 						</div>
 
 						<!-- Amount -->
 						{#if template.defaultAmount}
-							<div class="text-lg font-semibold text-foreground mb-2">
+							<div class="text-lg font-semibold text-foreground mb-2 hidden md:block">
 								{formatCurrency(template.defaultAmount)}
 							</div>
 						{/if}
 
 						<!-- Note -->
 						{#if template.note}
-							<p class="text-xs text-muted-foreground line-clamp-2 mb-3">
+							<p class="text-xs text-muted-foreground line-clamp-2 mb-3  hidden md:block">
 								{template.note}
 							</p>
 						{/if}
 
 						<!-- Usage Stats -->
-						<div class="flex items-center gap-2 text-xs text-muted-foreground">
+						<div class="flex items-center gap-2 text-xs text-muted-foreground  hidden md:block">
 							<Clock class="w-3 h-3" />
 							<span>Used {template.usageCount} {template.usageCount === 1 ? 'time' : 'times'}</span>
 						</div>
