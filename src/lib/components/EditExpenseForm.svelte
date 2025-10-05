@@ -50,6 +50,8 @@
         onCancel
     }: Props = $props();
 
+    console.log(data.data,vaultId,);
+
     const { form, errors, enhance, submitting } = superForm(data);
 
     // State for searchable categories
@@ -59,10 +61,17 @@
         label: cat.name,
     })));
 
-    let category = $state($form.categoryName ?? "");
-    const selectedCategory = $derived(
-        allCategories.find(opt => opt.value === category)
+    let searchCategory = $state("");
+
+    const filteredCategories = $derived(
+        searchCategory === ""
+            ? allCategories
+            : allCategories.filter((fruit) =>
+                fruit.label.toLowerCase().includes(searchCategory.toLowerCase())
+            )
     );
+
+    const activeCategory = $derived(allCategories.find(c => c.value === getCategory()))
 
     function getCategory() {
         return $form.categoryName ?? '';
@@ -70,7 +79,7 @@
 
     function setCategory(newValue: string) {
         $form.categoryName = newValue;
-        category = newValue;
+        searchCategory = newValue;
     }
 
     // User/Member selection
@@ -93,22 +102,37 @@
     }
 
     // Payment type
-    let paymentType = $state($form.paymentType || "");
-    const selectedPaymentType = $derived(
-        paymentType
-            ? paymentTypes.find((type) => type.code === paymentType)
-            : null
+    let allPaymentTypes = $state(paymentTypes.map(type => ({
+        ...type,
+        value: type.code,
+        label: type.name,
+    })));
+
+    let searchPaymentType = $state("");
+
+    const filteredPaymentTypes = $derived(
+        searchPaymentType === ""
+            ? allPaymentTypes
+            : allPaymentTypes.filter((type) =>
+                type.label.toLowerCase().includes(searchPaymentType.toLowerCase())
+            )
     );
 
     function getPaymentType() {
-        return paymentType;
+        return $form.paymentType ?? '';
     }
 
     function setPaymentType(newValue: string) {
         $form.paymentType = newValue;
-        paymentType = newValue;
+        searchPaymentType = newValue;
         setPaymentProvider("");
     }
+
+    const selectedPaymentType = $derived(
+        $form.paymentType
+            ? paymentTypes.find((type) => type.code === $form.paymentType)
+            : null
+    );
 
     // Payment provider
     let paymentProviderForPaymentType = $derived.by(()=>{
@@ -133,9 +157,19 @@
         }));
     })
 
-    let paymentProvider = $state($form.paymentProvider ?? "");
+    let searchPaymentProvider = $state("");
+
+    const filteredPaymentProviders = $derived(
+        searchPaymentProvider === ""
+            ? paymentProviderForPaymentType
+            : paymentProviderForPaymentType.filter((provider) =>
+                provider.label.toLowerCase().includes(searchPaymentProvider.toLowerCase())
+            )
+    );
+
     const selectedPaymentProvider = $derived(
-        paymentProviderForPaymentType.find(opt => opt.id === paymentProvider)
+        paymentProviderForPaymentType.find((provider) =>
+            provider.label.toLowerCase().includes(searchPaymentProvider.toLowerCase())) ?? null
     );
 
     function getPaymentProvider() {
@@ -144,11 +178,11 @@
 
     function setPaymentProvider(newValue: string) {
         $form.paymentProvider = newValue;
-        paymentProvider = newValue;
+        searchPaymentProvider = newValue;
     }
 
     // Show advanced options by default if payment info exists
-    let showAdvancedOptions = $state($form.paymentType?.length > 0 || $form.paymentProvider?.length > 0);
+    let showAdvancedOptions = $state($form.paymentType && $form.paymentType?.length > 0);
 
     function handleCancel() {
         if (onCancel) {
@@ -175,10 +209,6 @@
 </script>
 
 <form method="POST" use:enhance class="space-y-4">
-    <!-- Hidden fields for payment -->
-    <input type="hidden" name="paymentType" value={paymentType} />
-    <input type="hidden" name="paymentProvider" value={$form.paymentProvider} />
-
     <!-- Amount -->
     <div>
         <label for="amount" class="block text-sm font-medium text-foreground mb-1">
@@ -206,66 +236,86 @@
 
     <!-- Category -->
     <div>
-        <label for="categoryName" class="block text-sm font-medium text-foreground mb-1">
-            Category <span class="text-destructive">*</span>
-        </label>
-        <Select.Root
-                type="single"
-                name="categoryName"
-                bind:value={getCategory, setCategory}
-                items={allCategories}
-                allowDeselect={false}
-        >
-            <Select.Trigger
-                    class="h-input rounded-9px border-border-input bg-background data-placeholder:text-foreground-alt/50 inline-flex w-full touch-none select-none items-center border px-[11px] text-sm transition-colors"
-                    aria-label="Select category"
+        <div class="flex gap-2 justify-between items-center">
+            <label for="categoryName" class="block text-sm font-medium text-foreground mb-1">
+                Category <span class="text-destructive">*</span>
+            </label>
+            {#if activeCategory}
+                <div class="flex items-center gap-4">
+                    <IconDisplay icon={activeCategory.icon} iconType={activeCategory.iconType} size="sm" />
+                    <p>{activeCategory.label}</p>
+                </div>
+            {/if}
+
+        </div>
+
+        <div class="flex flex-col gap-2 pt-2">
+
+            <Combobox.Root
+                    type="single"
+                    name="categoryName"
+                    bind:value={getCategory, setCategory}
+                    inputValue={searchCategory}
+                    items={filteredCategories}
+                    onOpenChangeComplete={(o) => {if (!o) searchCategory = "";}}
             >
-                <Cards class="text-muted-foreground mr-[9px] size-6" />
-                {#if selectedCategory}
-                    <div class="flex items-center gap-4">
-                        <p>{selectedCategory.name}</p>
-                        <IconDisplay icon={selectedCategory.icon} iconType={selectedCategory.iconType} size="sm" />
-                    </div>
-                {:else}
-                    <span class="text-foreground-alt/50">Select a category</span>
-                {/if}
-                <CaretUpDown class="text-muted-foreground ml-auto size-6" />
-            </Select.Trigger>
-            <Select.Portal>
-                <Select.Content
-                        class="focus-override border-muted bg-background shadow-popover data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-hidden z-50 h-96 max-h-[var(--bits-select-content-available-height)] w-[var(--bits-select-anchor-width)] min-w-[var(--bits-select-anchor-width)] select-none rounded-xl border px-1 py-3 data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
-                        sideOffset={10}
-                >
-                    <Select.ScrollUpButton class="flex w-full items-center justify-center">
-                        <CaretDoubleUp class="size-3" />
-                    </Select.ScrollUpButton>
-                    <Select.Viewport class="p-1">
-                        {#each allCategories as option}
-                            <Select.Item
-                                    class="rounded-button data-highlighted:bg-muted outline-hidden flex h-10 w-full select-none items-center py-3 pl-5 pr-1.5 text-sm"
-                                    value={option.value}
-                                    label={option.label}
-                            >
-                                {#snippet children({ selected })}
-                                    <div class="flex items-center gap-4">
-                                        <IconDisplay icon={option.icon} iconType={option.iconType} size="sm" />
-                                        <p>{option.name}</p>
-                                    </div>
-                                    {#if selected}
-                                        <div class="ml-auto">
-                                            <Check aria-label="check" />
-                                        </div>
-                                    {/if}
-                                {/snippet}
-                            </Select.Item>
-                        {/each}
-                    </Select.Viewport>
-                    <Select.ScrollDownButton class="flex w-full items-center justify-center">
-                        <CaretDoubleDown class="size-3" />
-                    </Select.ScrollDownButton>
-                </Select.Content>
-            </Select.Portal>
-        </Select.Root>
+                <div class="relative fle">
+                    <Cards
+                            class="text-muted-foreground absolute start-3 top-1/2 size-6 -translate-y-1/2"
+                    />
+                    <Combobox.Input
+                            oninput={(e) => (searchCategory = e.currentTarget.value)}
+                            class="h-input w-full rounded-9px border-border-input bg-background placeholder:text-foreground-alt/50 focus:ring-foreground focus:ring-offset-background focus:outline-hidden inline-flex w-[296px] touch-none truncate border px-11 text-base transition-colors focus:ring-2 focus:ring-offset-2 sm:text-sm"
+                            placeholder="Search a category"
+                            aria-label="Search a category"
+                    />
+                    <Combobox.Trigger
+                            class="absolute end-3 top-1/2 size-6 -translate-y-1/2 touch-none"
+                    >
+                        <CaretUpDown class="text-muted-foreground size-6" />
+                    </Combobox.Trigger>
+                </div>
+                <Combobox.Portal>
+                    <Combobox.Content
+                            class="focus-override border-muted bg-background shadow-popover data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-hidden z-50 h-96 max-h-[var(--bits-combobox-content-available-height)] w-[var(--bits-combobox-anchor-width)] min-w-[var(--bits-combobox-anchor-width)] select-none rounded-xl border px-1 py-3 data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
+                            sideOffset={10}
+                    >
+                        <Combobox.ScrollUpButton
+                                class="flex w-full items-center justify-center py-1"
+                        >
+                            <CaretDoubleUp class="size-3" />
+                        </Combobox.ScrollUpButton>
+                        <Combobox.Viewport class="p-1">
+                            {#each filteredCategories as fruit, i (i + fruit.value)}
+                                <Combobox.Item
+                                        class="rounded-button data-highlighted:bg-muted outline-hidden flex h-10 w-full select-none items-center py-3 pl-5 pr-1.5 text-sm capitalize"
+                                        value={fruit.value}
+                                        label={fruit.label}
+                                >
+                                    {#snippet children({ selected })}
+                                        {fruit.label}
+                                        {#if selected}
+                                            <div class="ml-auto">
+                                                <Check />
+                                            </div>
+                                        {/if}
+                                    {/snippet}
+                                </Combobox.Item>
+                            {:else}
+          <span class="block px-5 py-2 text-sm text-muted-foreground">
+            No results found, try again.
+          </span>
+                            {/each}
+                        </Combobox.Viewport>
+                        <Combobox.ScrollDownButton
+                                class="flex w-full items-center justify-center py-1"
+                        >
+                            <CaretDoubleDown class="size-3" />
+                        </Combobox.ScrollDownButton>
+                    </Combobox.Content>
+                </Combobox.Portal>
+            </Combobox.Root>
+        </div>
         {#if $errors.categoryName}
             <p class="mt-0.5 text-xs text-destructive">{$errors.categoryName}</p>
         {/if}
@@ -295,9 +345,16 @@
 
     <!-- Who Spent -->
     <div>
-        <label class="block text-sm font-medium text-foreground mb-1">
-            Who spent? <span class="text-xs text-muted-foreground/60">(optional)</span>
-        </label>
+        <div class="flex flex-col gap-2 justify-between">
+            <label for="userId" class="block text-sm font-medium text-foreground mb-1">
+                Who spent?
+            </label>
+            {#if activeCategory}
+                <div class="flex items-center gap-4 truncate">
+                    <p>{selectedUserLabel}</p>
+                </div>
+            {/if}
+        </div>
         <Select.Root
             type="single"
             name="userId"
@@ -409,120 +466,177 @@
             <div class="space-y-4">
                 <!-- Payment Type -->
                 <div>
-                    <label for="paymentType" class="block text-sm font-medium text-foreground mb-1">
-                        Payment Type
-                    </label>
-                    <Select.Root
-                        type="single"
-                        name="paymentType"
-                        bind:value={getPaymentType, setPaymentType}
-                        items={paymentTypes.map(type => ({
-                            value: type.code,
-                            label: type.name,
-                        }))}
-                        allowDeselect={true}
-                    >
-                        <Select.Trigger
-                            class="h-input rounded-9px border-border-input bg-background data-placeholder:text-foreground-alt/50 inline-flex w-full touch-none select-none items-center border px-[11px] text-sm transition-colors"
-                            aria-label="Select payment type"
+                    <div class="flex gap-2 justify-between items-center py-2">
+                        <label for="paymentType" class="block text-sm font-medium text-foreground mb-1">
+                            Payment Type
+                        </label>
+                        {#if selectedPaymentType}
+                            <div class="flex items-center gap-4">
+                                <IconDisplay icon={selectedPaymentType.icon} iconType={selectedPaymentType.iconType} size="sm" />
+                                <p>{selectedPaymentType.name}</p>
+                            </div>
+                        {/if}
+
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <Combobox.Root
+                                type="single"
+                                name="paymentType"
+                                bind:value={getPaymentType, setPaymentType}
+                                inputValue={searchPaymentType}
+                                items={filteredPaymentTypes}
+                                onOpenChangeComplete={(o) => {if (!o) searchPaymentType = "";}}
                         >
-                            <Wallet class="text-muted-foreground mr-[9px] size-6" />
-                            {selectedPaymentType?.name ?? 'Select a payment type'}
-                            <CaretUpDown class="text-muted-foreground ml-auto size-6" />
-                        </Select.Trigger>
-                        <Select.Portal>
-                            <Select.Content
-                                class="focus-override border-muted bg-background shadow-popover data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-hidden z-50 h-96 max-h-[var(--bits-select-content-available-height)] w-[var(--bits-select-anchor-width)] min-w-[var(--bits-select-anchor-width)] select-none rounded-xl border px-1 py-3 data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
-                                sideOffset={10}
-                            >
-                                <Select.ScrollUpButton class="flex w-full items-center justify-center">
-                                    <CaretDoubleUp class="size-3" />
-                                </Select.ScrollUpButton>
-                                <Select.Viewport class="p-1">
-                                    {#each paymentTypes as type}
-                                        <Select.Item
-                                            class="rounded-button data-highlighted:bg-muted outline-hidden flex h-10 w-full select-none items-center py-3 pl-5 pr-1.5 text-sm"
-                                            value={type.code}
-                                            label={type.name}
-                                        >
-                                            {#snippet children({ selected })}
-                                                <div class="flex items-center gap-4">
-                                                    <IconDisplay icon={type.icon} iconType={type.iconType} size="sm" />
-                                                    <p>{type.name}</p>
-                                                </div>
-                                                {#if selected}
-                                                    <div class="ml-auto">
-                                                        <Check aria-label="check" />
+                            <div class="relative">
+                                <Wallet
+                                        class="text-muted-foreground absolute start-3 top-1/2 size-6 -translate-y-1/2"
+                                />
+                                <Combobox.Input
+                                        oninput={(e) => (searchPaymentType = e.currentTarget.value)}
+                                        class="h-input rounded-9px border-border-input bg-background placeholder:text-foreground-alt/50 focus:ring-foreground focus:ring-offset-background focus:outline-hidden inline-flex w-full touch-none truncate border px-11 text-base transition-colors focus:ring-2 focus:ring-offset-2 sm:text-sm"
+                                        placeholder="Search a payment type"
+                                        aria-label="Search a payment type"
+                                />
+                                <Combobox.Trigger
+                                        class="absolute end-3 top-1/2 size-6 -translate-y-1/2 touch-none"
+                                >
+                                    <CaretUpDown class="text-muted-foreground size-6" />
+                                </Combobox.Trigger>
+                            </div>
+                            <Combobox.Portal>
+                                <Combobox.Content
+                                        class="focus-override border-muted bg-background shadow-popover data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-hidden z-50 h-96 max-h-[var(--bits-combobox-content-available-height)] w-[var(--bits-combobox-anchor-width)] min-w-[var(--bits-combobox-anchor-width)] select-none rounded-xl border px-1 py-3 data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
+                                        sideOffset={10}
+                                >
+                                    <Combobox.ScrollUpButton
+                                            class="flex w-full items-center justify-center py-1"
+                                    >
+                                        <CaretDoubleUp class="size-3" />
+                                    </Combobox.ScrollUpButton>
+                                    <Combobox.Viewport class="p-1">
+                                        {#each filteredPaymentTypes as type, i (i + type.value)}
+                                            <Combobox.Item
+                                                    class="rounded-button data-highlighted:bg-muted outline-hidden flex h-10 w-full select-none items-center py-3 pl-5 pr-1.5 text-sm capitalize"
+                                                    value={type.value}
+                                                    label={type.label}
+                                            >
+                                                {#snippet children({ selected })}
+                                                    <div class="flex items-center gap-4">
+                                                        <IconDisplay icon={type.icon} iconType={type.iconType} size="sm" />
+                                                        <p>{type.label}</p>
                                                     </div>
-                                                {/if}
-                                            {/snippet}
-                                        </Select.Item>
-                                    {/each}
-                                </Select.Viewport>
-                                <Select.ScrollDownButton class="flex w-full items-center justify-center">
-                                    <CaretDoubleDown class="size-3" />
-                                </Select.ScrollDownButton>
-                            </Select.Content>
-                        </Select.Portal>
-                    </Select.Root>
+                                                    {#if selected}
+                                                        <div class="ml-auto">
+                                                            <Check />
+                                                        </div>
+                                                    {/if}
+                                                {/snippet}
+                                            </Combobox.Item>
+                                        {:else}
+                                        <span class="block px-5 py-2 text-sm text-muted-foreground">
+                                            No results found, try again.
+                                        </span>
+                                        {/each}
+                                    </Combobox.Viewport>
+                                    <Combobox.ScrollDownButton
+                                            class="flex w-full items-center justify-center py-1"
+                                    >
+                                        <CaretDoubleDown class="size-3" />
+                                    </Combobox.ScrollDownButton>
+                                </Combobox.Content>
+                            </Combobox.Portal>
+                        </Combobox.Root>
+                    </div>
+
                 </div>
 
                 <!-- Payment Provider -->
                 {#if paymentProviderForPaymentType?.length > 0}
                     <div>
-                        <label for="paymentProvider" class="block text-sm font-medium text-foreground mb-1">
-                            Payment Provider
-                        </label>
-                        <Select.Root
-                                type="single"
-                                name="paymentProvider"
-                                bind:value={getPaymentProvider, setPaymentProvider}
-                                items={paymentProviderForPaymentType}
-                                allowDeselect={true}
-                        >
-                            <Select.Trigger
-                                    class="h-input rounded-9px border-border-input bg-background data-placeholder:text-foreground-alt/50 inline-flex w-full touch-none select-none items-center border px-[11px] text-sm transition-colors"
-                                    aria-label="Select payment provider"
+                        <div class="flex gap-2 justify-between items-center py-2">
+                            <label for="paymentProvider" class="block text-sm font-medium text-foreground mb-1">
+                                Payment Provider
+                            </label>
+                            {#if selectedPaymentProvider}
+                                <div class="flex items-center gap-4">
+                                    <IconDisplay icon={selectedPaymentProvider.icon} iconType={selectedPaymentProvider.iconType} size="sm" />
+                                    <p>{selectedPaymentProvider.name}</p>
+                                </div>
+                            {/if}
+
+                        </div>
+
+                        <div class="flex items-center gap-4">
+                            <Combobox.Root
+                                    type="single"
+                                    name="paymentProvider"
+                                    bind:value={getPaymentProvider, setPaymentProvider}
+                                    inputValue={searchPaymentProvider}
+                                    items={filteredPaymentProviders}
+                                    onOpenChangeComplete={(o) => {if (!o) searchPaymentProvider = "";}}
                             >
-                                <Bank class="text-muted-foreground mr-[9px] size-6" />
-                                {selectedPaymentProvider?.name ?? 'Select a payment provider'}
-                                <CaretUpDown class="text-muted-foreground ml-auto size-6" />
-                            </Select.Trigger>
-                            <Select.Portal>
-                                <Select.Content
-                                        class="focus-override border-muted bg-background shadow-popover data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-hidden z-50 h-96 max-h-[var(--bits-select-content-available-height)] w-[var(--bits-select-anchor-width)] min-w-[var(--bits-select-anchor-width)] select-none rounded-xl border px-1 py-3 data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
-                                        sideOffset={10}
-                                >
-                                    <Select.ScrollUpButton class="flex w-full items-center justify-center">
-                                        <CaretDoubleUp class="size-3" />
-                                    </Select.ScrollUpButton>
-                                    <Select.Viewport class="p-1">
-                                        {#each paymentProviderForPaymentType as option}
-                                            <Select.Item
-                                                    class="rounded-button data-highlighted:bg-muted outline-hidden flex h-10 w-full select-none items-center py-3 pl-5 pr-1.5 text-sm"
-                                                    value={option.value}
-                                                    label={option.label}
-                                            >
-                                                {#snippet children({ selected })}
-                                                    <div class="flex items-center gap-4">
-                                                        <IconDisplay icon={option.icon} iconType={option.iconType} size="sm" />
-                                                        <p>{option.name}</p>
-                                                    </div>
-                                                    {#if selected}
-                                                        <div class="ml-auto">
-                                                            <Check aria-label="check" />
+                                <div class="relative">
+                                    <Bank
+                                            class="text-muted-foreground absolute start-3 top-1/2 size-6 -translate-y-1/2"
+                                    />
+                                    <Combobox.Input
+                                            oninput={(e) => (searchPaymentProvider = e.currentTarget.value)}
+                                            class="h-input rounded-9px border-border-input bg-background placeholder:text-foreground-alt/50 focus:ring-foreground focus:ring-offset-background focus:outline-hidden inline-flex w-full touch-none truncate border px-11 text-base transition-colors focus:ring-2 focus:ring-offset-2 sm:text-sm"
+                                            placeholder="Search a payment provider"
+                                            aria-label="Search a payment provider"
+                                    />
+                                    <Combobox.Trigger
+                                            class="absolute end-3 top-1/2 size-6 -translate-y-1/2 touch-none"
+                                    >
+                                        <CaretUpDown class="text-muted-foreground size-6" />
+                                    </Combobox.Trigger>
+                                </div>
+                                <Combobox.Portal>
+                                    <Combobox.Content
+                                            class="focus-override border-muted bg-background shadow-popover data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-hidden z-50 h-96 max-h-[var(--bits-combobox-content-available-height)] w-[var(--bits-combobox-anchor-width)] min-w-[var(--bits-combobox-anchor-width)] select-none rounded-xl border px-1 py-3 data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
+                                            sideOffset={10}
+                                    >
+                                        <Combobox.ScrollUpButton
+                                                class="flex w-full items-center justify-center py-1"
+                                        >
+                                            <CaretDoubleUp class="size-3" />
+                                        </Combobox.ScrollUpButton>
+                                        <Combobox.Viewport class="p-1">
+                                            {#each filteredPaymentProviders as provider, i (i + provider.value)}
+                                                <Combobox.Item
+                                                        class="rounded-button data-highlighted:bg-muted outline-hidden flex h-10 w-full select-none items-center py-3 pl-5 pr-1.5 text-sm capitalize"
+                                                        value={provider.value}
+                                                        label={provider.label}
+                                                >
+                                                    {#snippet children({ selected })}
+                                                        <div class="flex items-center gap-4">
+                                                            <IconDisplay icon={provider.icon} iconType={provider.iconType} size="sm" />
+                                                            <p>{provider.label}</p>
                                                         </div>
-                                                    {/if}
-                                                {/snippet}
-                                            </Select.Item>
-                                        {/each}
-                                    </Select.Viewport>
-                                    <Select.ScrollDownButton class="flex w-full items-center justify-center">
-                                        <CaretDoubleDown class="size-3" />
-                                    </Select.ScrollDownButton>
-                                </Select.Content>
-                            </Select.Portal>
-                        </Select.Root>
+                                                        {#if selected}
+                                                            <div class="ml-auto">
+                                                                <Check />
+                                                            </div>
+                                                        {/if}
+                                                    {/snippet}
+                                                </Combobox.Item>
+                                            {:else}
+                                            <span class="block px-5 py-2 text-sm text-muted-foreground">
+                                                No results found, try again.
+                                            </span>
+                                            {/each}
+                                        </Combobox.Viewport>
+                                        <Combobox.ScrollDownButton
+                                                class="flex w-full items-center justify-center py-1"
+                                        >
+                                            <CaretDoubleDown class="size-3" />
+                                        </Combobox.ScrollDownButton>
+                                    </Combobox.Content>
+                                </Combobox.Portal>
+                            </Combobox.Root>
+                        </div>
+
                     </div>
                 {/if}
             </div>

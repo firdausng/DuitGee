@@ -83,8 +83,6 @@ export const actions: Actions = {
         const data = {
             ...form.data,
             vaultId,
-            paymentType: form.data.paymentType || undefined,
-            paymentProvider: form.data.paymentProvider || undefined
         }
 
 		try {

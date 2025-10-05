@@ -69,6 +69,8 @@
             )
     );
 
+    const activeCategory = $derived(allCategories.find(c => c.value === getCategory()))
+
     function getCategory() {
         return $form.categoryName ?? '';
     }
@@ -163,6 +165,11 @@
             )
     );
 
+    const selectedPaymentProvider = $derived(
+        paymentProviderForPaymentType.find((provider) =>
+            provider.label.toLowerCase().includes(searchPaymentProvider.toLowerCase())) ?? null
+    );
+
     function getPaymentProvider() {
         return $form.paymentProvider ?? "";
     }
@@ -226,17 +233,23 @@
         {/if}
     </div>
 
-
-
     <!-- Category -->
     <div>
-        <label for="categoryName" class="block text-sm font-medium text-foreground mb-1">
-            Category <span class="text-destructive">*</span>
-        </label>
-        <div class="flex items-center gap-4">
-            <div>
-                <p>{getCategory()}</p>
-            </div>
+        <div class="flex gap-2 justify-between items-center">
+            <label for="categoryName" class="block text-sm font-medium text-foreground mb-1">
+                Category <span class="text-destructive">*</span>
+            </label>
+            {#if activeCategory}
+                <div class="flex items-center gap-4">
+                    <IconDisplay icon={activeCategory.icon} iconType={activeCategory.iconType} size="sm" />
+                    <p>{activeCategory.label}</p>
+                </div>
+            {/if}
+
+        </div>
+
+        <div class="flex flex-col gap-2 pt-2">
+
             <Combobox.Root
                     type="single"
                     name="categoryName"
@@ -245,13 +258,13 @@
                     items={filteredCategories}
                     onOpenChangeComplete={(o) => {if (!o) searchCategory = "";}}
             >
-                <div class="relative">
+                <div class="relative fle">
                     <Cards
                             class="text-muted-foreground absolute start-3 top-1/2 size-6 -translate-y-1/2"
                     />
                     <Combobox.Input
                             oninput={(e) => (searchCategory = e.currentTarget.value)}
-                            class="h-input rounded-9px border-border-input bg-background placeholder:text-foreground-alt/50 focus:ring-foreground focus:ring-offset-background focus:outline-hidden inline-flex w-[296px] touch-none truncate border px-11 text-base transition-colors focus:ring-2 focus:ring-offset-2 sm:text-sm"
+                            class="h-input w-full rounded-9px border-border-input bg-background placeholder:text-foreground-alt/50 focus:ring-foreground focus:ring-offset-background focus:outline-hidden inline-flex w-[296px] touch-none truncate border px-11 text-base transition-colors focus:ring-2 focus:ring-offset-2 sm:text-sm"
                             placeholder="Search a category"
                             aria-label="Search a category"
                     />
@@ -331,9 +344,16 @@
 
     <!-- Who Spent -->
     <div>
-        <label for="userId" class="block text-sm font-medium text-foreground mb-1">
-            Who spent? <span class="text-xs text-muted-foreground/60">(optional)</span>
-        </label>
+        <div class="flex flex-col gap-2 justify-between">
+            <label for="userId" class="block text-sm font-medium text-foreground mb-1">
+                Who spent?
+            </label>
+            {#if activeCategory}
+                <div class="flex items-center gap-4 truncate">
+                    <p>{selectedUserLabel}</p>
+                </div>
+            {/if}
+        </div>
         <Select.Root
             type="single"
             name="userId"
@@ -444,13 +464,20 @@
             <div class="space-y-4">
                 <!-- Payment Type -->
                 <div>
-                    <label for="paymentType" class="block text-sm font-medium text-foreground mb-1">
-                        Payment Type
-                    </label>
+                    <div class="flex gap-2 justify-between items-center py-2">
+                        <label for="paymentType" class="block text-sm font-medium text-foreground mb-1">
+                            Payment Type
+                        </label>
+                        {#if selectedPaymentType}
+                            <div class="flex items-center gap-4">
+                                <IconDisplay icon={selectedPaymentType.icon} iconType={selectedPaymentType.iconType} size="sm" />
+                                <p>{selectedPaymentType.name}</p>
+                            </div>
+                        {/if}
+
+                    </div>
+
                     <div class="flex items-center gap-4">
-                        <div>
-                            <p>{filteredPaymentTypes.find(pp => pp.code === getPaymentType())?.name}</p>
-                        </div>
                         <Combobox.Root
                                 type="single"
                                 name="paymentType"
@@ -525,13 +552,20 @@
                 <!-- Payment Provider -->
                 {#if paymentProviderForPaymentType?.length > 0}
                     <div>
-                        <label for="paymentProvider" class="block text-sm font-medium text-foreground mb-1">
-                            Payment Provider
-                        </label>
+                        <div class="flex gap-2 justify-between items-center py-2">
+                            <label for="paymentProvider" class="block text-sm font-medium text-foreground mb-1">
+                                Payment Provider
+                            </label>
+                            {#if selectedPaymentProvider}
+                                <div class="flex items-center gap-4">
+                                    <IconDisplay icon={selectedPaymentProvider.icon} iconType={selectedPaymentProvider.iconType} size="sm" />
+                                    <p>{selectedPaymentProvider.name}</p>
+                                </div>
+                            {/if}
+
+                        </div>
+
                         <div class="flex items-center gap-4">
-                            <div>
-                                <p>{filteredPaymentProviders.find(pp => pp.id === getPaymentProvider())?.name}</p>
-                            </div>
                             <Combobox.Root
                                     type="single"
                                     name="paymentProvider"
