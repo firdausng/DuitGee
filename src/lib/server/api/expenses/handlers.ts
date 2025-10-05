@@ -182,10 +182,8 @@ export const getExpense = async (
 		date: row.date,
 		createdAt: row.createdAt,
 		vaultId: row.vaultId || undefined,
-        paymentTypeName: row.paymentType,
-        paymentProviderName: row.paymentProvider,
-        paymentType: paymentData.paymentTypes.find(p => p.name === row.paymentType)?.code || null,
-        paymentProvider: paymentData.paymentProviders.find(p => p.name === row.paymentProvider)?.name || null,
+        paymentType: paymentData.paymentTypes.find(p => p.code === row.paymentType)?.code || null,
+        paymentProvider: paymentData.paymentProviders.find(p => p.id === row.paymentProvider)?.id || null,
 		vault: null, // Not included in this query
         category: categoryData.categories.find(c => c.name === row.categoryName) || null,
 	};
@@ -207,8 +205,8 @@ export const createExpense = async (userId: string, data: CreateExpense, db: D1D
 		...expenseFields,
 		userId,
 		categoryName: categoryData.categories.find(c => c.name === data.categoryName)?.name || null,
-        paymentType: paymentData.paymentTypes.find(p => p.name === paymentType)?.name || null,
-		paymentProvider: paymentData.paymentProviders.find(p => p.name === paymentProvider)?.name || null,
+        paymentType: paymentData.paymentTypes.find(p => p.code === paymentType)?.code || null,
+		paymentProvider: paymentData.paymentProviders.find(p => p.id === paymentProvider)?.id || null,
 		date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
 		...initialAuditFields({ userId })
 	};
@@ -216,10 +214,14 @@ export const createExpense = async (userId: string, data: CreateExpense, db: D1D
 	// Write to KV cache first
 	await setExpenseCache(expenseId, expenseData, kv);
 
+    console.log('[createExpense] ', expenseData)
 	// Then write to database
 	const expense = await client
 		.insert(expenses)
-		.values(expenseData)
+		.values({
+            ...expenseData,
+            categoryName: data.categoryName,
+        })
 		.returning();
 
 	// Increment template usage if expense was created from a template

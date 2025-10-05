@@ -3,7 +3,12 @@
     import Button from '$lib/components/ui/Button.svelte';
     import { goto } from '$app/navigation';
     import {type Category, type CreateExpense} from "$lib/schemas/expense";
-    import type {PaymentProvider, PaymentType} from "$lib/configuration/paymentTypes";
+    import {
+        getPaymentProviderFromType,
+        getPaymentTypeFromCode,
+        type PaymentProvider,
+        type PaymentType
+    } from "$lib/configuration/paymentTypes";
     import {Combobox, Select} from "bits-ui";
     import CaretUpDown from "phosphor-svelte/lib/CaretUpDown";
     import Check from "phosphor-svelte/lib/Check";
@@ -128,7 +133,7 @@
 
     const selectedPaymentType = $derived(
         $form.paymentType
-            ? paymentTypes.find((type) => type.code === $form.paymentType)
+            ? getPaymentTypeFromCode(paymentTypes, $form.paymentType)
             : null
     );
 
@@ -165,6 +170,9 @@
             )
     );
 
+    // const selectedPaymentProvider = $derived(
+    //     getPaymentProviderFromType(paymentProviderForPaymentType, searchPaymentProvider) ?? null
+    // );
     const selectedPaymentProvider = $derived(
         paymentProviderForPaymentType.find((provider) =>
             provider.label.toLowerCase().includes(searchPaymentProvider.toLowerCase())) ?? null
@@ -179,7 +187,7 @@
         searchPaymentProvider = newValue;
     }
 
-    let showAdvancedOptions = $state(false);
+    let showAdvancedOptions = $state($form.paymentType && $form.paymentType?.length > 0);
 
     function handleCancel() {
         if (onCancel) {

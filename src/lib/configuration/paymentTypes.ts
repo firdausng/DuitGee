@@ -404,3 +404,11 @@ export interface PaymentProvider {
     color: string
     isPublic: boolean
 }
+
+export function getPaymentTypeFromCode(paymentTypes: PaymentType[], code: string){
+    return paymentTypes.find(type => type.code === code)
+}
+
+export function getPaymentProviderFromType(paymentProviders: PaymentProvider[], type: string){
+    return paymentProviders.find(provider => provider.type === type)
+}

@@ -1,6 +1,6 @@
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
-import {createExpenseSchema, expenseSchema} from '$lib/schemas/expense';
+import {type CreateExpense, createExpenseSchema, expenseSchema} from '$lib/schemas/expense';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from "./$types";
 import {createExpense} from "$lib/server/api/expenses/handlers";
@@ -80,11 +80,12 @@ export const actions: Actions = {
 			return fail(400, { form });
 		}
 
-        const data = {
+        const data: CreateExpense = {
             ...form.data,
             vaultId,
         }
 
+        console.log('data', data);
 		try {
             const expenses = await createExpense(locals.currentUser.id, data, platform.env.DB);
 			return {
