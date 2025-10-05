@@ -140,6 +140,110 @@ Schema changes should be made in `src/lib/server/db/schema.ts` followed by runni
 - **Middleware**: Authentication and session handling in `src/lib/server/middleware.ts`
 - **API Base Path**: `/api/*` routes are proxied to Hono handlers
 
+### Vault Access Control and Permissions
+
+**CRITICAL**: All operations under a `vaultId` MUST verify user permissions before execution.
+
+#### Permission Check Pattern
+
+For any handler that operates on vault resources (expenses, templates, categories, etc.), you MUST verify that the user has access to the vault:
+
+```typescript
+// Example: Verify vault access before showing vault expenses
+const vaultAccess = await client
+    .select({ id: vaults.id })
+    .from(vaults)
+    .leftJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
+    .where(
+        and(
+            eq(vaults.id, vaultId),
+            or(
+                eq(vaults.ownerId, userId),      // User is vault owner
+                and(
+                    eq(vaultMembers.userId, userId),
+                    eq(vaultMembers.status, 'active')  // User is active member
+                )
+            )
+        )
+    )
+    .limit(1);
+
+if (vaultAccess.length === 0) {
+    throw new Error('Access denied to this vault');
+}
+
+// Now safe to perform vault operations
+whereClause = eq(expenses.vaultId, vaultId);
+```
+
+#### Permission Levels
+
+1. **Vault Owner** (`vaults.ownerId = userId`)
+   - Full access to all vault operations
+   - Can delete vault
+   - Can manage members
+   - Can edit vault settings
+
+2. **Active Member** (`vaultMembers.status = 'active'`)
+   - Can view vault expenses
+   - Can create expenses
+   - Can edit/delete own expenses (depending on vault settings)
+   - Cannot delete vault
+   - Cannot remove other members (unless admin)
+
+3. **Admin Member** (`vaultMembers.permissions = 'admin'`)
+   - Same as active member plus:
+   - Can edit vault settings
+   - Can manage members
+
+#### Key Files with Permission Checks
+
+- `src/lib/server/api/expenses/handlers.ts:304-325` - Vault expense access validation
+- `src/lib/server/api/vaults/handlers.ts:210-229` - Vault access check in `getVault()`
+- `src/lib/server/api/vaults/handlers.ts:493-505` - Owner-only vault deletion check
+- `src/lib/server/api/vaults/handlers.ts:446-460` - Admin-only vault update check
+
+#### Adding New Vault Resources
+
+When adding a new resource type under `vaultId` (e.g., categories, tags, templates):
+
+1. **Create handler function** with vault access check FIRST
+2. **Verify user permission** before any database operations
+3. **Throw descriptive error** if access denied
+4. **Document permission level** required for the operation
+
+Example for new resource:
+```typescript
+export const getVaultCategories = async (userId: string, vaultId: string, db: D1Database) => {
+    const client = drizzle(db, { schema });
+
+    // FIRST: Check vault access
+    const hasAccess = await client
+        .select({ id: vaults.id })
+        .from(vaults)
+        .leftJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
+        .where(
+            and(
+                eq(vaults.id, vaultId),
+                or(
+                    eq(vaults.ownerId, userId),
+                    and(eq(vaultMembers.userId, userId), eq(vaultMembers.status, 'active'))
+                )
+            )
+        )
+        .limit(1);
+
+    if (hasAccess.length === 0) {
+        throw new Error('Access denied to vault categories');
+    }
+
+    // THEN: Perform operation
+    return client.select().from(categories).where(eq(categories.vaultId, vaultId));
+};
+```
+
+**Remember**: Security is not optional. Every vault operation MUST validate permissions.
+
 ## Date and Timestamp Handling
 
 **CRITICAL**: All dates and timestamps MUST be stored in UTC format using `.toISOString()`

@@ -193,7 +193,7 @@
 
 </script>
 
-<form onsubmit={handleSubmit} class="space-y-4">
+<form onsubmit={handleSubmit} class="space-y-4 pr-8 md:pr-2">
     <!-- Template Name -->
     <div>
         <label for="name" class="block text-sm font-medium text-foreground mb-1">
