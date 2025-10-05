@@ -84,12 +84,12 @@
 				</Button>
                 <Button variant="default" size="sm" onclick={handleSkip}>
                     <Play class="w-4 h-4 mr-1" />
-                    Proceed
+                    New Expense
                 </Button>
 			</div>
 		</div>
 
-        <h1 class="text-lg font-semibold text-foreground">Existing Templates</h1>
+        <h1 class="text-lg text-xs font-semibold text-foreground">Existing Templates</h1>
 
 		<!-- Templates Grid -->
 		{#if data.templates.length === 0}
@@ -116,7 +116,7 @@
 						<!-- Icon and Name -->
 						<div class="flex items-start gap-3 mb-3">
 							<div class="flex-1 min-w-0">
-								<h3 class="font-medium text-foreground truncate group-hover:text-primary transition-colors">
+								<h3 class="font-medium text-foreground text-sm truncate group-hover:text-primary transition-colors">
 									{template.name}
 								</h3>
 								{#if template.categoryName}
