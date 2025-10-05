@@ -167,7 +167,7 @@
 		{/if}
 	{:else}
 		<!-- Expense Form View -->
-		<div class="max-w-lg mx-auto">
+		<div class="">
 			<!-- Header -->
 			<div class="mb-4 flex items-center justify-between">
 				<h1 class="text-lg font-semibold text-foreground">Add Expense</h1>

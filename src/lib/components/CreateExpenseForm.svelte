@@ -173,18 +173,21 @@
     // const selectedPaymentProvider = $derived(
     //     getPaymentProviderFromType(paymentProviderForPaymentType, searchPaymentProvider) ?? null
     // );
-    const selectedPaymentProvider = $derived(
-        paymentProviderForPaymentType.find((provider) =>
-            provider.label.toLowerCase().includes(searchPaymentProvider.toLowerCase())) ?? null
-    );
+    const selectedPaymentProvider = $derived.by(()=>{
+        console.log(`selectedPaymentProvider`,  searchPaymentProvider)
+        return paymentProviders.find((provider) =>
+            provider.id === $form.paymentProvider ) ?? null
+    });
 
     function getPaymentProvider() {
+        console.log(`getPaymentProvider`,  $form.paymentProvider)
         return $form.paymentProvider ?? "";
     }
 
     function setPaymentProvider(newValue: string) {
         $form.paymentProvider = newValue;
         searchPaymentProvider = newValue;
+        console.log(`setPaymentProvider`,  $form.paymentProvider, paymentProviderForPaymentType)
     }
 
     let showAdvancedOptions = $state($form.paymentType && $form.paymentType?.length > 0);
@@ -356,11 +359,6 @@
             <label for="userId" class="block text-sm font-medium text-foreground mb-1">
                 Who spent?
             </label>
-            {#if activeCategory}
-                <div class="flex items-center gap-4 truncate">
-                    <p>{selectedUserLabel}</p>
-                </div>
-            {/if}
         </div>
         <Select.Root
             type="single"
@@ -564,7 +562,7 @@
                             <label for="paymentProvider" class="block text-sm font-medium text-foreground mb-1">
                                 Payment Provider
                             </label>
-                            {#if selectedPaymentProvider}
+                            {#if $form.paymentProvider }
                                 <div class="flex items-center gap-4">
                                     <IconDisplay icon={selectedPaymentProvider.icon} iconType={selectedPaymentProvider.iconType} size="sm" />
                                     <p>{selectedPaymentProvider.name}</p>

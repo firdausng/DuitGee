@@ -5,6 +5,7 @@ import { and, eq, desc, isNull, sql } from "drizzle-orm";
 import { initialAuditFields, updateAuditFields } from "$lib/server/utils/audit";
 import { createId } from '@paralleldrive/cuid2';
 import type {CreateExpenseTemplate, ExpenseTemplate, UpdateExpenseTemplate} from "$lib/schemas/expense";
+import {requireVaultPermission} from "$lib/server/utils/permissions";
 
 export const getTemplates = async (
 	vaultId: string,
@@ -29,6 +30,7 @@ export const getTemplates = async (
 
 export const getTemplate = async (
 	templateId: string,
+    vaultId: string,
 	db: D1Database
 ): Promise<ExpenseTemplate | undefined> => {
 	const client = drizzle(db, { schema });
@@ -40,6 +42,7 @@ export const getTemplate = async (
 		.where(
 			and(
 				eq(expenseTemplates.id, templateId),
+				eq(expenseTemplates.vaultId, vaultId),
 				isNull(expenseTemplates.deletedAt)
 			)
 		)
@@ -56,6 +59,8 @@ export const createTemplate = async (
 	db: D1Database
 ) => {
 	const client = drizzle(db, { schema });
+
+    await requireVaultPermission(creatorUserId, data.vaultId, 'canCreateTemplateExpenses', db);
 
 	const templateId = createId();
 
@@ -75,10 +80,13 @@ export const createTemplate = async (
 export const updateTemplate = async (
 	updaterUserId: string,
 	templateId: string,
+    vaultId: string,
 	data: UpdateExpenseTemplate,
 	db: D1Database
 ) => {
 	const client = drizzle(db, { schema });
+
+    await requireVaultPermission(updaterUserId, vaultId, 'canEditTemplateExpenses', db);
 
 	const updatedTemplate = await client
 		.update(expenseTemplates)
@@ -99,10 +107,12 @@ export const updateTemplate = async (
 export const deleteTemplate = async (
 	userId: string,
 	templateId: string,
+    vaulId: string,
 	db: D1Database
 ) => {
 	const client = drizzle(db, { schema });
 
+    await requireVaultPermission(userId, vaulId, 'canDeleteTemplateExpenses', db);
 	// Soft delete template
 	const deletedTemplate = await client
 		.update(expenseTemplates)
@@ -117,6 +127,8 @@ export const deleteTemplate = async (
 			)
 		)
 		.returning();
+
+    console.log('[deleteTemplate] deletedTemplate:', deletedTemplate);
 
 	return deletedTemplate[0];
 };

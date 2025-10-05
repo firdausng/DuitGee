@@ -83,8 +83,9 @@ export const templatesApi = new Hono<App.Api>()
 		async (c) => {
 		const userId = c.get('userEmail') as string;
 		const id = c.req.param('id');
+		const vaultId = c.req.param('vaultId');
 
-		const template = await getTemplate(id, c.env.DB);
+		const template = await getTemplate(id, vaultId, c.env.DB);
 
 		if (!template) {
 			return c.json({ error: 'Template not found' }, 404);
@@ -113,9 +114,10 @@ export const templatesApi = new Hono<App.Api>()
 		async (c) => {
 		const userId = c.get('userEmail') as string;
 		const id = c.req.param('id');
+        const vaultId = c.req.param('vaultId');
 		const data = c.req.valid('json');
 
-		const template = await updateTemplate(userId, id, data, c.env.DB);
+		const template = await updateTemplate(userId, id, vaultId, data, c.env.DB);
 
 		if (!template) {
 			return c.json({ error: 'Template not found' }, 404);
@@ -143,8 +145,9 @@ export const templatesApi = new Hono<App.Api>()
 		async (c) => {
 		const userId = c.get('userEmail') as string;
 		const id = c.req.param('id');
+		const vaultId = c.req.param('vaultId');
 
-		const isDeleted = await deleteTemplate(userId, id, c.env.DB);
+		const isDeleted = await deleteTemplate(userId, id, vaultId, c.env.DB);
 
 		if (!isDeleted) {
 			return c.json({ error: 'Template not found' }, 404);

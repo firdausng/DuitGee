@@ -115,6 +115,36 @@
 		isSubmitting = false;
 	}
 
+	async function submitDeleteTemplate() {
+		if (!selectedTemplate) return;
+
+		isSubmitting = true;
+
+		try {
+			const response = await fetch(`/api/vaults/${data.vault.id}/templates/${selectedTemplate.id}`, {
+				method: 'DELETE',
+				headers: {
+					'Authorization': `Bearer ${authManager.authState?.accessToken}`
+				}
+			});
+
+			if (response.ok) {
+				// Close dialog and refresh data without full page reload
+				showDeleteDialog = false;
+				selectedTemplate = null;
+				await invalidateAll();
+			} else {
+				console.error('Failed to delete template');
+				alert('Failed to delete template. Please try again.');
+			}
+		} catch (error) {
+			console.error('Error deleting template:', error);
+			alert('An error occurred. Please try again.');
+		} finally {
+			isSubmitting = false;
+		}
+	}
+
 	const paymentTypeLabels: Record<string, string> = {
 		cash: 'Cash',
 		e_wallet: 'E-Wallet',
@@ -284,7 +314,7 @@
 {#if showDeleteDialog && selectedTemplate}
 	<Dialog
 		title="Delete Template"
-		description="Are you sure you want to delete this template? This action cannot be undone."
+		description="Are you sure you want to delete '{selectedTemplate.name}'? This action cannot be undone."
 		bind:open={showDeleteDialog}
 		onClose={() => {
 			showDeleteDialog = false;
@@ -292,24 +322,26 @@
 		}}
 	>
 		{#snippet children()}
-			<form method="POST" action="?/delete" use:enhance>
-				<input type="hidden" name="id" value={selectedTemplate.id} />
-				<div class="flex gap-3 justify-end mt-4">
-					<Button
-						type="button"
-						variant="outline"
-						onclick={() => {
-							showDeleteDialog = false;
-							selectedTemplate = null;
-						}}
-					>
-						Cancel
-					</Button>
-					<Button type="submit" variant="destructive">
-						Delete
-					</Button>
-				</div>
-			</form>
+			<div class="flex gap-3 justify-end mt-4">
+				<Button
+					type="button"
+					variant="outline"
+					onclick={() => {
+						showDeleteDialog = false;
+						selectedTemplate = null;
+					}}
+				>
+					Cancel
+				</Button>
+				<Button
+					type="button"
+					variant="destructive"
+					onclick={submitDeleteTemplate}
+					disabled={isSubmitting}
+				>
+					{isSubmitting ? 'Deleting...' : 'Delete'}
+				</Button>
+			</div>
 		{/snippet}
 	</Dialog>
 {/if}

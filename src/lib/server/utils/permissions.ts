@@ -9,6 +9,9 @@ export interface VaultPermissions {
     canCreateExpenses: boolean;
     canEditExpenses: boolean;
     canDeleteExpenses: boolean;
+    canCreateTemplateExpenses: boolean;
+    canEditTemplateExpenses: boolean;
+    canDeleteTemplateExpenses: boolean;
     canCreateCategories: boolean;
     canEditCategories: boolean;
     canDeleteCategories: boolean;
@@ -63,6 +66,9 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
             canCreateExpenses: false,
             canEditExpenses: false,
             canDeleteExpenses: false,
+            canCreateTemplateExpenses: false,
+            canEditTemplateExpenses: false,
+            canDeleteTemplateExpenses: false,
             canCreateCategories: false,
             canEditCategories: false,
             canDeleteCategories: false,
@@ -82,6 +88,9 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
                 canCreateExpenses: true,
                 canEditExpenses: true,
                 canDeleteExpenses: true,
+                canCreateTemplateExpenses: true,
+                canEditTemplateExpenses: true,
+                canDeleteTemplateExpenses: true,
                 canCreateCategories: true,
                 canEditCategories: true,
                 canDeleteCategories: true,
@@ -99,6 +108,9 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
                 canCreateExpenses: true,
                 canEditExpenses: true,
                 canDeleteExpenses: true,
+                canCreateTemplateExpenses: true,
+                canEditTemplateExpenses: true,
+                canDeleteTemplateExpenses: true,
                 canCreateCategories: true,
                 canEditCategories: true,
                 canDeleteCategories: true,
@@ -116,6 +128,9 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
                 canCreateExpenses: true,
                 canEditExpenses: false,
                 canDeleteExpenses: false,
+                canCreateTemplateExpenses: true,
+                canEditTemplateExpenses: true,
+                canDeleteTemplateExpenses: true,
                 canCreateCategories: false,
                 canEditCategories: false,
                 canDeleteCategories: false,
