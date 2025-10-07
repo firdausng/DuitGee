@@ -26,10 +26,11 @@
 
 	// Time period tabs
 	const timePeriods = [
-		{ id: 'daily', label: 'Daily', icon: '📅' },
-		{ id: 'weekly', label: 'Weekly', icon: '📊' },
-		{ id: 'monthly', label: 'Monthly', icon: '📈' },
-		{ id: 'yearly', label: 'Yearly', icon: '📆' },
+		{ id: 'daily', label: 'Today', icon: '📅' },
+		{ id: 'yesterday', label: 'Yesterday', icon: '📆' },
+		{ id: 'weekly', label: 'This Week', icon: '📊' },
+		{ id: 'monthly', label: 'This Month', icon: '📈' },
+		{ id: 'yearly', label: 'This Year', icon: '📆' },
 		{ id: 'all', label: 'All Time', icon: '🌍' }
 	];
 
@@ -158,6 +159,10 @@
 		switch (period) {
 			case 'daily':
 				return `Today (${now.toLocaleDateString()})`;
+			case 'yesterday':
+				const yesterday = new Date(now);
+				yesterday.setDate(now.getDate() - 1);
+				return `Yesterday (${yesterday.toLocaleDateString()})`;
 			case 'weekly':
 				const startOfWeek = new Date(now);
 				startOfWeek.setDate(now.getDate() - now.getDay());
@@ -228,7 +233,7 @@
 							disabled={isLoading}
 							class="py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-all duration-200 relative {
 								currentPeriod === period.id
-									? 'border-primary text-primary'
+									? 'border-primary text-primary text-green-600 dark:text-green-300 my-1'
 									: 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
 							} {isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}"
 						>

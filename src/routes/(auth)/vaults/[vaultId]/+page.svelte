@@ -11,11 +11,11 @@
     import {goto, pushState } from "$app/navigation";
 	import { fade, slide } from 'svelte/transition';
 
-    type Period = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'all';
+    type Period = 'daily' | 'yesterday' | 'weekly' | 'monthly' | 'yearly' | 'all';
     type TimePeriod = { id: Period, label: string, icon: string}
 
 	let { data } = $props();
-    console.log(data)
+    console.log(data);
 
 	// Delete dialog state
 	let showDeleteDialog = $state(false);
@@ -24,6 +24,7 @@
 	// Time period management
 	const timePeriods : TimePeriod[] = [
 		{ id: 'daily', label: 'Today', icon: '📅' },
+		{ id: 'yesterday', label: 'Yesterday', icon: '📆' },
 		{ id: 'weekly', label: 'This Week', icon: '📊' },
 		{ id: 'monthly', label: 'This Month', icon: '📈' },
 		{ id: 'yearly', label: 'This Year', icon: '📆' },
@@ -105,29 +106,84 @@
 		return colors[Math.abs(hash) % colors.length];
 	}
 
-	// Fetch filtered data from backend
+	// Calculate date range based on period in user's timezone
+	function calculateDateRange(period: Period): { startDate?: string, endDate?: string } {
+		const now = new Date();
+		let startDate: Date | undefined;
+		let endDate: Date | undefined;
+
+		switch (period) {
+			case 'daily':
+				startDate = new Date(now);
+				startDate.setHours(0, 0, 0, 0);
+				endDate = new Date(now);
+				endDate.setHours(23, 59, 59, 999);
+				break;
+			case 'yesterday':
+				const yesterday = new Date(now);
+				yesterday.setDate(now.getDate() - 1);
+				startDate = new Date(yesterday);
+				startDate.setHours(0, 0, 0, 0);
+				endDate = new Date(yesterday);
+				endDate.setHours(23, 59, 59, 999);
+				break;
+			case 'weekly':
+				startDate = new Date(now);
+				startDate.setDate(now.getDate() - now.getDay());
+				startDate.setHours(0, 0, 0, 0);
+				endDate = new Date(startDate);
+				endDate.setDate(startDate.getDate() + 6);
+				endDate.setHours(23, 59, 59, 999);
+				break;
+			case 'monthly':
+				startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+				endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+				endDate.setHours(23, 59, 59, 999);
+				break;
+			case 'yearly':
+				startDate = new Date(now.getFullYear(), 0, 1);
+				endDate = new Date(now.getFullYear(), 11, 31);
+				endDate.setHours(23, 59, 59, 999);
+				break;
+			case 'all':
+				// No date filtering
+				return {};
+		}
+
+		return {
+			startDate: startDate?.toISOString(),
+			endDate: endDate?.toISOString()
+		};
+	}
+
+	// Fetch filtered stats from API
 	async function fetchStats() {
 		isLoadingStats = true;
 		try {
+			const { startDate, endDate } = calculateDateRange(currentPeriod);
+
 			const params = new URLSearchParams({
-				period: currentPeriod,
 				limit: expenseLimit.toString()
 			});
 
+			if (startDate) params.set('startDate', startDate);
+			if (endDate) params.set('endDate', endDate);
 			if (selectedMemberIds.length > 0) {
 				params.set('memberIds', selectedMemberIds.join(','));
 			}
 
-			const response = await fetch(`/api/vaults/${data.vaultId}?${params.toString()}`, {
+			const response = await fetch(`/api/vaults/${data.vaultId}/stats?${params.toString()}`, {
 				headers: {
 					'Accept': 'application/json',
-                    'Authorization': `Bearer ${authManager.authState?.accessToken}`
+					'Authorization': `Bearer ${authManager.authState?.accessToken}`
 				}
 			});
 
 			if (response.ok) {
 				const result = await response.json();
-				statsData = result.stats;
+				if (result.success && result.data) {
+					statsData = result.data;
+				}
 			}
 		} catch (error) {
 			console.error('Failed to fetch stats:', error);
@@ -140,12 +196,13 @@
 		if (period === currentPeriod) return;
 
 		// Update URL
-		const newUrl = new URL(page.url);
-		newUrl.searchParams.set('period', period);
+		const params = new URLSearchParams(page.url.searchParams);
+		params.set('period', period);
 		if (selectedMemberIds.length > 0) {
-			newUrl.searchParams.set('memberIds', selectedMemberIds.join(','));
+			params.set('memberIds', selectedMemberIds.join(','));
 		}
-		pushState(newUrl);
+		const newUrl = `${page.url.pathname}?${params.toString()}`;
+		pushState(newUrl, '');
 
 		currentPeriod = period as Period;
 		await fetchStats();
@@ -155,27 +212,30 @@
 		// If clicking the same member, deselect it (clear filter)
 		if (selectedMemberIds.length === 1 && selectedMemberIds.includes(memberId)) {
 			selectedMemberIds = [];
-			const newUrl = new URL(page.url);
-			newUrl.searchParams.delete('memberIds');
-			newUrl.searchParams.set('period', currentPeriod);
-			pushState({}, '', newUrl);
+			const params = new URLSearchParams(page.url.searchParams);
+			params.delete('memberIds');
+			params.set('period', currentPeriod);
+			const newUrl = `${page.url.pathname}?${params.toString()}`;
+			pushState(newUrl, '');
 		} else {
 			// Replace selection with this member (single selection only)
 			selectedMemberIds = [memberId];
-			const newUrl = new URL(page.url);
-			newUrl.searchParams.set('period', currentPeriod);
-			newUrl.searchParams.set('memberIds', memberId);
-			pushState({}, '', newUrl);
+			const params = new URLSearchParams(page.url.searchParams);
+			params.set('period', currentPeriod);
+			params.set('memberIds', memberId);
+			const newUrl = `${page.url.pathname}?${params.toString()}`;
+			pushState(newUrl, '');
 		}
 		await fetchStats();
 	}
 
 	async function clearMemberFilter() {
 		selectedMemberIds = [];
-		const newUrl = new URL(page.url);
-		newUrl.searchParams.delete('memberIds');
-		newUrl.searchParams.set('period', currentPeriod);
-		pushState({}, '', newUrl);
+		const params = new URLSearchParams(page.url.searchParams);
+		params.delete('memberIds');
+		params.set('period', currentPeriod);
+		const newUrl = `${page.url.pathname}?${params.toString()}`;
+		pushState(newUrl, '');
 		await fetchStats();
 	}
 
@@ -213,6 +273,10 @@
 		switch (period) {
 			case 'daily':
 				return `Today (${now.toLocaleDateString()})`;
+			case 'yesterday':
+				const yesterday = new Date(now);
+				yesterday.setDate(now.getDate() - 1);
+				return `Yesterday (${yesterday.toLocaleDateString()})`;
 			case 'weekly':
 				const startOfWeek = new Date(now);
 				startOfWeek.setDate(now.getDate() - now.getDay());
@@ -270,22 +334,14 @@
 				{#each timePeriods as period}
 					<button
 						onclick={() => switchPeriod(period.id)}
-						disabled={isLoadingStats}
 						class="flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all {
 							currentPeriod === period.id
-								? 'bg-primary text-primary-foreground shadow-sm'
+								? 'bg-primary text-primary-foreground shadow-md ring-2 ring-primary/30  text-green-600 dark:text-green-300 my-1'
 								: 'bg-muted text-muted-foreground active:bg-muted/80'
-						} {isLoadingStats ? 'opacity-50' : ''}"
+						}"
 					>
-						{#if isLoadingStats && currentPeriod === period.id}
-							<div class="flex items-center gap-2">
-								<div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-								<span>{period.icon}</span>
-							</div>
-						{:else}
-							<span class="mr-1.5">{period.icon}</span>
-							{period.label}
-						{/if}
+						<span class="mr-1.5">{period.icon}</span>
+						{period.label}
 					</button>
 				{/each}
 			</div>
@@ -298,25 +354,14 @@
 					{#each timePeriods as period}
 						<button
 							onclick={() => switchPeriod(period.id)}
-							disabled={isLoadingStats}
-							class="py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-all duration-200 relative {
+							class="py-4 px-1 border-b-2 font-semibold text-sm whitespace-nowrap transition-all duration-200 cursor-pointer {
 								currentPeriod === period.id
-									? 'border-primary text-primary'
+									? 'border-primary text-primary border-b-[3px] text-green-600 dark:text-green-300'
 									: 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
-							} {isLoadingStats ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}"
+							}"
 						>
-							{#if isLoadingStats && currentPeriod === period.id}
-								<div class="absolute inset-0 flex items-center justify-center">
-									<div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-								</div>
-								<span class="invisible">
-									<span class="mr-2">{period.icon}</span>
-									{period.label}
-								</span>
-							{:else}
-								<span class="mr-2">{period.icon}</span>
-								{period.label}
-							{/if}
+							<span class="mr-2">{period.icon}</span>
+							{period.label}
 						</button>
 					{/each}
 				</nav>
@@ -325,7 +370,7 @@
 	</div>
 
 
-	{#if isLoadingStats || isLoadingStats}
+	{#if isLoadingStats}
 		<div class="flex items-center justify-center py-12">
 			<div class="flex items-center space-x-3 text-muted-foreground">
 				<div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>

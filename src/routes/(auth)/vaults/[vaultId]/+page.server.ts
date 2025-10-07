@@ -25,6 +25,7 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
         let startDate: string | undefined;
         let endDate: string | undefined;
 
+        console.log('timePeriod', timePeriod);
         switch (timePeriod) {
             case 'daily':
                 const startOfDay = new Date(now);
@@ -135,6 +136,8 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
                 memberIds
             })
         ]);
+
+        console.log('expensesResult', expensesResult);
 
         return {
             currentVault,

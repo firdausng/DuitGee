@@ -251,7 +251,7 @@ export const vaultsApi = new Hono<App.Api>()
         '/:id/stats',
         describeRoute({
             ...commonVaultConfig,
-            description: 'Get vault statistics',
+            description: 'Get vault statistics with optional filtering by date range',
             responses: {
                 200: {
                     description: 'Successful response',
@@ -271,11 +271,59 @@ export const vaultsApi = new Hono<App.Api>()
         const userEmail = c.get('userEmail') as string;
         const vaultId = c.req.param('id');
 
+        // Get query parameters for filtering
+        const startDate = c.req.query('startDate'); // ISO string from client
+        const endDate = c.req.query('endDate'); // ISO string from client
+        const memberIdsParam = c.req.query('memberIds');
+        const memberIds = memberIdsParam ? memberIdsParam.split(',') : undefined;
+        const limit = parseInt(c.req.query('limit') || '10');
+
         try {
-            const stats = await getVaultStatsByEmail(userEmail, vaultId, c.env.DB);
+            // Import handlers for expenses
+            const { getExpenses, getExpensesSummary, getMemberSpending } = await import('$lib/server/api/expenses/handlers');
+            const { getUserByEmail } = await import('$lib/server/api/users/handlers');
+
+            // Get user ID from email
+            const user = await getUserByEmail(userEmail, c.env.DB);
+            if (!user) {
+                return c.json({
+                    success: false,
+                    error: 'User not found'
+                }, 404);
+            }
+
+            // Get filtered stats
+            const [expensesResult, summaryResult, memberSpendingResult] = await Promise.all([
+                getExpenses(user.id, c.env.DB, {
+                    vaultId,
+                    startDate,
+                    endDate,
+                    memberIds,
+                    limit
+                }),
+                getExpensesSummary(user.id, c.env.DB, {
+                    vaultId,
+                    startDate,
+                    endDate,
+                    memberIds
+                }),
+                getMemberSpending(user.id, c.env.DB, {
+                    vaultId,
+                    startDate,
+                    endDate,
+                    memberIds
+                })
+            ]);
+
             return c.json({
                 success: true,
-                data: stats
+                data: {
+                    totalExpenses: expensesResult.pagination.total,
+                    totalAmount: summaryResult.totalAmount,
+                    avgAmount: expensesResult.pagination.total > 0 ? summaryResult.totalAmount / expensesResult.pagination.total : 0,
+                    recentExpenses: expensesResult.expenses,
+                    memberSpending: memberSpendingResult
+                }
             });
         } catch (error) {
             console.error('Error fetching vault stats:', error);

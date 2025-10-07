@@ -273,6 +273,20 @@ When using `<select>` with period/filter changes that trigger navigation:
 - Handle changes with `onchange={(e) => handler(e.target.value)}`
 - **Why**: Using `bind:value` with `onchange` creates a race condition where the value updates before navigation, causing the navigation check to fail
 
+### SvelteKit Navigation Functions
+**pushState Usage** (`$app/navigation`):
+- Correct syntax: `pushState(url, state)` where url is a string
+- Always convert URL objects to strings: `pushState(newUrl.toString(), '')`
+- To preserve current pathname with updated query params:
+  ```typescript
+  const params = new URLSearchParams(page.url.searchParams);
+  params.set('period', period);
+  const newUrl = `${page.url.pathname}?${params.toString()}`;
+  pushState(newUrl, '');
+  ```
+- **Common mistake**: Passing URL object directly causes `[object Object]` in URL
+- **Common mistake**: Wrong parameter order - url comes first, then state
+
 ### Loading States
 - Use SvelteKit's `$navigating` store for page navigation loading states
 - Display loading indicators during data fetching
@@ -283,8 +297,78 @@ When using `<select>` with period/filter changes that trigger navigation:
 ### Time Period Filtering
 - Supports: daily, weekly, monthly, yearly, all
 - Period state managed via URL query parameter `?period=xxx`
-- Date ranges calculated in `calculateDateRange()` function
-- All date comparisons done in UTC timezone
+- **Client calculates date ranges, server filters by date range**
+- Date range calculations done in user's timezone on client
+- Server receives ISO date strings and filters expenses
+
+**Vault Dashboard Implementation** (`src/routes/(auth)/vaults/[vaultId]/+page.svelte`):
+- Initial page load from `+page.server.ts` with default period (monthly)
+- Changing filters triggers API call to `/api/vaults/:id/stats`
+- Client calculates `startDate` and `endDate` in user's timezone based on selected period
+- Sends ISO date strings to server: `?startDate=2025-10-01T00:00:00.000Z&endDate=2025-10-31T23:59:59.999Z`
+- Uses `pushState` to update URL query params without full page reload
+- Shows loading state while fetching filtered data
+
+**API Endpoint** (`src/lib/server/api/vaults/vaults.ts`):
+- `GET /api/vaults/:id/stats?startDate=xxx&endDate=xxx&memberIds=xxx&limit=xxx`
+- Accepts ISO date strings from client (no period calculation)
+- Calls `getExpenses`, `getExpensesSummary`, `getMemberSpending` handlers with date filters
+- Returns filtered stats: `{ success: true, data: { totalExpenses, totalAmount, recentExpenses, memberSpending } }`
+
+**Implementation Pattern**:
+```typescript
+// Client calculates date range in user's timezone
+function calculateDateRange(period: Period): { startDate?: string, endDate?: string } {
+  const now = new Date();
+  let startDate: Date | undefined;
+  let endDate: Date | undefined;
+
+  switch (period) {
+    case 'daily':
+      startDate = new Date(now);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(now);
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case 'monthly':
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    // ... other cases
+  }
+
+  return {
+    startDate: startDate?.toISOString(),
+    endDate: endDate?.toISOString()
+  };
+}
+
+// Fetch with calculated date range
+async function fetchStats() {
+  const { startDate, endDate } = calculateDateRange(currentPeriod);
+  const params = new URLSearchParams({ limit: expenseLimit.toString() });
+
+  if (startDate) params.set('startDate', startDate);
+  if (endDate) params.set('endDate', endDate);
+  if (selectedMemberIds.length > 0) {
+    params.set('memberIds', selectedMemberIds.join(','));
+  }
+
+  const response = await fetch(`/api/vaults/${vaultId}/stats?${params}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  const result = await response.json();
+  statsData = result.data;
+}
+```
+
+**Benefits**:
+- Timezone-aware filtering (date ranges calculated in user's local timezone)
+- Server doesn't need to know about timezones
+- Client controls the exact date range being filtered
+- API accepts any arbitrary date range
 
 ### Recent Expenses Display
 - Dashboard: Shows 5 most recent expenses via API call

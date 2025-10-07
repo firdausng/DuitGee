@@ -82,7 +82,11 @@ export const userSchema = v.object({
     email: v.pipe(v.string(), v.email('Please enter a valid email address'))
 });
 
-export const updateUserSchema = v.partial(userSchema);
+export const updateUserSchema = v.object({
+    ...v.omit(userSchema, ['firstName', 'lastName']).entries,
+    firstName: v.string('First name is required'),
+    lastName: v.string('Last name is required'),
+});
 
 const createUserSchema = v.omit(
     userSchema,
