@@ -63,6 +63,7 @@ export const actions = {
             return { form };
         }
 
+        console.log('[create template]', locals.currentUser, form.data);
 		try {
 			const template = await createTemplate(
 				locals.currentUser.id,

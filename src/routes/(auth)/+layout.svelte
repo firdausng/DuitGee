@@ -24,11 +24,10 @@
 	import Lightning from 'phosphor-svelte/lib/Lightning';
 	import { goto } from '$app/navigation';
 	import { theme } from '$lib/stores/theme.svelte.js';
-    import {authManager} from "$lib/stores/current-session.svelte";
+
 
 	let { children, data } = $props();
 
-    authManager.setAuthenticationResponse(data.currentSession);
 	// Main navigation sections
 	const mainNavigation = [
 		{ name: 'Vaults', href: '/vaults', icon: Stool, key: 'vaults' },

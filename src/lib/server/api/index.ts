@@ -13,81 +13,103 @@ import { vaultsApi } from './vaults/vaults';
 import { vaultMembersApi } from './vault-members/vault-members';
 import { notificationApi } from "$lib/server/api/notifications/notifications";
 import { templatesApi } from "$lib/server/api/templates/templates";
-import {AuthService} from "$lib/server/auth-service.svelte";
 import {jwk} from "hono/jwk";
 import { openAPIRouteHandler } from 'hono-openapi'
 import { Scalar } from "@scalar/hono-api-reference";
+import { auth } from "$lib/server/better-auth";
 
 const router = new Hono<App.Api>()
 	// .use('*', cors())
     .use('*', trimTrailingSlash())
 	.use(logger())
 	.use('*', prettyJSON())
-	.use('*', async (c, next) => {
-		// Extract bearer token and verify it
-		const authHeader = c.req.header('Authorization');
-		if (!authHeader || !authHeader.startsWith('Bearer ')) {
-			return c.json({ error: 'Missing or invalid authorization header' }, 401);
-		}
-
-		const accessToken = authHeader.substring(7); // Remove "Bearer " prefix
-
-		// Create a hash of the token for KV key (tokens can be long)
-
-        const tokenHash = await hashSHA256(accessToken);
-		const cacheKey = `token:${tokenHash}`;
-
-		// Check KV cache first
-		try {
-			const cached = await c.env.KV.get(cacheKey);
-			if (cached) {
-				c.set('userEmail', cached);
-				await next();
-				return;
-			}
-		} catch (kvError) {
-			console.warn('KV cache read failed, continuing with verification:', kvError);
-		}
-
-		try {
-			const authService = new AuthService(
-				c.env.WORKOS_API_KEY,
-				c.env.WORKOS_CLIENT_ID,
-				c.env.BASE_PATH,
-				c.env.WORKOS_COOKIE_PASSWORD
-			);
-
-			// Verify the JWT token
-			const verifiedToken = await authService.verifiedSession(accessToken);
-			// Extract user ID from the token payload
-			const workOsUserId = verifiedToken.payload.sub as string; // 'sub' (subject) typically contains the user ID
-
-			if (!workOsUserId) {
-				return c.json({ error: 'Invalid token: no user ID found' }, 401);
-			}
-
-            const user = await authService.getUser(workOsUserId);
-            if (!user) {
-                return c.json({ error: 'Not authenticated' }, 401);
-            }
-
-			// Cache the result in KV for 5 minutes (300 seconds)
-			try {
-				await c.env.KV.put(cacheKey, user.email, {
-					expirationTtl: 300 // 5 minutes
-				});
-			} catch (kvError) {
-				console.warn('KV cache write failed, continuing without caching:', kvError);
-			}
-
-			// Set the user ID in the context
-			c.set('userEmail', user.email);
-			await next();
-		} catch (error) {
-			console.error('JWT verification failed:', error);
-			return c.json({ error: 'Invalid or expired token' }, 401);
-		}
-	})
+	// .use('*', async (c, next) => {
+	// 	// Extract bearer token and verify it
+	// 	const authHeader = c.req.header('Authorization');
+	// 	if (!authHeader || !authHeader.startsWith('Bearer ')) {
+	// 		return c.json({ error: 'Missing or invalid authorization header' }, 401);
+	// 	}
+    //
+	// 	const accessToken = authHeader.substring(7); // Remove "Bearer " prefix
+    //
+	// 	// Create a hash of the token for KV key (tokens can be long)
+    //
+    //     const tokenHash = await hashSHA256(accessToken);
+	// 	const cacheKey = `token:${tokenHash}`;
+    //
+	// 	// Check KV cache first
+	// 	try {
+	// 		const cached = await c.env.KV.get(cacheKey);
+	// 		if (cached) {
+	// 			c.set('userEmail', cached);
+	// 			await next();
+	// 			return;
+	// 		}
+	// 	} catch (kvError) {
+	// 		console.warn('KV cache read failed, continuing with verification:', kvError);
+	// 	}
+    //
+	// 	try {
+	// 		const authService = new AuthService(
+	// 			c.env.WORKOS_API_KEY,
+	// 			c.env.WORKOS_CLIENT_ID,
+	// 			c.env.BASE_PATH,
+	// 			c.env.WORKOS_COOKIE_PASSWORD
+	// 		);
+    //
+	// 		// Verify the JWT token
+	// 		const verifiedToken = await authService.verifiedSession(accessToken);
+	// 		// Extract user ID from the token payload
+	// 		const workOsUserId = verifiedToken.payload.sub as string; // 'sub' (subject) typically contains the user ID
+    //
+	// 		if (!workOsUserId) {
+	// 			return c.json({ error: 'Invalid token: no user ID found' }, 401);
+	// 		}
+    //
+    //         const user = await authService.getUser(workOsUserId);
+    //         if (!user) {
+    //             return c.json({ error: 'Not authenticated' }, 401);
+    //         }
+    //
+	// 		// Cache the result in KV for 5 minutes (300 seconds)
+	// 		try {
+	// 			await c.env.KV.put(cacheKey, user.email, {
+	// 				expirationTtl: 300 // 5 minutes
+	// 			});
+	// 		} catch (kvError) {
+	// 			console.warn('KV cache write failed, continuing without caching:', kvError);
+	// 		}
+    //
+	// 		// Set the user ID in the context
+	// 		c.set('userEmail', user.email);
+	// 		await next();
+	// 	} catch (error) {
+	// 		console.error('JWT verification failed:', error);
+	// 		return c.json({ error: 'Invalid or expired token' }, 401);
+	// 	}
+	// })
+    // .use('*', async (c, next) => {
+    //     const a = await auth(c.env).handler(c.req.raw);
+    //     console.log('asa', a)
+    //     await next();
+    // })
+    // .on(['GET', 'POST'], '/*', (c) => {
+    //     return auth(c.env).handler(c.req.raw);
+    // })
+    // .get('/auth', (c)=>{
+    //     return c.json({
+    //         name: 'test'
+    //     })
+    // })
+    .on(["POST", "GET"], "/auth/*", (c) => auth(c.env).handler(c.req.raw))
+    .use("*", async (c, next) => {
+	   const session = await auth(c.env).api.getSession({ headers: c.req.raw.headers });
+      	if (!session) {
+            return c.body(null, 401);
+      	}
+      	c.set("currentSession", session);
+      	return next();
+    })
 	.route('/', expensesApi)
 	.route('/', categoriesApi)
 	.route('/', categoryGroupsApi)

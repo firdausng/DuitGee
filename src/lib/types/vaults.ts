@@ -28,7 +28,6 @@ export interface VaultMembership {
 
 export interface UserVault {
 	vault: VaultDetails;
-	owner: VaultOwner;
 	membership: VaultMembership;
 }
 

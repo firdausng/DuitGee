@@ -12,7 +12,7 @@
 	import Megaphone from 'phosphor-svelte/lib/Megaphone';
 	import Clock from 'phosphor-svelte/lib/Clock';
     import Button from '$lib/components/ui/Button.svelte';
-    import {authManager} from "$lib/stores/current-session.svelte";
+
 
     let notifications = $state([]);
     let unreadCount = $state(0);
@@ -26,7 +26,7 @@
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authManager.authState?.accessToken}`
+                    // 'Authorization': `Bearer ${authManager.authState?.accessToken}`
                 },
             });
             const result = await response.json();
@@ -48,7 +48,7 @@
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authManager.authState?.accessToken}`
+                    // 'Authorization': `Bearer ${authManager.authState?.accessToken}`
                 },
             });
 
@@ -71,7 +71,7 @@
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authManager.authState?.accessToken}`
+                    // 'Authorization': `Bearer ${authManager.authState?.accessToken}`
                 },
             });
 
@@ -91,7 +91,7 @@
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authManager.authState?.accessToken}`
+                    // 'Authorization': `Bearer ${authManager.authState?.accessToken}`
                 },
             });
 

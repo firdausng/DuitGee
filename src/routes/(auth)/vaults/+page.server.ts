@@ -8,6 +8,8 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies }) =
 
     try {
 
+        console.log('locals.currentUserVaults', locals.currentUserVaults);
+        console.log('locals.currentUser', locals.currentUser);
         return {
             activeUser: locals.currentUser,
             vaults: locals.currentUserVaults,

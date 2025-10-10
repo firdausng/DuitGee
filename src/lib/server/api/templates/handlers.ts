@@ -54,14 +54,13 @@ export const getTemplate = async (
 };
 
 export const createTemplate = async (
-	creatorUserId: string,
 	data: CreateExpenseTemplate,
 	db: D1Database
 ) => {
+    // console.log('[createTemplate] data:', data);
 	const client = drizzle(db, { schema });
-
-    await requireVaultPermission(creatorUserId, data.vaultId, 'canCreateTemplateExpenses', db);
-
+    console.log('[createTemplate] data:', data);
+    await requireVaultPermission(data.userId, data.vaultId, 'canCreateTemplateExpenses', db);
 	const templateId = createId();
 
 	const template = await client
@@ -69,8 +68,7 @@ export const createTemplate = async (
 		.values({
 			id: templateId,
 			...data,
-			userId: creatorUserId, // Template creator - always set
-			...initialAuditFields({ userId: creatorUserId })
+			...initialAuditFields({ userId: data.userId })
 		})
 		.returning();
 

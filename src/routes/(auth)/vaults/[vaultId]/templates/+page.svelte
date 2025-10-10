@@ -12,7 +12,7 @@
 	import Lightning from 'phosphor-svelte/lib/Lightning';
 	import Clock from 'phosphor-svelte/lib/Clock';
     import type {CreateExpenseTemplate, ExpenseTemplate, UpdateExpenseTemplate} from "$lib/schemas/expense";
-    import {authManager} from "$lib/stores/current-session.svelte";
+
 
 	let { data } = $props();
 
@@ -52,12 +52,13 @@
 	async function submitCreateTemplate(formData: CreateExpenseTemplate) {
 		isSubmitting = true;
 
+        //currentUserId
 		try {
             const response = await fetch(`/api/vaults/${data.vault.id}/templates`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authManager.authState?.accessToken}`
+                    // 'Authorization': `Bearer ${authManager.authState?.accessToken}`
                 },
                 body: JSON.stringify(formData)
             });
@@ -86,7 +87,7 @@
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authManager.authState?.accessToken}`
+                    // 'Authorization': `Bearer ${authManager.authState?.accessToken}`
                 },
                 body: JSON.stringify(formData)
             });
@@ -124,7 +125,7 @@
 			const response = await fetch(`/api/vaults/${data.vault.id}/templates/${selectedTemplate.id}`, {
 				method: 'DELETE',
 				headers: {
-					'Authorization': `Bearer ${authManager.authState?.accessToken}`
+					// 'Authorization': `Bearer ${authManager.authState?.accessToken}`
 				}
 			});
 

@@ -1,9 +1,7 @@
 import type {RequestIdVariables} from "hono/request-id";
 import type {AuthService} from "$lib/server/auth-service.svelte";
-import type {AuthenticateWithSessionCookieSuccessResponse} from "@workos-inc/node";
 import type {User as AppUser} from "$lib/server/api/users/schema";
 import type {UserVault} from "$lib/types";
-import type {Category} from "$lib/server/api/categories/schema";
 import type {CategoryData} from "$lib/configuration/categories";
 import {PUBLIC_CATEGORIES_KEY} from "$lib/server/constants";
 
@@ -20,7 +18,7 @@ declare global {
         interface Locals {
             authService: AuthService,
             error: Error
-            currentSession: AuthenticateWithSessionCookieSuccessResponse
+            currentSession: AuthSession
             currentUser: AppUser
             isAdmin: boolean,
             currentUserVaults: UserVault[]
@@ -34,9 +32,35 @@ declare global {
         interface Api {
             Bindings: Cloudflare.Env,
             Variables: RequestIdVariables & {
-                userEmail: string
+                currentSession: AuthSession
                 [PUBLIC_CATEGORIES_KEY]: CategoryData
             }
+        }
+
+        interface AuthSession {
+            user:User
+            session:Session
+        }
+
+        interface User {
+            id: string
+            createdAt: Date
+            updatedAt: Date
+            email: string
+            emailVerified: boolean
+            name: string
+            image?: string | null | undefined
+        }
+
+        interface Session {
+            id: string
+            createdAt: Date
+            updatedAt: Date
+            userId: string
+            expiresAt: Date
+            token: string
+            ipAddress?: string | null | undefined
+            userAgent?: string | null | undefined
         }
     }
 
@@ -64,24 +88,29 @@ declare global {
             isLoading?: boolean;
         }
     }
-}
 
-declare namespace Cloudflare {
-    interface Env {
-        DATABASE_URL: string;
-        MY_VARIABLE: string;
-        BASE_PATH: string;
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: string;
-        CLERK_SECRET_KEY: string;
-        WORKOS_API_KEY: string;
-        WORKOS_CLIENT_ID: string;
-        WORKOS_COOKIE_PASSWORD: string;
-        ADMIN_EMAILS: string;
-        ASSETS: Fetcher;
-        DB: D1Database;
-        KV: KVNamespace;
+    namespace Cloudflare {
+        interface Env {
+            DATABASE_URL: string;
+            MY_VARIABLE: string;
+            BASE_PATH: string;
+            NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: string;
+            CLERK_SECRET_KEY: string;
+            WORKOS_API_KEY: string;
+            WORKOS_CLIENT_ID: string;
+            WORKOS_COOKIE_PASSWORD: string;
+            ADMIN_EMAILS: string;
+            BETTER_AUTH_URL: string;
+            BETTER_AUTH_SECRET: string;
+            GOOGLE_CLIENT_ID: string;
+            GOOGLE_CLIENT_SECRET: string;
+            ASSETS: Fetcher;
+            DB: D1Database;
+            AUTH_DB: D1Database;
+            KV: KVNamespace;
+        }
     }
 }
-interface Env extends Cloudflare.Env {}
+
 
 export {};

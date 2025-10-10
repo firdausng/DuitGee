@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
-import { vaults, vaultMembers, users } from "$lib/server/db/schema";
+import { vaults, vaultMembers } from "$lib/server/db/schema";
 import { and, eq, or } from "drizzle-orm";
 import { createId } from '@paralleldrive/cuid2';
 

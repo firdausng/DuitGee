@@ -230,7 +230,6 @@ export const getInvitationsByEmailSchema = v.object({
 export type Notification = v.InferOutput<typeof notificationSchema>;
 export type CreateNotification = v.InferOutput<typeof createNotificationSchema>;
 export type UpdateNotification = v.InferOutput<typeof updateNotificationSchema>;
-
 export type ExpenseSchema = typeof expenseSchema;
 export type CategoryGroupSchema = typeof categoryGroupSchema;
 export type CategorySchema = typeof categorySchema;

@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
 	import UserPlus from 'phosphor-svelte/lib/UserPlus';
-    import { authManager } from "$lib/stores/current-session.svelte";
     import { goto } from '$app/navigation';
 
     let invitationCount = $state(0);
@@ -11,26 +10,19 @@
     async function fetchInvitationCount() {
         try {
             loading = true;
-            console.log('Fetching invitation count...');
-            console.log('Access token:', authManager.authState?.accessToken ? 'Present' : 'Missing');
-
             const response = await fetch(`/api/vault-members/invitations/by-email?email=${authManager.authState?.user.email}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authManager.authState?.accessToken}`
+                    // 'Authorization': `Bearer ${authManager.authState?.accessToken}`
                 },
             });
 
-            console.log('Response status:', response.status);
             const result = await response.json();
-            console.log('Response data:', result);
 
             if (result.success) {
                 invitationCount = result.data.length;
-                console.log('Invitation count:', invitationCount);
             } else {
-                console.error('API returned error:', result.error);
             }
         } catch (error) {
             console.error('Error fetching invitation count:', error);

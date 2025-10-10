@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { page, navigating } from '$app/state';
-	import { authManager } from '$lib/stores/current-session.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import AlertDialog from '$lib/components/ui/AlertDialog.svelte';
 	import IconDisplay from '$lib/components/IconDisplay.svelte';
@@ -175,7 +174,7 @@
 			const response = await fetch(`/api/vaults/${data.vaultId}/stats?${params.toString()}`, {
 				headers: {
 					'Accept': 'application/json',
-					'Authorization': `Bearer ${authManager.authState?.accessToken}`
+					// 'Authorization': `Bearer ${authManager.authState?.accessToken}`
 				}
 			});
 
@@ -250,7 +249,7 @@
 		try {
 			const response = await fetch(`/api/vaults/${data.vaultId}/expenses/${expenseToDelete}`, {
 				method: 'DELETE',
-				headers: { 'Authorization': `Bearer ${authManager.authState?.accessToken}` }
+				// headers: { 'Authorization': `Bearer ${authManager.authState?.accessToken}` }
 			});
 
 			if (response.ok) {

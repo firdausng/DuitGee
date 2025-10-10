@@ -166,6 +166,7 @@ export const requireVaultPermission = async (
     permission: keyof VaultPermissions,
     db: D1Database
 ): Promise<void> => {
+    console.log('[requireVaultPermission]', userId, vaultId, permission)
     const hasPermission = await checkVaultPermission(userId, vaultId, permission, db);
 
     if (!hasPermission) {

@@ -55,11 +55,10 @@ export const templatesApi = new Hono<App.Api>()
 		}),
 		vValidator('json', createExpenseTemplateSchema),
 		async (c) => {
-		const userId = c.get('userEmail') as string;
 		const vaultId = c.req.param('vaultId');
 		const data = c.req.valid('json');
 
-		const template = await createTemplate(userId, { ...data, vaultId }, c.env.DB);
+		const template = await createTemplate({ ...data, vaultId }, c.env.DB);
 
 		return c.json(template, 201);
 	})
