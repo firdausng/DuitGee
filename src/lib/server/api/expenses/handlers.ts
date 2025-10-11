@@ -1,6 +1,6 @@
 import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
-import {expenses, expenseTemplates, users, vaultMembers, vaults} from "$lib/server/db/schema";
+import {expenses, expenseTemplates, vaultMembers, vaults} from "$lib/server/db/schema";
 import {and, desc, eq, isNull, or, sql, sum} from "drizzle-orm";
 import {requireVaultPermission} from "$lib/server/utils/permissions";
 import {initialAuditFields, updateAuditFields} from "$lib/server/utils/audit";
@@ -94,7 +94,6 @@ export const getExpenses = async (
 		.select()
 		.from(expenses)
 		.leftJoin(vaults, eq(expenses.vaultId, vaults.id))
-		.leftJoin(users, eq(expenses.userId, users.id))
 		.where(whereClause)
 		.orderBy(desc(expenses.date))
 		.limit(limit)
@@ -116,6 +115,7 @@ export const getExpenses = async (
 		amount: row.expenses.amount,
 		date: row.expenses.date,
 		createdAt: row.expenses.createdAt,
+		userId: row.expenses.userId || undefined,
 		vaultId: row.expenses.vaultId || undefined,
 		vault: row.vaults?.id ? {
 			id: row.vaults.id,
@@ -126,12 +126,6 @@ export const getExpenses = async (
 			isPersonal: row.vaults.isPersonal
 		} : null,
         category: categoryData.categories.find(c => c.name === row.expenses.categoryName) || null,
-		creator: row.users?.id ? {
-			id: row.users.id,
-			firstName: row.users.firstName || undefined,
-			lastName: row.users.lastName || undefined,
-			email: row.users.email
-		} : null,
 	}));
 
 	return {
@@ -440,22 +434,16 @@ export const getMemberSpending = async (
 	const memberStats = await client
 		.select({
 			userId: expenses.userId,
-			firstName: users.firstName,
-			lastName: users.lastName,
-			email: users.email,
 			totalAmount: sum(expenses.amount).mapWith(Number),
 			expenseCount: sql<number>`count(*)`.mapWith(Number)
 		})
 		.from(expenses)
-		.leftJoin(users, eq(expenses.userId, users.id))
 		.where(whereClause)
-		.groupBy(expenses.userId, users.firstName, users.lastName, users.email);
+		.groupBy(expenses.userId);
 
 	return memberStats.map(stat => ({
 		userId: stat.userId,
-		userName: stat.firstName && stat.lastName
-			? `${stat.firstName} ${stat.lastName}`
-			: stat.email,
+		userName: null,
 		totalAmount: stat.totalAmount,
 		expenseCount: stat.expenseCount
 	}));
@@ -534,7 +522,6 @@ export const getExpensesByVault = async (
 		// .leftJoin(categories, eq(expenses.categoryId, categories.id))
 		// .leftJoin(categoryGroups, eq(categories.groupId, categoryGroups.id))
 		.leftJoin(vaults, eq(expenses.vaultId, vaults.id))
-		.leftJoin(users, eq(expenses.userId, users.id))
 		.where(whereClause)
 		.orderBy(desc(expenses.date))
 		.limit(limit);
@@ -546,6 +533,7 @@ export const getExpensesByVault = async (
         amount: row.expenses.amount,
         date: row.expenses.date,
         createdAt: row.expenses.createdAt,
+        userId: row.expenses.userId || undefined,
         vaultId: row.expenses.vaultId || undefined,
         vault: row.vaults?.id ? {
             id: row.vaults.id,
@@ -556,126 +544,6 @@ export const getExpensesByVault = async (
             isPersonal: row.vaults.isPersonal
         } : null,
         category: categoryData.categories.find(c => c.name === row.expenses.categoryName) || null,
-        creator: row.users?.id ? {
-            id: row.users.id,
-            firstName: row.users.firstName || undefined,
-            lastName: row.users.lastName || undefined,
-            email: row.users.email
-        } : null,
     }));
 };
 
-// Email-based wrapper functions for API consistency
-export const getExpensesByEmail = async (
-	userEmail: string,
-	db: D1Database,
-	options?: GetExpensesOptions
-): Promise<ExpensesResponse> => {
-	const client = drizzle(db, { schema });
-
-	// Find user by email first
-	const user = await client
-		.select({ id: users.id })
-		.from(users)
-		.where(eq(users.email, userEmail))
-		.limit(1);
-
-	if (user.length === 0) {
-		throw new Error('User not found');
-	}
-
-	return getExpenses(user[0].id, db, options);
-};
-
-export const createExpenseByEmail = async (userEmail: string, data: any, db: D1Database, kv?: KVNamespace) => {
-	const client = drizzle(db, { schema });
-
-	// Find user by email first
-	const user = await client
-		.select({ id: users.id })
-		.from(users)
-		.where(eq(users.email, userEmail))
-		.limit(1);
-
-	if (user.length === 0) {
-		throw new Error('User not found');
-	}
-
-	return createExpense(user[0].id, data, db, kv);
-};
-
-export const updateExpenseByEmail = async (userEmail: string, vaultId: string, expenseId: string, data: any, db: D1Database, kv?: KVNamespace) => {
-	const client = drizzle(db, { schema });
-
-	// Find user by email first
-	const user = await client
-		.select({ id: users.id })
-		.from(users)
-		.where(eq(users.email, userEmail))
-		.limit(1);
-
-	if (user.length === 0) {
-		throw new Error('User not found');
-	}
-
-	return updateExpense(user[0].id, vaultId, expenseId, data, db, kv);
-};
-
-export const deleteExpenseByEmail = async (userEmail: string, vaultId: string, expenseId: string, db: D1Database, kv?: KVNamespace) => {
-	const client = drizzle(db, { schema });
-
-	// Find user by email first
-	const user = await client
-		.select({ id: users.id })
-		.from(users)
-		.where(eq(users.email, userEmail))
-		.limit(1);
-
-	if (user.length === 0) {
-		throw new Error('User not found');
-	}
-
-	return deleteExpense(user[0].id, vaultId, expenseId, db, kv);
-};
-
-export const getExpensesSummaryByEmail = async (
-	userEmail: string,
-	db: D1Database,
-	options?: GetExpensesSummaryOptions & { vaultId?: string }
-): Promise<ExpensesSummary> => {
-	const client = drizzle(db, { schema });
-
-	// Find user by email first
-	const user = await client
-		.select({ id: users.id })
-		.from(users)
-		.where(eq(users.email, userEmail))
-		.limit(1);
-
-	if (user.length === 0) {
-		throw new Error('User not found');
-	}
-
-	return getExpensesSummary(user[0].id, db, options);
-};
-
-export const getMemberSpendingByEmail = async (
-	userEmail: string,
-	db: D1Database,
-	options?: GetExpensesSummaryOptions & { vaultId?: string }
-): Promise<Array<{ userId: string|null; userName: string|null; totalAmount: number; expenseCount: number }>> => {
-	const client = drizzle(db, { schema });
-
-	// Find user by email first
-	const user = await client
-		.select({ id: users.id })
-		.from(users)
-		.where(eq(users.email, userEmail))
-		.limit(1);
-
-	if (user.length === 0) {
-		throw new Error('User not found');
-	}
-
-	return getMemberSpending(user[0].id, db, options);
-};

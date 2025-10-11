@@ -8,7 +8,6 @@ import {prettyJSON} from 'hono/pretty-json';
 import {expensesApi} from './expenses/expenses';
 import {categoriesApi} from './categories/categories';
 import {categoryGroupsApi} from './category-groups/category-groups';
-import {usersApi} from './users/users';
 import {vaultsApi} from './vaults/vaults';
 import {vaultMembersApi} from './vault-members/vault-members';
 import {notificationApi} from "$lib/server/api/notifications/notifications";
@@ -114,7 +113,6 @@ const router = new Hono<App.Api>()
     .route('/', categoriesApi)
     .route('/', categoryGroupsApi)
     .route('/notifications', notificationApi)
-    .route('/users', usersApi)
     .route('/vaults', vaultsApi)
     .route('/vault-members', vaultMembersApi)
     .route('/', templatesApi);

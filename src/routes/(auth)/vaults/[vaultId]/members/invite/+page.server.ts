@@ -4,7 +4,7 @@ import { redirect, error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import type { PageServerLoad, Actions } from './$types.js';
 import { createNotification } from '$lib/server/api/notifications/handlers';
-import {getUserVaultsByEmail, getVault} from "$lib/server/api/vaults/handlers";
+import {getUserVaults, getVault} from "$lib/server/api/vaults/handlers";
 import {getUserByEmail} from "$lib/server/api/users/handlers";
 import {getUserVaultInvitationsByEmail, inviteUserToVault} from "$lib/server/api/vault-members/handlers";
 import type {CreateNotification, NotificationType} from "$lib/schemas/expense";
@@ -76,7 +76,7 @@ export const actions: Actions = {
         try {
             // TODO: Implement actual invitation logic:
             // 2. Check if user is already a member of this vault
-            const invitedUserVaults = await getUserVaultsByEmail(form.data.email, platform.env.DB);
+            const invitedUserVaults = await getUserVaults(form.data.email, platform.env.DB);
             const isAlreadyInVault = invitedUserVaults.some(v => v.vault.id === vaultId);
             console.log('isAlreadyInVault', isAlreadyInVault);
 

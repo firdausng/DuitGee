@@ -10,7 +10,7 @@
 	let confirmPassword = $state('');
 	let firstName = $state('');
 	let lastName = $state('');
-	let isLoading = $state('');
+	let isLoading = $state(false);
 	let errorMessage = $state('');
 
     const authClient = createAuthClient({
@@ -41,10 +41,28 @@
 			return;
 		}
 
-		isLoading = true;
+
 		try {
 			// TODO: Implement authentication logic
 			console.log('Register', { email, password, firstName, lastName });
+            const { data, error } = await authClient.signUp.email({
+                email, // user email address
+                password, // user password -> min 8 characters by default
+                name: `${firstName} ${lastName}`, // user display name
+                //image, // User image URL (optional)
+                callbackURL: "/login" // A URL to redirect to after the user verifies their email (optional)
+            }, {
+                onRequest: (ctx) => {
+                    isLoading = true;
+                },
+                onSuccess: (ctx) => {
+                    //redirect to the dashboard or sign in page
+                },
+                onError: (ctx) => {
+                    // display the error message
+                    alert(ctx.error.message);
+                },
+            });
 		} catch (error) {
 			errorMessage = error instanceof Error ? error.message : 'Registration failed';
 		} finally {

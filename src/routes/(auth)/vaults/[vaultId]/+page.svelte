@@ -38,33 +38,20 @@
 	let isLoadingStats = $state(false);
 	let statsData = $state(data.stats);
 
-	// Get all vault members (owner + active members)
+	// Get all vault members (owner + active members) - without user details
 	let allMembers = $derived.by(() => {
 		if (!data.currentVault) return [];
 
 		const members = [];
-		// Add owner
-		if (data.currentVault.owner) {
-			members.push({
-				id: data.currentVault.owner.id,
-				name: data.currentVault.owner.firstName && data.currentVault.owner.lastName
-					? `${data.currentVault.owner.firstName} ${data.currentVault.owner.lastName}`
-					: data.currentVault.owner.email,
-				email: data.currentVault.owner.email,
-				isOwner: true
-			});
-		}
-		// Add active members
+		// Add active members by userId only (no user details available)
 		if (data.currentVault.members) {
 			data.currentVault.members.forEach(member => {
-				if (member.status === 'active' && member.user) {
+				if (member.status === 'active' && member.userId) {
 					members.push({
-						id: member.user.id,
-						name: member.user.firstName && member.user.lastName
-							? `${member.user.firstName} ${member.user.lastName}`
-							: member.user.email,
-						email: member.user.email,
-						isOwner: false
+						id: member.userId,
+						name: member.userId, // Use userId as fallback since we don't have user details
+						email: '',
+						isOwner: member.role === 'owner'
 					});
 				}
 			});
@@ -532,7 +519,7 @@
 				{:else}
 					<div class="divide-y divide-border">
 						{#each statsData.recentExpenses as expense (expense.id)}
-							<div class="py-2 px-3 -mx-3 rounded-md transition-colors {expense.creator ? getMemberColor(expense.creator.id) : 'bg-background'}" transition:slide={{ duration: 200 }}>
+							<div class="py-2 px-3 -mx-3 rounded-md transition-colors {expense.userId ? getMemberColor(expense.userId) : 'bg-background'}" transition:slide={{ duration: 200 }}>
 								<!-- Desktop Layout -->
 								<div class="hidden sm:block">
 									<div class="flex items-start justify-between gap-4 mb-2">
@@ -557,13 +544,6 @@
 												<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-muted text-muted-foreground flex-shrink-0">
 													{expense.category?.name}
 												</span>
-											</div>
-											<div class="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-												{#if expense.creator}
-													<span class="truncate">by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName}` : expense.creator.email}</span>
-												{:else}
-													<span class="italic">Vault</span>
-												{/if}
 											</div>
 										</div>
 									</div>
@@ -614,13 +594,6 @@
 										<div class="flex-1 min-w-0">
 											<div class="flex items-center gap-1 text-xs text-muted-foreground">
 												<span>{expense.category?.name}</span>
-											</div>
-											<div class="text-xs text-muted-foreground mt-0.5 truncate">
-												{#if expense.creator}
-													by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName}` : expense.creator.email}
-												{:else}
-													<span class="italic">Vault</span>
-												{/if}
 											</div>
 										</div>
 									</div>

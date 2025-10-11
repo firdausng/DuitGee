@@ -16,7 +16,7 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
 
 	const { vaultId } = params;
 	const client = drizzle(platform.env.DB, { schema });
-
+    console.log('[Statistic]');
 	// Fetch all expenses for the vault (with optional server-side filters)
 	const expenses = await getExpensesByVault(
 		vaultId,
@@ -26,32 +26,27 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
 			limit: 10000 // Get all expenses for statistics
 		}
 	);
+    console.log('[Statistic] expenses', expenses);
 
-	// Get vault owner
+	// Get vault owner ID
 	const vault = await client
 		.select({
-			ownerId: schema.vaults.ownerId,
-			ownerFirstName: schema.users.firstName,
-			ownerLastName: schema.users.lastName,
-			ownerEmail: schema.users.email
+			ownerId: schema.vaults.ownerId
 		})
 		.from(schema.vaults)
-		.leftJoin(schema.users, eq(schema.vaults.ownerId, schema.users.id))
 		.where(eq(schema.vaults.id, vaultId))
 		.limit(1);
 
-	// Fetch vault members for member filter (excluding owner to avoid duplicates)
+    console.log('[Statistic] vault', vault);
+
+	// Fetch vault members for member filter
 	const vaultMembers = await client
 		.select({
 			userId: schema.vaultMembers.userId,
 			role: schema.vaultMembers.role,
-			status: schema.vaultMembers.status,
-			firstName: schema.users.firstName,
-			lastName: schema.users.lastName,
-			email: schema.users.email
+			status: schema.vaultMembers.status
 		})
 		.from(schema.vaultMembers)
-		.leftJoin(schema.users, eq(schema.vaultMembers.userId, schema.users.id))
 		.where(
 			and(
 				eq(schema.vaultMembers.vaultId, vaultId),
@@ -59,6 +54,8 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
 			)
 		);
 
+
+    console.log('[Statistic] vaultMembers', vaultMembers);
 	// Combine owner and members, using Map to deduplicate by userId
 	const membersMap = new Map();
 
@@ -66,22 +63,24 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
 	if (vault[0]) {
 		membersMap.set(vault[0].ownerId, {
 			userId: vault[0].ownerId,
-			firstName: vault[0].ownerFirstName || undefined,
-			lastName: vault[0].ownerLastName || undefined,
-			email: vault[0].ownerEmail || '',
+			firstName: undefined,
+			lastName: undefined,
+			email: '',
 			role: 'owner' as const,
 			status: 'active' as const
 		});
 	}
+
+
 
 	// Add other members (skip if already in map as owner)
 	vaultMembers.forEach(m => {
 		if (!membersMap.has(m.userId)) {
 			membersMap.set(m.userId, {
 				userId: m.userId,
-				firstName: m.firstName || undefined,
-				lastName: m.lastName || undefined,
-				email: m.email || '',
+				firstName: undefined,
+				lastName: undefined,
+				email: '',
 				role: m.role,
 				status: m.status
 			});

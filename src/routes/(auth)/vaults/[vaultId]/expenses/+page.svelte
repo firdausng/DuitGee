@@ -90,7 +90,6 @@
 	let searchTerm = $state('');
 	let selectedCategory = $state('');
 	let sortBy = $state('date');
-	let selectedMemberIds = $state<string[]>([]);
 
 	let filteredExpenses = $derived.by(()=>{
         return data.expenses.expenses
@@ -98,8 +97,7 @@
                 // If no search term, show all expenses; otherwise filter by note content
                 const matchesSearch = !searchTerm || expense.note?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
                 const matchesCategory = !selectedCategory || expense.category?.id === selectedCategory;
-                const matchesMember = selectedMemberIds.length === 0 || (expense.creator && selectedMemberIds.includes(expense.creator.id));
-                return matchesSearch && matchesCategory && matchesMember;
+                return matchesSearch && matchesCategory;
             })
             .sort((a, b) => {
                 if (sortBy === 'date') return b.date.localeCompare(a.date); // ISO strings can be compared directly
@@ -142,14 +140,6 @@
 		} catch (error) {
 			console.error('Failed to delete expense:', error);
 			alert('Failed to delete expense. Please try again.');
-		}
-	}
-
-	function toggleMemberFilter(memberId: string) {
-		if (selectedMemberIds.includes(memberId)) {
-			selectedMemberIds = selectedMemberIds.filter(id => id !== memberId);
-		} else {
-			selectedMemberIds = [...selectedMemberIds, memberId];
 		}
 	}
 
@@ -307,38 +297,11 @@
 							</Select>
 						</div>
 
-						<!-- Member Filter -->
-						{#if data.vault?.allMembers && data.vault.allMembers.length > 1}
-							<div>
-								<label class="block text-sm font-medium text-foreground mb-2">Filter by Member</label>
-								<div class="space-y-2 max-h-48 overflow-y-auto">
-									{#each data.vault.allMembers as member}
-										<label class="flex items-center gap-2 cursor-pointer hover:bg-accent/50 p-2 rounded transition-colors">
-											<input
-												type="checkbox"
-												checked={selectedMemberIds.includes(member.user.id)}
-												onchange={() => toggleMemberFilter(member.user.id)}
-												disabled={isLoading}
-												class="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary"
-											/>
-											<span class="text-sm truncate flex-1">
-												{member.user.firstName && member.user.lastName ? `${member.user.firstName} ${member.user.lastName}` : member.user.email}
-											</span>
-											{#if member.role === 'owner'}
-												<span class="text-xs text-muted-foreground">(Owner)</span>
-											{/if}
-										</label>
-									{/each}
-								</div>
-							</div>
-						{/if}
-
 						<div class="pt-4 border-t border-border">
 							<Button variant="outline" class="w-full" onclick={() => {
 								searchTerm = '';
 								selectedCategory = '';
 								sortBy = 'date';
-								selectedMemberIds = [];
 							}}>
 								Clear Filters
 							</Button>
@@ -373,7 +336,7 @@
 			{:else}
 				<div class="divide-y divide-border">
 				{#each filteredExpenses as expense (expense.id)}
-					<div class="px-4 sm:px-6 py-3 sm:py-4 transition-colors rounded-md {expense.creator ? getMemberColor(expense.creator.id) : 'bg-background'}" transition:slide={{ duration: 200 }}>
+					<div class="px-4 sm:px-6 py-3 sm:py-4 transition-colors rounded-md {expense.userId ? getMemberColor(expense.userId) : 'bg-background'}" transition:slide={{ duration: 200 }}>
 						<!-- Desktop Layout -->
 						<div class="hidden sm:block">
 							<div class="flex items-start justify-between gap-4 mb-2">
@@ -407,13 +370,6 @@
 										<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
 											{expense.category?.name}
 										</span>
-									</div>
-									<div class="flex items-center space-x-2 text-xs text-muted-foreground">
-										{#if expense.creator}
-											<span>by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName}` : expense.creator.email}</span>
-										{:else}
-											<span class="italic">Vault</span>
-										{/if}
 									</div>
 								</div>
 							</div>
@@ -469,13 +425,6 @@
 										<span class="text-xs text-muted-foreground">
 											{expense.category?.name}
 										</span>
-									</div>
-									<div class="text-xs text-muted-foreground mt-0.5 truncate">
-										{#if expense.creator}
-											by {expense.creator.firstName && expense.creator.lastName ? `${expense.creator.firstName} ${expense.creator.lastName}` : expense.creator.email}
-										{:else}
-											<span class="italic">Vault</span>
-										{/if}
 									</div>
 								</div>
 							</div>

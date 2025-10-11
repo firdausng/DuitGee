@@ -7,7 +7,7 @@ import {
     declineVaultInvitation,
     removeUserFromVault,
     updateVaultMember,
-    getUserVaultInvitationsByEmail
+    getUserVaultInvitations
 } from "$lib/server/api/vault-members/handlers";
 import { describeRoute, resolver } from 'hono-openapi';
 import {getInvitationsByEmailSchema, inviteUserSchema, updateMemberSchema} from "$lib/schemas/expense";
@@ -103,11 +103,11 @@ export const vaultMembersApi = new Hono<App.Api>()
             },
         }),
         async (c) => {
-        const userId = c.get('userEmail') as string;
+            const session = c.get('currentSession');
         const invitationId = c.req.param('invitationId');
 
         try {
-            const membership = await acceptVaultInvitation(userId, invitationId, c.env.DB);
+            const membership = await acceptVaultInvitation(session.user.id, invitationId, c.env.DB);
             return c.json({
                 success: true,
                 data: membership,
@@ -145,11 +145,11 @@ export const vaultMembersApi = new Hono<App.Api>()
             },
         }),
         async (c) => {
-        const userId = c.get('userEmail') as string;
+            const session = c.get('currentSession');
         const invitationId = c.req.param('invitationId');
 
         try {
-            const membership = await declineVaultInvitation(userId, invitationId, c.env.DB);
+            const membership = await declineVaultInvitation(session.user.id, invitationId, c.env.DB);
             return c.json({
                 success: true,
                 data: membership,
@@ -190,12 +190,12 @@ export const vaultMembersApi = new Hono<App.Api>()
             },
         }),
         async (c) => {
-        const removerId = c.get('userEmail') as string;
+            const session = c.get('currentSession');
         const vaultId = c.req.param('vaultId');
         const userId = c.req.param('userId');
 
         try {
-            const membership = await removeUserFromVault(removerId, vaultId, userId, c.env.DB);
+            const membership = await removeUserFromVault(userId, vaultId, session.user.id, c.env.DB);
             return c.json({
                 success: true,
                 data: membership,
@@ -241,13 +241,13 @@ export const vaultMembersApi = new Hono<App.Api>()
         }),
         vValidator('json', updateMemberSchema),
         async (c) => {
-        const updaterId = c.get('userEmail') as string;
+            const session = c.get('currentSession');
         const vaultId = c.req.param('vaultId');
         const userId = c.req.param('userId');
         const updates = c.req.valid('json');
 
         try {
-            const membership = await updateVaultMember(updaterId, vaultId, userId, updates, c.env.DB);
+            const membership = await updateVaultMember(session.user.id, vaultId, userId, updates, c.env.DB);
             return c.json({
                 success: true,
                 data: membership,
@@ -285,10 +285,10 @@ export const vaultMembersApi = new Hono<App.Api>()
             },
         }),
         async (c) => {
-        const userId = c.get('userEmail') as string;
+            const session = c.get('currentSession');
 
         try {
-            const invitations = await getUserVaultInvitationsByEmail(userId, c.env.DB);
+            const invitations = await getUserVaultInvitations(session.user.id, c.env.DB);
             return c.json({
                 success: true,
                 data: invitations
@@ -299,44 +299,5 @@ export const vaultMembersApi = new Hono<App.Api>()
                 success: false,
                 error: 'Failed to fetch invitations'
             }, 500);
-        }
-    })
-
-    .get(
-        '/invitations/by-email',
-        describeRoute({
-            ...commonVaultMemberConfig,
-            description: 'Get invitations by email',
-            responses: {
-                200: {
-                    description: 'Successful response',
-                    content: {
-                        'application/json': { schema: resolver(v.object({
-                            success: v.boolean(),
-                            data: v.array(v.any())
-                        })) },
-                    },
-                },
-                404: {
-                    description: 'User not found',
-                },
-            },
-        }),
-        vValidator('query', getInvitationsByEmailSchema),
-        async (c) => {
-        const query = c.req.valid('query');
-
-        try {
-            const invitations = await getUserVaultInvitationsByEmail(query.email, c.env.DB);
-            return c.json({
-                success: true,
-                data: invitations
-            });
-        } catch (error) {
-            console.error('Error fetching invitations by email:', error);
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to fetch invitations'
-            }, error instanceof Error && error.message === 'User not found' ? 404 : 500);
         }
     });
