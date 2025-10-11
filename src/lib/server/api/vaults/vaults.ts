@@ -2,11 +2,11 @@ import {Hono} from 'hono';
 import * as v from "valibot";
 import {vValidator} from "@hono/valibot-validator";
 import {
-    getUserVaultsByEmail,
-    getVaultByEmail,
-    createVaultByEmail,
-    updateVaultByEmail,
-    deleteVaultByEmail,
+    getUserVaults,
+    getVault,
+    createVault,
+    updateVault,
+    deleteVault,
 } from "$lib/server/api/vaults/handlers";
 import {describeRoute, resolver} from 'hono-openapi';
 import {getUserVaultsByEmailSchema, updateVaultSchema, vaultSchema} from "$lib/schemas/expense";
@@ -40,7 +40,7 @@ export const vaultsApi = new Hono<App.Api>()
             const session = c.get('currentSession');
 
             try {
-                const vaults = await getUserVaultsByEmail(session.user.email, c.env.DB);
+                const vaults = await getUserVaults(session.user.email, c.env.DB);
                 return c.json({
                     success: true,
                     data: vaults
@@ -80,7 +80,7 @@ export const vaultsApi = new Hono<App.Api>()
             const query = c.req.valid('query');
 
             try {
-                const vaults = await getUserVaultsByEmail(query.email, c.env.DB);
+                const vaults = await getUserVaults(query.email, c.env.DB);
                 return c.json({
                     success: true,
                     data: vaults
@@ -118,7 +118,7 @@ export const vaultsApi = new Hono<App.Api>()
             const data = c.req.valid('json');
 
             try {
-                const vault = await createVaultByEmail(session.user.email, data, c.env.DB, c.env.KV);
+                const vault = await createVault(session.user.email, data, c.env.DB, c.env.KV);
                 return c.json({
                     success: true,
                     data: vault
@@ -158,7 +158,7 @@ export const vaultsApi = new Hono<App.Api>()
             const vaultId = c.req.param('id');
 
             try {
-                const vault = await getVaultByEmail(session.user.email, vaultId, c.env.DB);
+                const vault = await getVault(session.user.email, vaultId, c.env.DB);
                 return c.json({
                     success: true,
                     data: vault
@@ -201,7 +201,7 @@ export const vaultsApi = new Hono<App.Api>()
             const data = c.req.valid('json');
 
             try {
-                const vault = await updateVaultByEmail(session.user.email, vaultId, data, c.env.DB, c.env.KV);
+                const vault = await updateVault(session.user.email, vaultId, data, c.env.DB, c.env.KV);
                 return c.json({
                     success: true,
                     data: vault
@@ -243,7 +243,7 @@ export const vaultsApi = new Hono<App.Api>()
             const vaultId = c.req.param('id');
 
             try {
-                const vault = await deleteVaultByEmail(session.user.email, vaultId, c.env.DB, c.env.KV);
+                const vault = await deleteVault(session.user.email, vaultId, c.env.DB, c.env.KV);
                 return c.json({
                     success: true,
                     data: vault,
@@ -298,33 +298,24 @@ export const vaultsApi = new Hono<App.Api>()
                     getExpensesSummary,
                     getMemberSpending
                 } = await import('$lib/server/api/expenses/handlers');
-                const {getUserByEmail} = await import('$lib/server/api/users/handlers');
 
-                // Get user ID from email
-                const user = await getUserByEmail(session.user.email, c.env.DB);
-                if (!user) {
-                    return c.json({
-                        success: false,
-                        error: 'User not found'
-                    }, 404);
-                }
 
                 // Get filtered stats
                 const [expensesResult, summaryResult, memberSpendingResult] = await Promise.all([
-                    getExpenses(user.id, c.env.DB, {
+                    getExpenses(session.user.id, c.env.DB, {
                         vaultId,
                         startDate,
                         endDate,
                         memberIds,
                         limit
                     }),
-                    getExpensesSummary(user.id, c.env.DB, {
+                    getExpensesSummary(session.user.id, c.env.DB, {
                         vaultId,
                         startDate,
                         endDate,
                         memberIds
                     }),
-                    getMemberSpending(user.id, c.env.DB, {
+                    getMemberSpending(session.user.id, c.env.DB, {
                         vaultId,
                         startDate,
                         endDate,

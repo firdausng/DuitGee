@@ -8,7 +8,7 @@ import { createId } from '@paralleldrive/cuid2';
 export const inviteUserToVault = async (
     inviterId: string,
     vaultId: string,
-    inviteeEmail: string,
+    inviteeId: string,
     role: string,
     permissions: string,
     db: D1Database
@@ -38,19 +38,6 @@ export const inviteUserToVault = async (
     if (canInvite.length === 0) {
         throw new Error('Permission denied: Cannot invite users to this vault');
     }
-
-    // Find the user by email
-    const inviteeUser = await client
-        .select()
-        .from(users)
-        .where(eq(users.email, inviteeEmail))
-        .limit(1);
-
-    if (inviteeUser.length === 0) {
-        throw new Error('User not found with that email address');
-    }
-
-    const inviteeId = inviteeUser[0].id;
 
     // Check if user is already a member or has pending invitation
     const existingMembership = await client
@@ -91,7 +78,7 @@ export const inviteUserToVault = async (
 
     return {
         invitation: invitation[0],
-        inviteeUser: inviteeUser[0]
+        inviteeId: inviteeId
     };
 };
 
@@ -328,15 +315,9 @@ export const getUserVaultInvitations = async (userId: string, db: D1Database) =>
                 icon: vaults.icon,
                 iconType: vaults.iconType
             },
-            inviter: {
-                id: users.id,
-                name: users.name,
-                email: users.email
-            }
         })
         .from(vaultMembers)
         .leftJoin(vaults, eq(vaultMembers.vaultId, vaults.id))
-        .leftJoin(users, eq(vaultMembers.invitedBy, users.id))
         .where(
             and(
                 eq(vaultMembers.userId, userId),

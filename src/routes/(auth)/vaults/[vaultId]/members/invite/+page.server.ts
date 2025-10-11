@@ -1,12 +1,11 @@
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
-import { redirect, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import type { PageServerLoad, Actions } from './$types.js';
 import { createNotification } from '$lib/server/api/notifications/handlers';
-import {getUserVaults, getVault} from "$lib/server/api/vaults/handlers";
-import {getUserByEmail} from "$lib/server/api/users/handlers";
-import {getUserVaultInvitationsByEmail, inviteUserToVault} from "$lib/server/api/vault-members/handlers";
+import {getUserVaults} from "$lib/server/api/vaults/handlers";
+import {getUserVaultInvitations, inviteUserToVault} from "$lib/server/api/vault-members/handlers";
 import type {CreateNotification, NotificationType} from "$lib/schemas/expense";
 
 // Schema for inviting a user
@@ -87,7 +86,8 @@ export const actions: Actions = {
                 }
             }
 
-            const invitation = await getUserVaultInvitationsByEmail(form.data.email, platform.env.DB);
+            const mockUserId = 'mock-user-id';
+            const invitation = await getUserVaultInvitations(mockUserId, platform.env.DB);
 
             const alreadyInvited = invitation.some(v => v.vault?.id === vaultId);
             if (alreadyInvited) {
