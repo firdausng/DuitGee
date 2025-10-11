@@ -16,66 +16,7 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
     try {
         // Get time period from URL params
         const timePeriod = url.searchParams.get('period') || 'monthly';
-        const memberIdsParam = url.searchParams.get('memberIds');
-        const memberIds = memberIdsParam ? memberIdsParam.split(',') : undefined;
-        const limit = parseInt(url.searchParams.get('limit') || '10');
 
-        // Calculate date range based on time period
-        const now = new Date();
-        let startDate: string | undefined;
-        let endDate: string | undefined;
-
-        console.log('timePeriod', timePeriod);
-        switch (timePeriod) {
-            case 'daily':
-                const startOfDay = new Date(now);
-                startOfDay.setHours(0, 0, 0, 0);
-                const endOfDay = new Date(now);
-                endOfDay.setHours(23, 59, 59, 999);
-                startDate = startOfDay.toISOString();
-                endDate = endOfDay.toISOString();
-                break;
-            case 'weekly':
-                const startOfWeek = new Date(now);
-                startOfWeek.setDate(now.getDate() - now.getDay());
-                startOfWeek.setHours(0, 0, 0, 0);
-                const endOfWeek = new Date(startOfWeek);
-                endOfWeek.setDate(startOfWeek.getDate() + 6);
-                endOfWeek.setHours(23, 59, 59, 999);
-                startDate = startOfWeek.toISOString();
-                endDate = endOfWeek.toISOString();
-                break;
-            case 'monthly':
-                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-                const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                endOfMonth.setHours(23, 59, 59, 999);
-                startDate = startOfMonth.toISOString();
-                endDate = endOfMonth.toISOString();
-                break;
-            case 'yearly':
-                const startOfYear = new Date(now.getFullYear(), 0, 1);
-                const endOfYear = new Date(now.getFullYear(), 11, 31);
-                endOfYear.setHours(23, 59, 59, 999);
-                startDate = startOfYear.toISOString();
-                endDate = endOfYear.toISOString();
-                break;
-            case 'all':
-                // No date filtering for "All Time"
-                startDate = undefined;
-                endDate = undefined;
-                break;
-            default:
-                // Default to daily
-                const defaultStartOfDay = new Date(now);
-                defaultStartOfDay.setHours(0, 0, 0, 0);
-                const defaultEndOfDay = new Date(now);
-                defaultEndOfDay.setHours(23, 59, 59, 999);
-                startDate = defaultStartOfDay.toISOString();
-                endDate = defaultEndOfDay.toISOString();
-        }
-
-        // Get user's available vaults
-        // const userVaults = await getUserVaults(locals.currentUser.id, platform?.env?.DB);
 
         // Find the current vault and user's role
         const currentVaultData = locals.currentUserVaults.find(v => v.vault.id === vaultId);
@@ -114,30 +55,6 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
             members: getVaultWithMemberById.members,
         };
 
-        // Load dashboard stats data
-        const [expensesResult, summaryResult, memberSpendingResult] = await Promise.all([
-            getExpenses(locals.currentUser.id, platform.env.DB, {
-                vaultId,
-                startDate,
-                endDate,
-                memberIds,
-                limit
-            }),
-            getExpensesSummary(locals.currentUser.id, platform.env.DB, {
-                vaultId,
-                startDate,
-                endDate,
-                memberIds
-            }),
-            getMemberSpending(locals.currentUser.id, platform.env.DB, {
-                vaultId,
-                startDate,
-                endDate,
-                memberIds
-            })
-        ]);
-
-        console.log('expensesResult', expensesResult);
 
         return {
             currentVault,
@@ -145,13 +62,6 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
             vaultId,
             url: url.pathname,
             currentPeriod: timePeriod,
-            stats: {
-                totalExpenses: expensesResult.pagination.total,
-                totalAmount: summaryResult.totalAmount,
-                avgAmount: expensesResult.pagination.total > 0 ? summaryResult.totalAmount / expensesResult.pagination.total : 0,
-                recentExpenses: expensesResult.expenses,
-                memberSpending: memberSpendingResult
-            }
         };
     } catch (err) {
         console.error('Error loading vault data:', err);

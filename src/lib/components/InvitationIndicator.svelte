@@ -38,8 +38,8 @@
 
     // Fetch invitations on mount
     onMount(() => {
-        fetchInvitationCount();
-
+        // fetchInvitationCount();
+        //
         // Refresh count every 5 minutes
         // const interval = setInterval(fetchInvitationCount, 5 * 60 * 1000);
         //

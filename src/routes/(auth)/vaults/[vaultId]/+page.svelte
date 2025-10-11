@@ -10,6 +10,7 @@
     import {goto, pushState } from "$app/navigation";
 	import { fade, slide } from 'svelte/transition';
     import {ofetch} from "ofetch";
+    import {onMount} from "svelte";
 
     type Period = 'daily' | 'yesterday' | 'weekly' | 'monthly' | 'yearly' | 'all';
     type TimePeriod = { id: Period, label: string, icon: string}
@@ -36,7 +37,11 @@
 	let selectedMemberIds = $state<string[]>(page.url.searchParams.get('memberIds')?.split(',').filter(Boolean) || []);
 	let expenseLimit = $state<number>(parseInt(page.url.searchParams.get('limit') || '10'));
 	let isLoadingStats = $state(false);
-	let statsData = $state(data.stats);
+	let statsData = $state<any>();
+
+    onMount(async ()=>{
+        await fetchStats();
+    })
 
 	// Get all vault members (owner + active members) - without user details
 	let allMembers = $derived.by(() => {
@@ -165,12 +170,9 @@
 					// 'Authorization': `Bearer ${authManager.authState?.accessToken}`
 				}
 			});
-
-			if (response.ok) {
-				const result = await response.json();
-				if (result.success && result.data) {
-					statsData = result.data;
-				}
+            console.log('response.ok', response)
+			if (response.success) {
+                statsData = response.data;
 			}
 		} catch (error) {
 			console.error('Failed to fetch stats:', error);
