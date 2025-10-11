@@ -24,9 +24,12 @@ export const setupServicesHandler: Handle = async ({ event, resolve }) => {
 
 const publicRoutes = [
     '/login',
+    '/register',
     '/logged-out',
     '/callback',
     '/unauthorized',
+    '/privacy',
+    '/term',
     '/.well-known',
     '/openapi.json',
     '/scalar',

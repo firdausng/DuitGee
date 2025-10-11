@@ -57,7 +57,6 @@ export const createTemplate = async (
 	data: CreateExpenseTemplate,
 	db: D1Database
 ) => {
-    // console.log('[createTemplate] data:', data);
 	const client = drizzle(db, { schema });
     console.log('[createTemplate] data:', data);
     await requireVaultPermission(data.userId, data.vaultId, 'canCreateTemplateExpenses', db);

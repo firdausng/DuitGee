@@ -48,13 +48,13 @@ export const vaultMembersApi = new Hono<App.Api>()
         }),
         vValidator('json', inviteUserSchema),
         async (c) => {
-        const userId = c.get('userEmail') as string;
-        const vaultId = c.req.param('vaultId');
+            const session = c.get('currentSession');
+            const vaultId = c.req.param('vaultId');
         const data = c.req.valid('json');
 
         try {
             const result = await inviteUserToVault(
-                userId,
+                session.user.email,
                 vaultId,
                 data.email,
                 data.role,

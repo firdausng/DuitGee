@@ -66,7 +66,6 @@ export const actions = {
         console.log('[create template]', locals.currentUser, form.data);
 		try {
 			const template = await createTemplate(
-				locals.currentUser.id,
                 form.data,
 				platform.env.DB
 			);
@@ -87,6 +86,8 @@ export const actions = {
 			return { success: false, error: 'Unauthorized' };
 		}
 
+        let { vaultId } = params;
+
         const form = await superValidate(request, valibot(updateExpenseTemplateSchema));
 
         console.log('form', form);
@@ -99,6 +100,7 @@ export const actions = {
 			const template = await updateTemplate(
 				locals.currentUser.id,
                 form.data.templateId,
+                vaultId,
 				form.data,
 				platform.env.DB
 			);
@@ -110,7 +112,7 @@ export const actions = {
 		}
 	},
 
-	delete: async ({ locals, platform, request }) => {
+	delete: async ({ locals, platform, request, params }) => {
 		if (!platform?.env?.DB) {
 			return { success: false, error: 'Database not available' };
 		}
@@ -118,6 +120,8 @@ export const actions = {
 		if (!locals.currentUser) {
 			return { success: false, error: 'Unauthorized' };
 		}
+
+        let { vaultId} = params;
 
 		const formData = await request.formData();
 		const templateId = formData.get('id')?.toString();
@@ -127,7 +131,7 @@ export const actions = {
 		}
 
 		try {
-			await deleteTemplate(locals.currentUser.id, templateId, platform.env.DB);
+			await deleteTemplate(locals.currentUser.id, templateId, vaultId, platform.env.DB);
 			return { success: true };
 		} catch (err) {
 			console.error('Error deleting template:', err);

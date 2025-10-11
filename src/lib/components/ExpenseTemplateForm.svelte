@@ -2,8 +2,6 @@
     import Button from '$lib/components/ui/Button.svelte';
     import IconDisplay from '$lib/components/IconDisplay.svelte';
     import IconPicker from '$lib/components/ui/IconPicker.svelte';
-    import SearchableSelect from '$lib/components/ui/SearchableSelect.svelte';
-    import CustomCombobox from '$lib/components/ui/CustomCombobox.svelte';
     import type {Category, CreateExpenseTemplate, ExpenseTemplate, UpdateExpenseTemplate} from "$lib/schemas/expense";
     import type {PaymentProvider, PaymentType} from "$lib/configuration/paymentTypes";
     import {Combobox} from "bits-ui";

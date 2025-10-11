@@ -9,6 +9,7 @@
 	import Trash from 'phosphor-svelte/lib/Trash';
     import {goto, pushState } from "$app/navigation";
 	import { fade, slide } from 'svelte/transition';
+    import {ofetch} from "ofetch";
 
     type Period = 'daily' | 'yesterday' | 'weekly' | 'monthly' | 'yearly' | 'all';
     type TimePeriod = { id: Period, label: string, icon: string}
@@ -171,7 +172,7 @@
 				params.set('memberIds', selectedMemberIds.join(','));
 			}
 
-			const response = await fetch(`/api/vaults/${data.vaultId}/stats?${params.toString()}`, {
+			const response = await ofetch(`/api/vaults/${data.vaultId}/stats?${params.toString()}`, {
 				headers: {
 					'Accept': 'application/json',
 					// 'Authorization': `Bearer ${authManager.authState?.accessToken}`

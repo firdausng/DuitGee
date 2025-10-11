@@ -7,7 +7,10 @@
     let {data} = $props();
 	let email = $state('');
 	let password = $state('');
-	let isLoading = $state(false);
+	let confirmPassword = $state('');
+	let firstName = $state('');
+	let lastName = $state('');
+	let isLoading = $state('');
 	let errorMessage = $state('');
 
     const authClient = createAuthClient({
@@ -28,18 +31,28 @@
 			return;
 		}
 
+		if (password !== confirmPassword) {
+			errorMessage = 'Passwords do not match';
+			return;
+		}
+
+		if (!firstName || !lastName) {
+			errorMessage = 'First name and last name are required';
+			return;
+		}
+
 		isLoading = true;
 		try {
 			// TODO: Implement authentication logic
-			console.log('Login', { email, password });
+			console.log('Register', { email, password, firstName, lastName });
 		} catch (error) {
-			errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+			errorMessage = error instanceof Error ? error.message : 'Registration failed';
 		} finally {
 			isLoading = false;
 		}
 	}
 
-	async function handleGoogleLogin() {
+	async function handleGoogleSignup() {
 		isLoading = true;
 		try {
             const response = await authClient.signIn.social({
@@ -48,7 +61,7 @@
                 errorCallbackURL: "/error",
             });
 		} catch (error) {
-			errorMessage = error instanceof Error ? error.message : 'Google login failed';
+			errorMessage = error instanceof Error ? error.message : 'Google signup failed';
 		} finally {
 			isLoading = false;
 		}
@@ -56,7 +69,7 @@
 </script>
 
 <svelte:head>
-	<title>Login - DuitGee</title>
+	<title>Sign Up - DuitGee</title>
 </svelte:head>
 
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 px-4 sm:px-6 lg:px-8">
@@ -69,12 +82,12 @@
 				</div>
 			</div>
 			<h1 class="text-4xl font-bold text-primary mb-2">DuitGee</h1>
-			<p class="text-muted-foreground">Track your expenses with ease</p>
+			<p class="text-muted-foreground">Create your account</p>
 		</div>
 
 		<!-- Main Card -->
 		<div class="bg-card border border-border rounded-lg shadow-lg p-6 sm:p-8">
-			<h2 class="text-2xl font-semibold text-center mb-6">Login</h2>
+			<h2 class="text-2xl font-semibold text-center mb-6">Sign Up</h2>
 
 			<!-- Error Message -->
 			{#if errorMessage}
@@ -83,11 +96,11 @@
 				</div>
 			{/if}
 
-			<!-- Google Login Button -->
+			<!-- Google Signup Button -->
 			<Button
 				variant="outline"
 				class="w-full mb-6"
-				onclick={handleGoogleLogin}
+				onclick={handleGoogleSignup}
 				disabled={isLoading}
 			>
 				<svg class="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -108,7 +121,7 @@
 						d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
 					/>
 				</svg>
-				Login with Google
+				Sign up with Google
 			</Button>
 
 			<!-- Divider -->
@@ -123,6 +136,33 @@
 
 			<!-- Email/Password Form -->
 			<form onsubmit={(e) => { e.preventDefault(); handleEmailAuth(); }}>
+				<div class="grid grid-cols-2 gap-4 mb-4">
+					<div>
+						<label for="firstName" class="block text-sm font-medium text-foreground mb-1.5">
+							First Name
+						</label>
+						<Input
+							id="firstName"
+							type="text"
+							bind:value={firstName}
+							placeholder="John"
+							disabled={isLoading}
+						/>
+					</div>
+					<div>
+						<label for="lastName" class="block text-sm font-medium text-foreground mb-1.5">
+							Last Name
+						</label>
+						<Input
+							id="lastName"
+							type="text"
+							bind:value={lastName}
+							placeholder="Doe"
+							disabled={isLoading}
+						/>
+					</div>
+				</div>
+
 				<div class="mb-4">
 					<label for="email" class="block text-sm font-medium text-foreground mb-1.5">
 						Email Address
@@ -149,14 +189,17 @@
 					/>
 				</div>
 
-				<div class="flex items-center justify-between mb-6">
-					<label class="flex items-center">
-						<input type="checkbox" class="mr-2 h-4 w-4 rounded border-border text-primary" />
-						<span class="text-sm text-muted-foreground">Remember me</span>
+				<div class="mb-6">
+					<label for="confirmPassword" class="block text-sm font-medium text-foreground mb-1.5">
+						Confirm Password
 					</label>
-					<a href="/forgot-password" class="text-sm text-primary hover:underline">
-						Forgot password?
-					</a>
+					<Input
+						id="confirmPassword"
+						type="password"
+						bind:value={confirmPassword}
+						placeholder="••••••••"
+						disabled={isLoading}
+					/>
 				</div>
 
 				<Button
@@ -167,20 +210,20 @@
 					{#if isLoading}
 						<div class="flex items-center justify-center">
 							<div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"></div>
-							Logging in...
+							Creating account...
 						</div>
 					{:else}
-						Login
+						Create Account
 					{/if}
 				</Button>
 			</form>
 
-			<!-- Register Link -->
+			<!-- Login Link -->
 			<div class="mt-6 text-center">
 				<p class="text-sm text-muted-foreground">
-					Don't have an account?
-					<a href="/register" class="text-primary hover:underline font-medium">
-						Sign up
+					Already have an account?
+					<a href="/login" class="text-primary hover:underline font-medium">
+						Login
 					</a>
 				</p>
 			</div>

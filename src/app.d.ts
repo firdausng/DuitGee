@@ -5,8 +5,7 @@ import type {UserVault} from "$lib/types";
 import type {CategoryData} from "$lib/configuration/categories";
 import {PUBLIC_CATEGORIES_KEY} from "$lib/server/constants";
 
-// See https://svelte.dev/docs/kit/types#app.d.ts
-// for information about these interfaces
+
 declare global {
 	namespace App {
         interface Platform {
@@ -88,29 +87,6 @@ declare global {
             isLoading?: boolean;
         }
     }
-
-    namespace Cloudflare {
-        interface Env {
-            DATABASE_URL: string;
-            MY_VARIABLE: string;
-            BASE_PATH: string;
-            NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: string;
-            CLERK_SECRET_KEY: string;
-            WORKOS_API_KEY: string;
-            WORKOS_CLIENT_ID: string;
-            WORKOS_COOKIE_PASSWORD: string;
-            ADMIN_EMAILS: string;
-            BETTER_AUTH_URL: string;
-            BETTER_AUTH_SECRET: string;
-            GOOGLE_CLIENT_ID: string;
-            GOOGLE_CLIENT_SECRET: string;
-            ASSETS: Fetcher;
-            DB: D1Database;
-            AUTH_DB: D1Database;
-            KV: KVNamespace;
-        }
-    }
 }
-
 
 export {};
