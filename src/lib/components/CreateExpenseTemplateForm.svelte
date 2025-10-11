@@ -190,7 +190,7 @@
 
 <form onsubmit={handleSubmit} class="space-y-4 pr-8 md:pr-2">
     <!-- Template Name -->
-    <div>
+    <div class="pr-18">
         <label for="name" class="block text-sm font-medium text-foreground mb-1">
             Template Name <span class="text-destructive">*</span>
         </label>
@@ -204,8 +204,16 @@
         />
     </div>
 
-    <!-- Description -->
+    <!-- Icon -->
     <div>
+        <label class="block text-sm font-medium text-foreground mb-1">
+            Icon
+        </label>
+        <IconPicker bind:value={getIcon, setIcon}/>
+    </div>
+
+    <!-- Description -->
+    <div class="pr-18">
         <label for="description" class="block text-sm font-medium text-foreground mb-1">
             Description
         </label>
@@ -219,7 +227,7 @@
     </div>
 
     <!-- Category -->
-    <div>
+    <div class="pr-18">
         <label for="categoryName" class="block text-sm font-medium text-foreground mb-1">
             Category
         </label>
@@ -282,7 +290,7 @@
     </div>
 
     <!-- Default User -->
-    <div>
+    <div class="pr-18">
         <label class="block text-sm font-medium text-foreground mb-1">
             Default User
         </label>
@@ -336,7 +344,7 @@
     </div>
 
     <!-- Default Amount -->
-    <div>
+    <div class="pr-18">
         <label for="amount" class="block text-sm font-medium text-foreground mb-1">
             Default Amount
         </label>
@@ -351,8 +359,22 @@
         />
     </div>
 
+    <!-- Default Note -->
+    <div class="pr-18">
+        <label for="note" class="block text-sm font-medium text-foreground mb-1">
+            Default Note
+        </label>
+        <input
+                type="text"
+                id="note"
+                bind:value={formData.note}
+                placeholder="Optional default note"
+                class="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+        />
+    </div>
+
     <!-- Payment Type -->
-    <div>
+    <div class="pr-18">
         <label for="paymentType" class="block text-sm font-medium text-foreground mb-1">
             Payment Type
         </label>
@@ -414,7 +436,7 @@
 
     <!-- Payment Provider -->
     {#if paymentProviderForPaymentType?.length > 0}
-        <div>
+        <div class="pr-18">
             <label for="paymentProvider" class="block text-sm font-medium text-foreground mb-1">
                 Payment Provider
             </label>
@@ -471,28 +493,6 @@
             </Select.Root>
         </div>
     {/if}
-
-    <!-- Default Note -->
-    <div>
-        <label for="note" class="block text-sm font-medium text-foreground mb-1">
-            Default Note
-        </label>
-        <input
-            type="text"
-            id="note"
-            bind:value={formData.note}
-            placeholder="Optional default note"
-            class="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-        />
-    </div>
-
-    <!-- Icon -->
-    <div>
-        <label class="block text-sm font-medium text-foreground mb-1">
-            Icon
-        </label>
-        <IconPicker bind:value={getIcon, setIcon}/>
-    </div>
 
     <!-- Actions -->
     <div class="flex gap-3 pt-4">

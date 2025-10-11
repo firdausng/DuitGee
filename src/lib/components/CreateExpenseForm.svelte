@@ -1,6 +1,7 @@
 <script lang="ts">
     import {superForm, type SuperValidated} from 'sveltekit-superforms';
     import Button from '$lib/components/ui/Button.svelte';
+    import SearchableDropdown from '$lib/components/ui/SearchableDropdown.svelte';
     import { goto } from '$app/navigation';
     import {type Category, type CreateExpense} from "$lib/schemas/expense";
     import {
@@ -220,7 +221,7 @@
 
 <form method="POST" use:enhance class="space-y-4">
     <!-- Amount -->
-    <div>
+    <div class="pr-18">
         <label for="amount" class="block text-sm font-medium text-foreground mb-1">
             Amount <span class="text-destructive">*</span>
         </label>
@@ -244,8 +245,11 @@
         {/if}
     </div>
 
+<!--    <div>-->
+<!--        <SearchableDropdown />-->
+<!--    </div>-->
     <!-- Category -->
-    <div>
+    <div class="pr-18">
         <div class="flex gap-2 justify-between items-center">
             <label for="categoryName" class="block text-sm font-medium text-foreground mb-1">
                 Category <span class="text-destructive">*</span>
@@ -332,7 +336,7 @@
     </div>
 
     <!-- Date -->
-    <div>
+    <div class="pr-18">
         <label for="date" class="block text-sm font-medium text-foreground mb-1">
             When <span class="text-destructive">*</span>
         </label>
@@ -354,7 +358,7 @@
     </div>
 
     <!-- Who Spent -->
-    <div>
+    <div class="pr-18">
         <div class="flex flex-col gap-2 justify-between">
             <label for="userId" class="block text-sm font-medium text-foreground mb-1">
                 Who spent?
@@ -435,7 +439,7 @@
     </div>
 
     <!-- Note -->
-    <div>
+    <div class="pr-18">
         <label for="note" class="block text-sm font-medium text-foreground mb-1">
             What did you spend on?
         </label>
@@ -469,7 +473,7 @@
         {#if showAdvancedOptions}
             <div class="space-y-4">
                 <!-- Payment Type -->
-                <div>
+                <div class="pr-18">
                     <div class="flex gap-2 justify-between items-center py-2">
                         <label for="paymentType" class="block text-sm font-medium text-foreground mb-1">
                             Payment Type
@@ -557,7 +561,7 @@
 
                 <!-- Payment Provider -->
                 {#if paymentProviderForPaymentType?.length > 0}
-                    <div>
+                    <div class="pr-18">
                         <div class="flex gap-2 justify-between items-center py-2">
                             <label for="paymentProvider" class="block text-sm font-medium text-foreground mb-1">
                                 Payment Provider

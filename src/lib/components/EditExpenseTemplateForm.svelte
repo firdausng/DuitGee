@@ -195,7 +195,7 @@
 
 <form onsubmit={handleSubmit} class="space-y-4 pr-8 md:pr-2">
     <!-- Template Name -->
-    <div>
+    <div class="pr-18">
         <label for="name" class="block text-sm font-medium text-foreground mb-1">
             Template Name <span class="text-destructive">*</span>
         </label>
@@ -210,7 +210,7 @@
     </div>
 
     <!-- Description -->
-    <div>
+    <div class="pr-18">
         <label for="description" class="block text-sm font-medium text-foreground mb-1">
             Description
         </label>
@@ -224,7 +224,7 @@
     </div>
 
     <!-- Category -->
-    <div>
+    <div class="pr-18">
         <label for="categoryName" class="block text-sm font-medium text-foreground mb-1">
             Category
         </label>
@@ -287,7 +287,7 @@
     </div>
 
     <!-- Default User -->
-    <div>
+    <div class="pr-18">
         <label for="defaultUserId" class="block text-sm font-medium text-foreground mb-1">
             Default User
         </label>
@@ -341,7 +341,7 @@
     </div>
 
     <!-- Default Amount -->
-    <div>
+    <div class="pr-18">
         <label for="amount" class="block text-sm font-medium text-foreground mb-1">
             Default Amount
         </label>
@@ -357,7 +357,7 @@
     </div>
 
     <!-- Payment Type -->
-    <div>
+    <div class="pr-18">
         <label for="paymentType" class="block text-sm font-medium text-foreground mb-1">
             Payment Type
         </label>
@@ -419,7 +419,7 @@
 
     <!-- Payment Provider -->
     {#if paymentProviderForPaymentType?.length > 0}
-        <div>
+        <div class="pr-18">
             <label for="paymentProvider" class="block text-sm font-medium text-foreground mb-1">
                 Payment Provider
             </label>
@@ -478,7 +478,7 @@
     {/if}
 
     <!-- Default Note -->
-    <div>
+    <div class="pr-18">
         <label for="note" class="block text-sm font-medium text-foreground mb-1">
             Default Note
         </label>
