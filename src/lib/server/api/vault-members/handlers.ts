@@ -86,7 +86,6 @@ export const inviteUserToVault = async (
 export const acceptVaultInvitation = async (userId: string, invitationId: string, db: D1Database) => {
     const client = drizzle(db, { schema });
 
-    console.log('[acceptVaultInvitation] userId:', userId, 'invitationId:', invitationId);
 
     // First check if invitation exists at all
     const anyInvitation = await client
@@ -95,7 +94,6 @@ export const acceptVaultInvitation = async (userId: string, invitationId: string
         .where(eq(vaultMembers.id, invitationId))
         .limit(1);
 
-    console.log('[acceptVaultInvitation] anyInvitation:', anyInvitation);
 
     // Find the invitation
     const invitation = await client
@@ -109,8 +107,6 @@ export const acceptVaultInvitation = async (userId: string, invitationId: string
             )
         )
         .limit(1);
-
-    console.log('[acceptVaultInvitation] invitation found:', invitation);
 
     if (invitation.length === 0) {
         if (anyInvitation.length === 0) {

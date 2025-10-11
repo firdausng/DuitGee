@@ -58,7 +58,6 @@ export const createTemplate = async (
 	db: D1Database
 ) => {
 	const client = drizzle(db, { schema });
-    console.log('[createTemplate] data:', data);
     await requireVaultPermission(data.userId, data.vaultId, 'canCreateTemplateExpenses', db);
 	const templateId = createId();
 
@@ -124,8 +123,6 @@ export const deleteTemplate = async (
 			)
 		)
 		.returning();
-
-    console.log('[deleteTemplate] deletedTemplate:', deletedTemplate);
 
 	return deletedTemplate[0];
 };

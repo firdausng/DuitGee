@@ -33,7 +33,7 @@ export const templatesApi = new Hono<App.Api>()
 			},
 		}),
 		async (c) => {
-		const userId = c.get('userEmail') as string;
+
 		const vaultId = c.req.param('vaultId');
 		const templatesList = await getTemplates(vaultId, c.env.DB);
 
@@ -80,7 +80,6 @@ export const templatesApi = new Hono<App.Api>()
 			},
 		}),
 		async (c) => {
-		const userId = c.get('userEmail') as string;
 		const id = c.req.param('id');
 		const vaultId = c.req.param('vaultId');
 
@@ -111,12 +110,12 @@ export const templatesApi = new Hono<App.Api>()
 		}),
 		vValidator('json', updateExpenseTemplateSchema),
 		async (c) => {
-		const userId = c.get('userEmail') as string;
+            const session = c.get('currentSession');
 		const id = c.req.param('id');
         const vaultId = c.req.param('vaultId');
 		const data = c.req.valid('json');
 
-		const template = await updateTemplate(userId, id, vaultId, data, c.env.DB);
+		const template = await updateTemplate(session.user.id, id, vaultId, data, c.env.DB);
 
 		if (!template) {
 			return c.json({ error: 'Template not found' }, 404);
@@ -142,11 +141,11 @@ export const templatesApi = new Hono<App.Api>()
 			},
 		}),
 		async (c) => {
-		const userId = c.get('userEmail') as string;
+            const session = c.get('currentSession');
 		const id = c.req.param('id');
 		const vaultId = c.req.param('vaultId');
 
-		const isDeleted = await deleteTemplate(userId, id, vaultId, c.env.DB);
+		const isDeleted = await deleteTemplate(session.user.id, id, vaultId, c.env.DB);
 
 		if (!isDeleted) {
 			return c.json({ error: 'Template not found' }, 404);

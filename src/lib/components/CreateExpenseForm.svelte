@@ -75,7 +75,6 @@
                     'Content-Type': 'application/json'
                 }
             });
-            console.log(`response`, response)
             if(response){
                 await goto(`/vaults/${vaultId}`);
             } else {
@@ -201,20 +200,17 @@
     //     getPaymentProviderFromType(paymentProviderForPaymentType, searchPaymentProvider) ?? null
     // );
     const selectedPaymentProvider = $derived.by(()=>{
-        console.log(`selectedPaymentProvider`,  searchPaymentProvider)
         return paymentProviders.find((provider) =>
             provider.id === $form.paymentProvider ) ?? null
     });
 
     function getPaymentProvider() {
-        console.log(`getPaymentProvider`,  $form.paymentProvider)
         return $form.paymentProvider ?? "";
     }
 
     function setPaymentProvider(newValue: string) {
         $form.paymentProvider = newValue;
         searchPaymentProvider = newValue;
-        console.log(`setPaymentProvider`,  $form.paymentProvider, paymentProviderForPaymentType)
     }
 
     let showAdvancedOptions = $state($form.paymentType && $form.paymentType?.length > 0);

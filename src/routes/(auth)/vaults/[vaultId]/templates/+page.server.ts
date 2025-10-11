@@ -63,7 +63,6 @@ export const actions = {
             return { form };
         }
 
-        console.log('[create template]', locals.currentUser, form.data);
 		try {
 			const template = await createTemplate(
                 form.data,
@@ -90,7 +89,6 @@ export const actions = {
 
         const form = await superValidate(request, valibot(updateExpenseTemplateSchema));
 
-        console.log('form', form);
         if (!form.valid) {
             return { form };
         }

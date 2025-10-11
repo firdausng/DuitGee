@@ -16,7 +16,6 @@ export const load: PageServerLoad = async ({ locals, platform, params }) => {
     try {
         // Get vault with all members using the real handler
         const vaultData = await getVault(locals.currentUser.id, vaultId, platform.env.DB);
-        console.log('vaultData.members', vaultData.members);
         return {
             members: vaultData.members,
             vault: vaultData.vault,

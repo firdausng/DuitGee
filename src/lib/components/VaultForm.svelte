@@ -39,13 +39,11 @@
 	$effect(() => {
 		// Ensure color has a valid value
 		if (!$form.color || $form.color === '') {
-			console.log('Setting default color');
 			$form.color = '#3B82F6';
 		}
 
 		// Ensure iconType has a value
 		if (!$form.iconType || $form.iconType === '') {
-			console.log('Setting default iconType');
 			$form.iconType = 'emoji';
 		}
 
@@ -56,13 +54,11 @@
 
 		// Ensure icon has a value
 		if (!$form.icon || $form.icon === '') {
-			console.log('Setting default icon');
 			$form.icon = '🏦';
 		}
 
 		// Set default for isPersonal only for new vaults
 		if (!isEdit && ($form.isPersonal === undefined || $form.isPersonal === null)) {
-			console.log('Setting default isPersonal');
 			$form.isPersonal = true;
 		}
 	});
@@ -96,7 +92,6 @@
 	function selectColor(color: string) {
 		$form.color = color;
 		showColorPicker = false;
-        console.log('color', color)
 	}
 
 	function selectIcon(option: typeof iconOptions[0]) {

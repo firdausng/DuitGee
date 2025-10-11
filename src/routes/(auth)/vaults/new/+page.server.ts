@@ -25,7 +25,6 @@ export const actions: Actions = {
             throw new Error("No platform")
         }
         const form = await superValidate(request, valibot(createVaultSchema));
-        console.log('form', form);
 		if (!form.valid) {
 			return { form };
 		}

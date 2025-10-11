@@ -1,6 +1,6 @@
-import { Hono } from 'hono';
+import {Hono} from 'hono';
 import * as v from "valibot";
-import { vValidator } from "@hono/valibot-validator";
+import {vValidator} from "@hono/valibot-validator";
 import {
     createNotification,
     getNotifications,
@@ -9,7 +9,7 @@ import {
     deleteNotification,
     getUnreadNotificationCount
 } from "$lib/server/api/notifications/handlers";
-import { describeRoute, resolver } from 'hono-openapi';
+import {describeRoute, resolver} from 'hono-openapi';
 import {createNotificationSchema} from "$lib/schemas/expense";
 
 // Query parameters schema for GET notifications
@@ -34,42 +34,43 @@ export const notificationApi = new Hono<App.Api>()
                 200: {
                     description: 'Successful response',
                     content: {
-                        'application/json': { schema: resolver(v.object({
-                            success: v.boolean(),
-                            data: v.any()
-                        })) },
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.any()
+                            }))
+                        },
                     },
                 },
             },
         }),
         vValidator('query', getNotificationsQuerySchema),
         async (c) => {
-        const userId = c.get('userEmail') as string;
-        const query = c.req.valid('query');
+            const session = c.get('currentSession');
+            const query = c.req.valid('query');
 
-        const limit = query.limit;
-        const offset = query.offset;
-        const unreadOnly = query.unreadOnly;
+            const limit = query.limit;
+            const offset = query.offset;
+            const unreadOnly = query.unreadOnly;
 
-        try {
-            const result = await getNotifications(userId, c.env.DB, {
-                limit,
-                offset,
-                unreadOnly
-            });
+            try {
+                const result = await getNotifications(session.user.id, c.env.DB, {
+                    limit,
+                    offset,
+                    unreadOnly
+                });
 
-            return c.json({
-                success: true,
-                data: result
-            });
-        } catch (error) {
-            console.error('Error fetching notifications:', error);
-            return c.json({
-                success: false,
-                error: 'Failed to fetch notifications'
-            }, 500);
-        }
-    })
+                return c.json({
+                    success: true,
+                    data: result
+                });
+            } catch (error) {
+                return c.json({
+                    success: false,
+                    error: 'Failed to fetch notifications'
+                }, 500);
+            }
+        })
 
     .put(
         '/',
@@ -80,39 +81,40 @@ export const notificationApi = new Hono<App.Api>()
                 200: {
                     description: 'Successful response',
                     content: {
-                        'application/json': { schema: resolver(v.object({
-                            success: v.boolean(),
-                            message: v.string()
-                        })) },
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                message: v.string()
+                            }))
+                        },
                     },
                 },
             },
         }),
         async (c) => {
-        const userId = c.get('userEmail') as string;
+            const session = c.get('currentSession');
 
-        try {
-            const success = await markAllNotificationsAsRead(userId, c.env.DB);
+            try {
+                const success = await markAllNotificationsAsRead(session.user.id, c.env.DB);
 
-            if (!success) {
+                if (!success) {
+                    return c.json({
+                        success: false,
+                        error: 'Failed to mark notifications as read'
+                    }, 500);
+                }
+
+                return c.json({
+                    success: true,
+                    message: 'All notifications marked as read'
+                });
+            } catch (error) {
                 return c.json({
                     success: false,
                     error: 'Failed to mark notifications as read'
                 }, 500);
             }
-
-            return c.json({
-                success: true,
-                message: 'All notifications marked as read'
-            });
-        } catch (error) {
-            console.error('Error marking notifications as read:', error);
-            return c.json({
-                success: false,
-                error: 'Failed to mark notifications as read'
-            }, 500);
-        }
-    })
+        })
 
     .post(
         '/',
@@ -123,34 +125,34 @@ export const notificationApi = new Hono<App.Api>()
                 201: {
                     description: 'Successful response',
                     content: {
-                        'application/json': { schema: resolver(v.object({
-                            success: v.boolean(),
-                            data: v.any()
-                        })) },
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.any()
+                            }))
+                        },
                     },
                 },
             },
         }),
         vValidator('json', createNotificationSchema),
         async (c) => {
-        const userId = c.get('userEmail') as string;
-        const data = c.req.valid('json');
+            const data = c.req.valid('json');
 
-        try {
-            const notification = await createNotification(data, c.env.DB);
+            try {
+                const notification = await createNotification(data, c.env.DB);
 
-            return c.json({
-                success: true,
-                data: notification
-            }, 201);
-        } catch (error) {
-            console.error('Error creating notification:', error);
-            return c.json({
-                success: false,
-                error: 'Failed to create notification'
-            }, 500);
-        }
-    })
+                return c.json({
+                    success: true,
+                    data: notification
+                }, 201);
+            } catch (error) {
+                return c.json({
+                    success: false,
+                    error: 'Failed to create notification'
+                }, 500);
+            }
+        })
 
     .get(
         '/count',
@@ -161,34 +163,35 @@ export const notificationApi = new Hono<App.Api>()
                 200: {
                     description: 'Successful response',
                     content: {
-                        'application/json': { schema: resolver(v.object({
-                            success: v.boolean(),
-                            data: v.object({
-                                unreadCount: v.number()
-                            })
-                        })) },
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.object({
+                                    unreadCount: v.number()
+                                })
+                            }))
+                        },
                     },
                 },
             },
         }),
         async (c) => {
-        const userId = c.get('userEmail') as string;
+            const session = c.get('currentSession');
 
-        try {
-            const count = await getUnreadNotificationCount(userId, c.env.DB);
+            try {
+                const count = await getUnreadNotificationCount(session.user.id, c.env.DB);
 
-            return c.json({
-                success: true,
-                data: { unreadCount: count }
-            });
-        } catch (error) {
-            console.error('Error getting notification count:', error);
-            return c.json({
-                success: false,
-                error: 'Failed to get notification count'
-            }, 500);
-        }
-    })
+                return c.json({
+                    success: true,
+                    data: {unreadCount: count}
+                });
+            } catch (error) {
+                return c.json({
+                    success: false,
+                    error: 'Failed to get notification count'
+                }, 500);
+            }
+        })
 
     .put(
         '/:id',
@@ -199,10 +202,12 @@ export const notificationApi = new Hono<App.Api>()
                 200: {
                     description: 'Successful response',
                     content: {
-                        'application/json': { schema: resolver(v.object({
-                            success: v.boolean(),
-                            message: v.string()
-                        })) },
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                message: v.string()
+                            }))
+                        },
                     },
                 },
                 404: {
@@ -211,31 +216,30 @@ export const notificationApi = new Hono<App.Api>()
             },
         }),
         async (c) => {
-        const userId = c.get('userEmail') as string;
-        const notificationId = c.req.param('id');
+            const session = c.get('currentSession');
+            const notificationId = c.req.param('id');
 
-        try {
-            const success = await markNotificationAsRead(notificationId, userId, c.env.DB);
+            try {
+                const success = await markNotificationAsRead(notificationId, session.user.id, c.env.DB);
 
-            if (!success) {
+                if (!success) {
+                    return c.json({
+                        success: false,
+                        error: 'Notification not found'
+                    }, 404);
+                }
+
+                return c.json({
+                    success: true,
+                    message: 'Notification marked as read'
+                });
+            } catch (error) {
                 return c.json({
                     success: false,
-                    error: 'Notification not found'
-                }, 404);
+                    error: 'Failed to mark notification as read'
+                }, 500);
             }
-
-            return c.json({
-                success: true,
-                message: 'Notification marked as read'
-            });
-        } catch (error) {
-            console.error('Error marking notification as read:', error);
-            return c.json({
-                success: false,
-                error: 'Failed to mark notification as read'
-            }, 500);
-        }
-    })
+        })
 
     .delete(
         '/:id',
@@ -246,10 +250,12 @@ export const notificationApi = new Hono<App.Api>()
                 200: {
                     description: 'Successful response',
                     content: {
-                        'application/json': { schema: resolver(v.object({
-                            success: v.boolean(),
-                            message: v.string()
-                        })) },
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                message: v.string()
+                            }))
+                        },
                     },
                 },
                 404: {
@@ -258,28 +264,27 @@ export const notificationApi = new Hono<App.Api>()
             },
         }),
         async (c) => {
-        const userId = c.get('userEmail') as string;
-        const notificationId = c.req.param('id');
+            const session = c.get('currentSession');
+            const notificationId = c.req.param('id');
 
-        try {
-            const success = await deleteNotification(notificationId, userId, c.env.DB);
+            try {
+                const success = await deleteNotification(notificationId, session.user.id, c.env.DB);
 
-            if (!success) {
+                if (!success) {
+                    return c.json({
+                        success: false,
+                        error: 'Notification not found'
+                    }, 404);
+                }
+
+                return c.json({
+                    success: true,
+                    message: 'Notification deleted'
+                });
+            } catch (error) {
                 return c.json({
                     success: false,
-                    error: 'Notification not found'
-                }, 404);
+                    error: 'Failed to delete notification'
+                }, 500);
             }
-
-            return c.json({
-                success: true,
-                message: 'Notification deleted'
-            });
-        } catch (error) {
-            console.error('Error deleting notification:', error);
-            return c.json({
-                success: false,
-                error: 'Failed to delete notification'
-            }, 500);
-        }
-    });
+        });

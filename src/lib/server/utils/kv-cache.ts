@@ -21,13 +21,23 @@ export async function getUserVaultsFromCache(userId: string, kv?: KVNamespace): 
     try {
         const cached = await kv.get(`user_vaults:${userId}`, 'json');
         if (cached) {
-            console.log(`[KV Cache] HIT for user_vaults:${userId}`);
+            console.log({
+                message: `[KV Cache] HIT for user_vaults:${userId}`,
+                userId
+            });
             return cached as UserVault[];
         }
-        console.log(`[KV Cache] MISS for user_vaults:${userId}`);
+        console.log({
+            message: `[KV Cache] MISS for user_vaults:${userId}`,
+            userId
+        });
         return null;
     } catch (error) {
-        console.warn(`[KV Cache] Error reading user_vaults:${userId}`, error);
+        console.log({
+            message: `[KV Cache] Error reading user_vaults:${userId}`,
+            userId,
+            error
+        });
         return null;
     }
 }
@@ -42,9 +52,17 @@ export async function setUserVaultsCache(userId: string, vaults: UserVault[], kv
         await kv.put(`user_vaults:${userId}`, JSON.stringify(vaults), {
             expirationTtl: ttl
         });
-        console.log(`[KV Cache] SET user_vaults:${userId} (TTL: ${ttl}s)`);
+        console.log({
+            message: `[KV Cache] SET user_vaults:${userId} (TTL: ${ttl}s)`,
+            userId,
+            ttl
+        });
     } catch (error) {
-        console.warn(`[KV Cache] Error writing user_vaults:${userId}`, error);
+        console.warn({
+            message: `[KV Cache] Error writing user_vaults:${userId}`,
+            userId,
+            error
+        });
     }
 }
 
@@ -56,9 +74,15 @@ export async function invalidateUserVaultsCache(userId: string, kv?: KVNamespace
 
     try {
         await kv.delete(`user_vaults:${userId}`);
-        console.log(`[KV Cache] INVALIDATED user_vaults:${userId}`);
+        console.log({
+            message: `[KV Cache] INVALIDATED user_vaults:${userId}`,
+            userId
+        })
     } catch (error) {
-        console.warn(`[KV Cache] Error invalidating user_vaults:${userId}`, error);
+        console.warn({
+            message: `[KV Cache] Error invalidating user_vaults:${userId}`,
+            userId
+        });
     }
 }
 

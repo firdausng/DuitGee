@@ -13,14 +13,12 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
 
 	// Fetch the vault
 	const {vault} = await getVault(locals.currentUser.id, vaultId, platform.env.DB);
-    console.log('vault', vault);
 	if (!vault) {
 		throw error(404, 'Vault not found');
 	}
 
 	// Check if user has permission to edit this vault
 	// For now, just check ownership
-    console.log('vault', vault.ownerId, locals.currentUser.id);
 	if (vault.ownerId !== locals.currentUser.id) {
 		throw error(403, 'You do not have permission to edit this vault');
 	}

@@ -208,7 +208,6 @@ export const createExpense = async (userId: string, data: CreateExpense, db: D1D
 	// Write to KV cache first
 	await setExpenseCache(expenseId, expenseData, kv);
 
-    console.log('[createExpense] ', expenseData)
 	// Then write to database
 	const expense = await client
 		.insert(expenses)

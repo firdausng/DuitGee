@@ -78,11 +78,6 @@
         vaultId: vaultId,
         templateId: template?.id || '',
     });
-
-    $effect(() => {
-        console.log("formData", formData);
-    })
-
     // State for searchable categories
     let allCategories = $state(categories.map(cat => ({
         ...cat,
@@ -183,8 +178,6 @@
             note: formData.note,
             description: formData.description
         };
-
-        console.log("submitData", submitData);
 
         onSubmit(submitData);
     }

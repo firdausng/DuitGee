@@ -16,7 +16,6 @@
     type TimePeriod = { id: Period, label: string, icon: string}
 
 	let { data } = $props();
-    console.log(data);
 
 	// Delete dialog state
 	let showDeleteDialog = $state(false);
@@ -170,7 +169,6 @@
 					// 'Authorization': `Bearer ${authManager.authState?.accessToken}`
 				}
 			});
-            console.log('response.ok', response)
 			if (response.success) {
                 statsData = response.data;
 			}

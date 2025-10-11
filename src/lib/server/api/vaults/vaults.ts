@@ -46,7 +46,10 @@ export const vaultsApi = new Hono<App.Api>()
                     data: vaults
                 });
             } catch (error) {
-                console.error('Error fetching vaults:', error);
+                console.error({
+                    message: 'Error fetching vaults:',
+                    error
+                });
                 return c.json({
                     success: false,
                     error: 'Failed to fetch vaults'
@@ -86,7 +89,10 @@ export const vaultsApi = new Hono<App.Api>()
                     data: vaults
                 });
             } catch (error) {
-                console.error('Error fetching vaults by email:', error);
+                console.error({
+                    message: 'Error fetching vaults by email',
+                    error
+                });
                 return c.json({
                     success: false,
                     error: error instanceof Error ? error.message : 'Failed to fetch vaults'
@@ -124,7 +130,10 @@ export const vaultsApi = new Hono<App.Api>()
                     data: vault
                 }, 201);
             } catch (error) {
-                console.error('Error creating vault:', error);
+                console.error({
+                    message: 'Error creating vault',
+                    error
+                });
                 return c.json({
                     success: false,
                     error: 'Failed to create vault'
@@ -164,7 +173,10 @@ export const vaultsApi = new Hono<App.Api>()
                     data: vault
                 });
             } catch (error) {
-                console.error('Error fetching vault:', error);
+                console.error({
+                    message: `Error fetching vault`,
+                    error
+                })
                 const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
                 return c.json({
                     success: false,
@@ -207,7 +219,10 @@ export const vaultsApi = new Hono<App.Api>()
                     data: vault
                 });
             } catch (error) {
-                console.error('Error updating vault:', error);
+                console.error({
+                    message: `Error updating vault`,
+                    error
+                })
                 const status = error instanceof Error && error.message.includes('Permission denied') ? 403 : 500;
                 return c.json({
                     success: false,
@@ -250,7 +265,10 @@ export const vaultsApi = new Hono<App.Api>()
                     message: 'Vault deleted successfully'
                 });
             } catch (error) {
-                console.error('Error deleting vault:', error);
+                console.error({
+                    message: `Error deleting vault`,
+                    error
+                });
                 const status = error instanceof Error && error.message.includes('Permission denied') ? 403 : 500;
                 return c.json({
                     success: false,
@@ -334,7 +352,10 @@ export const vaultsApi = new Hono<App.Api>()
                     }
                 });
             } catch (error) {
-                console.error('Error fetching vault stats:', error);
+                console.error({
+                    message: `Error fetching vault stats`,
+                    error
+                });
                 const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
                 return c.json({
                     success: false,

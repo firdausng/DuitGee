@@ -5,8 +5,8 @@ import { and, eq, or, desc, sql } from "drizzle-orm";
 import { createId } from '@paralleldrive/cuid2';
 import type {UserVault} from "$lib/types/vaults";
 import {formatISO} from "date-fns";
-import { getUserVaultsFromCache, setUserVaultsCache, invalidateUserVaultsCache, invalidateVaultMembersCache } from "$lib/server/utils/kv-cache";
-import type {CreateVault, Vault} from "$lib/schemas/expense";
+import { invalidateUserVaultsCache, invalidateVaultMembersCache } from "$lib/server/utils/kv-cache";
+import type {CreateVault} from "$lib/schemas/expense";
 import { compareDesc } from "date-fns";
 
 
@@ -154,7 +154,6 @@ export const getVaultMembers = async (vaultId: string, db: D1Database) => {
 
 // Get a specific vault with member details
 export const getVault = async (userId: string, vaultId: string, db: D1Database) => {
-    console.log(`[getVault] Called with userId: ${userId}, vaultId: ${vaultId}`);
     const client = drizzle(db, { schema });
 
     // First check if user has access to this vault
@@ -170,7 +169,6 @@ export const getVault = async (userId: string, vaultId: string, db: D1Database) 
         )
         .limit(1);
 
-    console.log(`[getVault] Access check result:`, hasAccess);
     if (hasAccess.length === 0) {
         throw new Error('Vault not found or access denied');
     }
@@ -275,10 +273,12 @@ export const createVault = async (userId: string, data: CreateVault, db: D1Datab
         // Invalidate user's vault cache
         await invalidateUserVaultsCache(userId, kv);
 
-        console.log(`[createVault.handler] Successfully created vault`);
         return vault[0];
     } catch (error) {
-        console.log(`[createVault.handler] Error creating vault: ${error}`);
+        console.log({
+            message: `[createVault.handler] Error creating vault: ${error}`,
+            error
+        });
         throw error;
     }
 };

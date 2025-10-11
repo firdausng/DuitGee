@@ -75,7 +75,6 @@ export const actions: Actions = {
         let {vaultId} = params;
         const form = await superValidate(request, valibot(createExpenseSchema));
 
-        console.log('form', form);
 		if (!form.valid) {
 			return fail(400, { form });
 		}
@@ -85,7 +84,6 @@ export const actions: Actions = {
             vaultId,
         }
 
-        console.log('data', data);
 		try {
             const expenses = await createExpense(locals.currentUser.id, data, platform.env.DB);
 			return {

@@ -54,7 +54,6 @@
         onCancel
     }: Props = $props();
 
-    console.log(data.data,vaultId,);
 
     const { form, errors, enhance, submitting } = superForm(data, {
         SPA: true,
@@ -73,7 +72,6 @@
                     'Content-Type': 'application/json'
                 }
             });
-            console.log(`response`, response)
             if(response){
                 await goto(`/vaults/${vaultId}`);
             } else {

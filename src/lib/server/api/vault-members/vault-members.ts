@@ -67,7 +67,6 @@ export const vaultMembersApi = new Hono<App.Api>()
                 message: 'User invited successfully'
             }, 201);
         } catch (error) {
-            console.error('Error inviting user:', error);
             let status = 500;
             if (error instanceof Error) {
                 if (error.message.includes('Permission denied')) status = 403;
@@ -114,7 +113,6 @@ export const vaultMembersApi = new Hono<App.Api>()
                 message: 'Invitation accepted successfully'
             });
         } catch (error) {
-            console.error('Error accepting invitation:', error);
             const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
             return c.json({
                 success: false,
@@ -156,7 +154,6 @@ export const vaultMembersApi = new Hono<App.Api>()
                 message: 'Invitation declined successfully'
             });
         } catch (error) {
-            console.error('Error declining invitation:', error);
             const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
             return c.json({
                 success: false,
@@ -202,7 +199,6 @@ export const vaultMembersApi = new Hono<App.Api>()
                 message: 'User removed from vault successfully'
             });
         } catch (error) {
-            console.error('Error removing user from vault:', error);
             let status = 500;
             if (error instanceof Error) {
                 if (error.message.includes('Permission denied')) status = 403;
@@ -254,7 +250,6 @@ export const vaultMembersApi = new Hono<App.Api>()
                 message: 'Member updated successfully'
             });
         } catch (error) {
-            console.error('Error updating member:', error);
             let status = 500;
             if (error instanceof Error) {
                 if (error.message.includes('Permission denied')) status = 403;
@@ -294,7 +289,6 @@ export const vaultMembersApi = new Hono<App.Api>()
                 data: invitations
             });
         } catch (error) {
-            console.error('Error fetching invitations:', error);
             return c.json({
                 success: false,
                 error: 'Failed to fetch invitations'

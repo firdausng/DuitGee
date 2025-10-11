@@ -46,7 +46,7 @@ export const checkSessionHandler: Handle = async ({ event, resolve }) => {
     });
 
     if(!session){
-        console.warn("[checkSessionHandler] user not authenticated", session);
+        console.warn({session, message: "[checkSessionHandler] user not authenticated"});
         return redirect(307, "/login");
     }
 
@@ -61,10 +61,7 @@ export const checkSessionHandler: Handle = async ({ event, resolve }) => {
     //         event.platform.env.DB);
     // }
 
-    console.log('[checkSessionHandler] getting user vaults', session.user)
     const vaults = await getUserVaults(session.user.id, event.platform.env.DB, event.platform.env.KV);
-
-    console.log(`[checkSessionHandler] setting active user to the local data for ${event.url.pathname}`);
 
     event.locals.currentUserVaults = vaults;
     event.locals.currentSession = session;
@@ -90,7 +87,11 @@ export const setupPersonalVaultHandler: Handle = async ({ event, resolve }) => {
     if(!event.locals.currentSession){
         return resolve(event);
     }
-    console.log(`[setupPersonalVaultHandler] ensureUserPersonalVault data by ${event.locals.currentUser.email} for ${event.url.pathname}`);
+    console.log({
+        message: `[setupPersonalVaultHandler] ensureUserPersonalVault data by ${event.locals.currentUser.email} for ${event.url.pathname}`,
+        currentUser: event.locals.currentUser,
+        pathname: event.url.pathname
+    });
 
     // const vault = await ensureUserPersonalVault(event.locals.currentUser.id, event.platform.env.DB);
 
@@ -113,7 +114,9 @@ export const adminOnlyHandler: Handle = async ({ event, resolve }) => {
     const adminEmails = event.platform.env.ADMIN_EMAILS.split(',')
 
     if(!adminEmails.includes(event.locals.currentUser.email)){
-        console.warn("[adminOnlyHandler] this is admin only page, redirect to login");
+        console.warn({
+            message: "[adminOnlyHandler] this is admin only page, redirect to login"
+        });
         return redirect(307, "/");
     }
 

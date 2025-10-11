@@ -8,6 +8,7 @@
 	import GridFour from 'phosphor-svelte/lib/GridFour';
 	import List from 'phosphor-svelte/lib/List';
     import {goto} from "$app/navigation";
+    import {ofetch} from "ofetch";
 
 	let { data } = $props();
 
@@ -24,13 +25,6 @@
 
 	const currentUserId = data.activeUser.id;
 
-	// Debug data
-	console.log('[vaults/+page.svelte] Data received:', {
-		vaultsType: Array.isArray(data.vaults),
-		vaultsLength: data.vaults?.length,
-		vaultsData: data.vaults
-	});
-
 	// Group vaults by ownership
 	const ownedVaults = $derived(data.vaults.filter(v => v.vault.ownerId === currentUserId));
 	const sharedVaults = $derived(data.vaults.filter(v => v.vault.ownerId !== currentUserId));
@@ -39,10 +33,14 @@
 		goto(`/vaults/${vaultId}/edit`);
 	}
 
-	function handleDeleteVault(vaultId: string) {
+	async function handleDeleteVault(vaultId: string) {
 		if (confirm('Are you sure you want to delete this vault? This action cannot be undone.')) {
-			// TODO: Implement delete functionality
-			console.log('Delete vault:', vaultId);
+            await ofetch(`/api/vaults/${vaultId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
 		}
 	}
 

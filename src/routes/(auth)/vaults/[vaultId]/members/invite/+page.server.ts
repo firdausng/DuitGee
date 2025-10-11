@@ -77,7 +77,6 @@ export const actions: Actions = {
             // 2. Check if user is already a member of this vault
             const invitedUserVaults = await getUserVaults(form.data.email, platform.env.DB);
             const isAlreadyInVault = invitedUserVaults.some(v => v.vault.id === vaultId);
-            console.log('isAlreadyInVault', isAlreadyInVault);
 
             if (isAlreadyInVault) {
                 return {

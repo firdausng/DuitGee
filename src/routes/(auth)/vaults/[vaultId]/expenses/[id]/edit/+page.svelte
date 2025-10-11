@@ -7,8 +7,6 @@
 	function handleCancel() {
 		goto(`/vaults/${data.vaultId}/expenses`);
 	}
-    console.log(data.expense)
-
 </script>
 
 <svelte:head>
