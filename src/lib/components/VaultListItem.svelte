@@ -55,7 +55,7 @@
 	let canEdit = $derived(isOwner || membership?.permissions === 'admin');
 </script>
 
-<tr class="hover:bg-accent/5 cursor-pointer transition-colors border-b border-border" onclick={() => goto(`/vaults/${vault.id}`)}>
+<tr class="hover:bg-accent/5 cursor-pointer transition-colors border-b border-border" onclick={() => goto(`/vaults/${vault.id}?period=today`)}>
 	<!-- Vault Name & Info -->
 	<td class="py-3 px-4">
 		<div class="flex items-center space-x-3">

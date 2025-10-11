@@ -96,7 +96,7 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
             iconType: v.vault.iconType as 'emoji' | 'phosphor',
             isPersonal: v.vault.isPersonal,
             role: v.vault.ownerId === locals.currentUser.id ? 'owner' : v.membership?.role as 'admin' | 'member'| 'owner',
-            owner: v.owner,
+            owner: v.vault.id,
             membership: v.membership,
         }));
 
@@ -109,7 +109,7 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, par
             iconType: currentVaultData.vault.iconType as 'emoji' | 'phosphor',
             isPersonal: currentVaultData.vault.isPersonal,
             role: currentVaultData.vault.ownerId === locals.currentUser.id ? 'owner' : currentVaultData.membership?.role as 'admin' | 'member'| 'owner',
-            owner: currentVaultData.owner,
+            owner: currentVaultData.vault.id,
             membership: currentVaultData.membership,
             members: getVaultWithMemberById.members,
         };
