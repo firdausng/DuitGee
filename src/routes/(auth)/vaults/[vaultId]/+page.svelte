@@ -33,7 +33,7 @@
 	];
 
 	// Filter state
-	let currentPeriod = $state<Period>(page.url.searchParams.get('period') as Period || 'monthly');
+	let currentPeriod = $state<Period>(page.url.searchParams.get('period') as Period || 'daily');
 	let selectedMemberIds = $state<string[]>(page.url.searchParams.get('memberIds')?.split(',').filter(Boolean) || []);
 	let expenseLimit = $state<number>(parseInt(page.url.searchParams.get('limit') || '10'));
 	let isLoadingStats = $state(false);
