@@ -195,7 +195,7 @@
 
 <form onsubmit={handleSubmit} class="space-y-4 pr-8 md:pr-2">
     <!-- Template Name -->
-    <div class="pr-18">
+    <div class="pr-8 md:pr-2">
         <label for="name" class="block text-sm font-medium text-foreground mb-1">
             Template Name <span class="text-destructive">*</span>
         </label>
@@ -210,7 +210,7 @@
     </div>
 
     <!-- Description -->
-    <div class="pr-18">
+    <div class="pr-8 md:pr-2">
         <label for="description" class="block text-sm font-medium text-foreground mb-1">
             Description
         </label>
@@ -224,7 +224,7 @@
     </div>
 
     <!-- Category -->
-    <div class="pr-18">
+    <div class="pr-8 md:pr-2">
         <label for="categoryName" class="block text-sm font-medium text-foreground mb-1">
             Category
         </label>
@@ -287,7 +287,7 @@
     </div>
 
     <!-- Default User -->
-    <div class="pr-18">
+    <div class="pr-8 md:pr-2">
         <label for="defaultUserId" class="block text-sm font-medium text-foreground mb-1">
             Default User
         </label>
@@ -341,7 +341,7 @@
     </div>
 
     <!-- Default Amount -->
-    <div class="pr-18">
+    <div class="pr-8 md:pr-2">
         <label for="amount" class="block text-sm font-medium text-foreground mb-1">
             Default Amount
         </label>
@@ -357,7 +357,7 @@
     </div>
 
     <!-- Payment Type -->
-    <div class="pr-18">
+    <div class="pr-8 md:pr-2">
         <label for="paymentType" class="block text-sm font-medium text-foreground mb-1">
             Payment Type
         </label>
@@ -419,7 +419,7 @@
 
     <!-- Payment Provider -->
     {#if paymentProviderForPaymentType?.length > 0}
-        <div class="pr-18">
+        <div class="pr-8 md:pr-2">
             <label for="paymentProvider" class="block text-sm font-medium text-foreground mb-1">
                 Payment Provider
             </label>
@@ -478,7 +478,7 @@
     {/if}
 
     <!-- Default Note -->
-    <div class="pr-18">
+    <div class="pr-8 md:pr-2">
         <label for="note" class="block text-sm font-medium text-foreground mb-1">
             Default Note
         </label>
@@ -500,7 +500,7 @@
     </div>
 
     <!-- Actions -->
-    <div class="flex gap-3 pt-4">
+    <div class="flex flex-col md:flex-row gap-3 pt-4">
         <Button type="submit" variant="default" disabled={isSubmitting} class="flex-1">
             {isSubmitting ? 'Updating...' : 'Update Template'}
         </Button>

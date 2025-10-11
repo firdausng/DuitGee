@@ -11,15 +11,7 @@ import {
     getMemberSpending
 } from "$lib/server/api/expenses/handlers";
 import {describeRoute, resolver} from 'hono-openapi';
-
-const expenseSchema = v.object({
-    note: v.optional(v.string()),
-    amount: v.pipe(v.number(), v.minValue(0.01, 'Amount must be positive')),
-    categoryId: v.pipe(v.string(), v.minLength(1, 'Category is required')),
-    date: v.optional(v.pipe(v.string(), v.isoDateTime()))
-});
-
-const updateExpenseSchema = v.partial(expenseSchema);
+import {createExpenseSchema, updateExpenseSchema} from "$lib/schemas/expense";
 
 const EXPENSE_TAG = ['Expense'];
 const commonExpenseConfig = {
@@ -88,7 +80,7 @@ export const expensesApi = new Hono<App.Api>()
                 },
             },
         }),
-        vValidator('json', expenseSchema),
+        vValidator('json', createExpenseSchema),
         async (c) => {
             const session = c.get('currentSession');
             const vaultId = c.req.param('vaultId');

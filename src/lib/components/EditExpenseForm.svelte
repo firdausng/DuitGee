@@ -1,8 +1,8 @@
 <script lang="ts">
-    import {superForm, type SuperValidated} from 'sveltekit-superforms';
+    import {setMessage, superForm, type SuperValidated} from 'sveltekit-superforms';
     import Button from '$lib/components/ui/Button.svelte';
     import { goto } from '$app/navigation';
-    import {type Category, type CreateExpense} from "$lib/schemas/expense";
+    import {type Category, type CreateExpense, createExpenseSchema, updateExpenseSchema} from "$lib/schemas/expense";
     import type {PaymentProvider, PaymentType} from "$lib/configuration/paymentTypes";
     import {Combobox, Select} from "bits-ui";
     import CaretUpDown from "phosphor-svelte/lib/CaretUpDown";
@@ -18,6 +18,8 @@
     import Note from "phosphor-svelte/lib/Note";
     import CaretDown from "phosphor-svelte/lib/CaretDown";
     import IconDisplay from '$lib/components/IconDisplay.svelte';
+    import {valibot} from "sveltekit-superforms/adapters";
+    import {ofetch} from "ofetch";
 
     type Member = {
         userId: string;
@@ -36,6 +38,7 @@
         members?: Member[];
         currentUserId: string;
         vaultId: string;
+        expenseId: string;
         onCancel?: () => void;
     }
 
@@ -47,12 +50,37 @@
         members = [],
         currentUserId,
         vaultId,
+        expenseId,
         onCancel
     }: Props = $props();
 
     console.log(data.data,vaultId,);
 
-    const { form, errors, enhance, submitting } = superForm(data);
+    const { form, errors, enhance, submitting } = superForm(data, {
+        SPA: true,
+        validators: valibot(updateExpenseSchema),
+        onUpdate: async({ form }) =>{
+            if(!form.valid){
+                setMessage(form, 'invalid data!');
+            }
+            const response = await ofetch(`/api/vaults/${vaultId}/expenses/${expenseId}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    ...form.data,
+                    vaultId,
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            console.log(`response`, response)
+            if(response){
+                await goto(`/vaults/${vaultId}`);
+            } else {
+                // setError(form, 'amount', response.error.message);
+            }
+        }
+    });
 
     // State for searchable categories
     let allCategories = $state(categories.map(cat => ({
@@ -210,7 +238,7 @@
 
 <form method="POST" use:enhance class="space-y-4">
     <!-- Amount -->
-    <div class="pr-18">
+    <div class="pr-8 md:pr-2">
         <label for="amount" class="block text-sm font-medium text-foreground mb-1">
             Amount <span class="text-destructive">*</span>
         </label>
@@ -236,7 +264,7 @@
     </div>
 
     <!-- Category -->
-    <div class="pr-18">
+    <div class="pr-8 md:pr-2">
         <div class="flex gap-2 justify-between items-center">
             <label for="categoryName" class="block text-sm font-medium text-foreground mb-1">
                 Category <span class="text-destructive">*</span>
@@ -323,7 +351,7 @@
     </div>
 
     <!-- Date -->
-    <div class="pr-18">
+    <div class="pr-8 md:pr-2">
         <label for="date" class="block text-sm font-medium text-foreground mb-1">
             When <span class="text-destructive">*</span>
         </label>
@@ -345,7 +373,7 @@
     </div>
 
     <!-- Who Spent -->
-    <div class="pr-18">
+    <div class="pr-8 md:pr-2">
         <div class="flex flex-col gap-2 justify-between">
             <label for="userId" class="block text-sm font-medium text-foreground mb-1">
                 Who spent?
@@ -432,7 +460,7 @@
     </div>
 
     <!-- Note -->
-    <div class="pr-18">
+    <div class="pr-8 md:pr-2">
         <label for="note" class="block text-sm font-medium text-foreground mb-1">
             What did you spend on?
         </label>
@@ -466,7 +494,7 @@
         {#if showAdvancedOptions}
             <div class="space-y-4">
                 <!-- Payment Type -->
-                <div class="pr-18">
+                <div class="pr-8 md:pr-2">
                     <div class="flex gap-2 justify-between items-center py-2">
                         <label for="paymentType" class="block text-sm font-medium text-foreground mb-1">
                             Payment Type
@@ -554,7 +582,7 @@
 
                 <!-- Payment Provider -->
                 {#if paymentProviderForPaymentType?.length > 0}
-                    <div class="pr-18">
+                    <div class="pr-8 md:pr-2">
                         <div class="flex gap-2 justify-between items-center py-2">
                             <label for="paymentProvider" class="block text-sm font-medium text-foreground mb-1">
                                 Payment Provider
@@ -645,7 +673,7 @@
     </div>
 
     <!-- Actions -->
-    <div class="flex gap-3 pt-4">
+    <div class="flex flex-col md:flex-row  gap-3 pt-4">
         <Button type="submit" variant="default" disabled={$submitting} class="flex-1">
             {$submitting ? 'Updating...' : 'Update Expense'}
         </Button>

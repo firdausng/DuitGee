@@ -32,6 +32,7 @@
 			members={data.members}
 			currentUserId={data.currentUserId}
 			vaultId={data.vaultId}
+            expenseId={data.expense.id}
 			onCancel={handleCancel}
 		/>
 	</div>

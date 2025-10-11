@@ -49,8 +49,6 @@ export const load: PageServerLoad = async ({ params, fetch, locals, cookies, pla
 			tagNames: expense.tags?.map((t: any) => t.name).join(',') || ''
 		};
 
-        console.log('formData', formData);
-
 		const form = await superValidate(formData, valibot(updateExpenseSchema));
 		return {
             form,
