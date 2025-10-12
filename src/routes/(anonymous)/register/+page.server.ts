@@ -11,5 +11,6 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 
     return {
         basePath: platform.env.BASE_PATH,
+        callbackPath: platform.env.CALLBACK_PATH,
     };
 };

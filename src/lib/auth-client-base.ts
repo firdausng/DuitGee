@@ -1,7 +1,7 @@
 import {createAuthClient} from "better-auth/client";
 import {adminClient, organizationClient} from "better-auth/client/plugins";
 
-export const authClient = ({basePath}: {basePath:string}) => createAuthClient({
+export const authClientBase = ({basePath}: {basePath:string}) => createAuthClient({
     baseURL: basePath,
     plugins: [
         organizationClient({
@@ -18,7 +18,7 @@ export const authClient = ({basePath}: {basePath:string}) => createAuthClient({
     }
 });
 
-export const adminAuthClient = ({basePath}: {basePath:string}) => createAuthClient({
+export const adminAuthClientBase = ({basePath}: {basePath:string}) => createAuthClient({
     baseURL: basePath,
     plugins: [
         organizationClient({

@@ -7,7 +7,7 @@ import {createExpense} from "$lib/server/api/expenses/handlers";
 import {getTemplates} from "$lib/server/api/templates/handlers";
 import {getVaultMembers} from "$lib/server/api/vaults/handlers";
 import {getConfigurations} from "$lib/server/api/app-configurations/handlers";
-import {adminAuthClient} from "$lib/auth-client";
+import {adminAuthClientBase} from "$lib/auth-client-base";
 
 export const load: PageServerLoad = async ({platform, locals, params, url}) => {
     if(platform === undefined){

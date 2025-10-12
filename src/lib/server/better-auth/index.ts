@@ -1,9 +1,7 @@
 import { drizzle } from "drizzle-orm/d1";
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { betterAuth } from 'better-auth';
-import { bearer, admin  } from "better-auth/plugins";
 import { betterAuthOptions } from './options';
-
 import * as schema from "../db/better-auth-schema";
 
 export const auth = (env: Cloudflare.Env): ReturnType<typeof betterAuth> => {

@@ -3,7 +3,7 @@
     import { oneTapClient } from "better-auth/client/plugins";
     import {goto} from "$app/navigation";
 
-    let {data} = $props()
+    let {data} = $props();
 
     const authClient = createAuthClient({
         baseURL: data.basePath,
@@ -44,7 +44,7 @@
     async function signInGoogle() {
         const response = await authClient.signIn.social({
             provider: "google",
-            callbackURL: "/",
+            callbackURL: data.callbackPath,
             errorCallbackURL: "/error",
             // newUserCallbackURL: "/",
             // disableRedirect: true,

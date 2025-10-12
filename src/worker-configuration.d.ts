@@ -3,14 +3,8 @@
 // Runtime types generated with workerd@1.20250924.0 2025-09-27 nodejs_als
 declare namespace Cloudflare {
     interface Env {
-        DATABASE_URL: string;
-        MY_VARIABLE: string;
         BASE_PATH: string;
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: string;
-        CLERK_SECRET_KEY: string;
-        WORKOS_API_KEY: string;
-        WORKOS_CLIENT_ID: string;
-        WORKOS_COOKIE_PASSWORD: string;
+        CALLBACK_PATH: string;
         ADMIN_EMAILS: string;
         BETTER_AUTH_URL: string;
         BETTER_AUTH_SECRET: string;

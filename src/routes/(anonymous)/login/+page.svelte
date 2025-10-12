@@ -2,9 +2,12 @@
 	import { goto } from '$app/navigation';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
-    import {authClient} from "$lib/auth-client";
+    import {authClientBase} from "$lib/auth-client-base";
 
     let {data} = $props();
+
+    let authClient = authClientBase({basePath: data.basePath});
+
 	let email = $state('');
 	let password = $state('');
 	let isLoading = $state(false);
@@ -32,9 +35,9 @@
 	async function handleGoogleLogin() {
 		isLoading = true;
 		try {
-            const response = await authClient({basePath: data.basePath}).signIn.social({
+            const response = await authClient.signIn.social({
                 provider: "google",
-                callbackURL: "/",
+                callbackURL: data.callbackPath,
                 errorCallbackURL: "/error",
             });
 		} catch (error) {
