@@ -11,6 +11,12 @@ export const betterAuthOptions: BetterAuthOptions = {
     plugins: [
         bearer(),
         admin(),
-        organization(),
+        organization({
+            teams: {
+                enabled: true,
+                //maximumTeams: 10, // Optional: limit teams per organization
+                allowRemovingAllTeams: false, // Optional: prevent removing the last team
+            },
+        }),
     ],
 };

@@ -4,7 +4,11 @@ import {adminClient, organizationClient} from "better-auth/client/plugins";
 export const authClient = ({basePath}: {basePath:string}) => createAuthClient({
     baseURL: basePath,
     plugins: [
-        organizationClient(),
+        organizationClient({
+            teams: {
+                enabled: true,
+            },
+        }),
     ],
     session: {
         cookieCache: {
@@ -17,7 +21,11 @@ export const authClient = ({basePath}: {basePath:string}) => createAuthClient({
 export const adminAuthClient = ({basePath}: {basePath:string}) => createAuthClient({
     baseURL: basePath,
     plugins: [
-        organizationClient(),
+        organizationClient({
+            teams: {
+                enabled: true,
+            },
+        }),
         adminClient(),
     ],
     session: {
