@@ -7,6 +7,7 @@ import {createExpense} from "$lib/server/api/expenses/handlers";
 import {getTemplates} from "$lib/server/api/templates/handlers";
 import {getVaultMembers} from "$lib/server/api/vaults/handlers";
 import {getConfigurations} from "$lib/server/api/app-configurations/handlers";
+import {adminAuthClient} from "$lib/auth-client";
 
 export const load: PageServerLoad = async ({platform, locals, params, url}) => {
     if(platform === undefined){
@@ -20,8 +21,17 @@ export const load: PageServerLoad = async ({platform, locals, params, url}) => {
     const [configuration, templates, allMembers] = await Promise.all([
         getConfigurations(),
         getTemplates(vaultId, platform.env.DB),
-        getVaultMembers(vaultId, platform.env.DB),
+        getVaultMembers(locals.currentUser.id, vaultId, platform.env.DB),
     ]);
+
+    console.log("locals.currentUserVaults", locals.currentUserVaults)
+    console.log("allMembers", allMembers)
+
+    // const { data: users, error } = await adminAuthClient({basePath: platform.env.BASE_PATH}).admin.listUsers({
+    //     query: {
+    //         filter: 'email_verified eq true'
+    //     }
+    // });
 
 	const form = await superValidate(valibot(createExpenseSchema));
 

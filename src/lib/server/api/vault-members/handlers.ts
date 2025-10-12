@@ -3,6 +3,7 @@ import * as schema from "$lib/server/db/schema";
 import {vaults, vaultMembers} from "$lib/server/db/schema";
 import { and, eq, or } from "drizzle-orm";
 import { createId } from '@paralleldrive/cuid2';
+import {requireVaultPermission} from "$lib/server/utils/permissions";
 
 // Invite a user to a vault
 export const inviteUserToVault = async (
@@ -15,29 +16,7 @@ export const inviteUserToVault = async (
 ) => {
     const client = drizzle(db, { schema });
 
-    // Check if inviter has permission to invite (owner or admin)
-    const canInvite = await client
-        .select({ id: vaults.id })
-        .from(vaults)
-        .leftJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
-        .where(
-            and(
-                eq(vaults.id, vaultId),
-                or(
-                    eq(vaults.ownerId, inviterId), // Owner
-                    and(
-                        eq(vaultMembers.userId, inviterId),
-                        eq(vaultMembers.permissions, 'admin'),
-                        eq(vaultMembers.status, 'active')
-                    ) // Admin member
-                )
-            )
-        )
-        .limit(1);
-
-    if (canInvite.length === 0) {
-        throw new Error('Permission denied: Cannot invite users to this vault');
-    }
+    await requireVaultPermission(inviterId, vaultId, 'canInviteMemberToVault', db);
 
     // Check if user is already a member or has pending invitation
     const existingMembership = await client
@@ -177,28 +156,7 @@ export const removeUserFromVault = async (
     const client = drizzle(db, { schema });
 
     // Check if remover has permission (owner or admin)
-    const canRemove = await client
-        .select({ id: vaults.id })
-        .from(vaults)
-        .leftJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
-        .where(
-            and(
-                eq(vaults.id, vaultId),
-                or(
-                    eq(vaults.ownerId, removerId), // Owner
-                    and(
-                        eq(vaultMembers.userId, removerId),
-                        eq(vaultMembers.permissions, 'admin'),
-                        eq(vaultMembers.status, 'active')
-                    ) // Admin member
-                )
-            )
-        )
-        .limit(1);
-
-    if (canRemove.length === 0) {
-        throw new Error('Permission denied: Cannot remove users from this vault');
-    }
+    await requireVaultPermission(removerId, vaultId, 'canRemoveMemberFromVault', db);
 
     // Cannot remove vault owner
     const vault = await client
@@ -239,28 +197,7 @@ export const updateVaultMember = async (
     const client = drizzle(db, { schema });
 
     // Check if updater has permission (owner or admin)
-    const canUpdate = await client
-        .select({ id: vaults.id })
-        .from(vaults)
-        .leftJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
-        .where(
-            and(
-                eq(vaults.id, vaultId),
-                or(
-                    eq(vaults.ownerId, updaterId), // Owner
-                    and(
-                        eq(vaultMembers.userId, updaterId),
-                        eq(vaultMembers.permissions, 'admin'),
-                        eq(vaultMembers.status, 'active')
-                    ) // Admin member
-                )
-            )
-        )
-        .limit(1);
-
-    if (canUpdate.length === 0) {
-        throw new Error('Permission denied: Cannot update member permissions');
-    }
+    await requireVaultPermission(updaterId, vaultId, 'canRemoveMemberFromVault', db);
 
     // Cannot update vault owner role
     const vault = await client

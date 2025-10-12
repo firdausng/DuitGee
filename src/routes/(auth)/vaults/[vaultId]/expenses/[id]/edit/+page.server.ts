@@ -3,9 +3,7 @@ import { valibot } from 'sveltekit-superforms/adapters';
 import {type UpdateExpense, updateExpenseSchema} from '$lib/schemas/expense';
 import { fail, redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from "./$types";
-import {getCategories} from "$lib/server/api/categories/handlers";
 import {getExpense, updateExpense} from "$lib/server/api/expenses/handlers";
-import {getPaymentTypes} from "$lib/server/api/payments/handlers";
 import {getVaultMembers} from "$lib/server/api/vaults/handlers";
 import {getConfigurations} from "$lib/server/api/app-configurations/handlers";
 
@@ -20,7 +18,7 @@ export const load: PageServerLoad = async ({ params, fetch, locals, cookies, pla
         const [configuration, expense, members] = await Promise.all([
             getConfigurations(),
             getExpense(vaultId, id, platform.env.DB),
-            getVaultMembers(vaultId, platform.env.DB)
+            getVaultMembers(locals.currentUser.id, vaultId, platform.env.DB)
         ]);
 
         if (!expense) {

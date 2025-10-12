@@ -1,6 +1,6 @@
-import { Hono } from 'hono';
+import {Hono} from 'hono';
 import * as v from "valibot";
-import { vValidator } from "@hono/valibot-validator";
+import {vValidator} from "@hono/valibot-validator";
 import {
     inviteUserToVault,
     acceptVaultInvitation,
@@ -9,8 +9,8 @@ import {
     updateVaultMember,
     getUserVaultInvitations
 } from "$lib/server/api/vault-members/handlers";
-import { describeRoute, resolver } from 'hono-openapi';
-import {getInvitationsByEmailSchema, inviteUserSchema, updateMemberSchema} from "$lib/schemas/expense";
+import {describeRoute, resolver} from 'hono-openapi';
+import {inviteUserSchema, updateMemberSchema} from "$lib/schemas/expense";
 
 const VAULT_MEMBER_TAG = ['Vault Member'];
 const commonVaultMemberConfig = {
@@ -28,11 +28,13 @@ export const vaultMembersApi = new Hono<App.Api>()
                 201: {
                     description: 'Successful response',
                     content: {
-                        'application/json': { schema: resolver(v.object({
-                            success: v.boolean(),
-                            data: v.any(),
-                            message: v.string()
-                        })) },
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.any(),
+                                message: v.string()
+                            }))
+                        },
                     },
                 },
                 403: {
@@ -50,35 +52,35 @@ export const vaultMembersApi = new Hono<App.Api>()
         async (c) => {
             const session = c.get('currentSession');
             const vaultId = c.req.param('vaultId');
-        const data = c.req.valid('json');
+            const data = c.req.valid('json');
 
-        try {
-            const result = await inviteUserToVault(
-                session.user.email,
-                vaultId,
-                data.email,
-                data.role,
-                data.permissions,
-                c.env.DB
-            );
-            return c.json({
-                success: true,
-                data: result,
-                message: 'User invited successfully'
-            }, 201);
-        } catch (error) {
-            let status = 500;
-            if (error instanceof Error) {
-                if (error.message.includes('Permission denied')) status = 403;
-                else if (error.message.includes('User not found')) status = 404;
-                else if (error.message.includes('already')) status = 409;
+            try {
+                const result = await inviteUserToVault(
+                    session.user.email,
+                    vaultId,
+                    data.email,
+                    data.role,
+                    data.permissions,
+                    c.env.DB
+                );
+                return c.json({
+                    success: true,
+                    data: result,
+                    message: 'User invited successfully'
+                }, 201);
+            } catch (error) {
+                let status = 500;
+                if (error instanceof Error) {
+                    if (error.message.includes('Permission denied')) status = 403;
+                    else if (error.message.includes('User not found')) status = 404;
+                    else if (error.message.includes('already')) status = 409;
+                }
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to invite user'
+                }, status);
             }
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to invite user'
-            },  status);
-        }
-    })
+        })
 
     .put(
         '/invitations/:invitationId/accept',
@@ -89,11 +91,13 @@ export const vaultMembersApi = new Hono<App.Api>()
                 200: {
                     description: 'Successful response',
                     content: {
-                        'application/json': { schema: resolver(v.object({
-                            success: v.boolean(),
-                            data: v.any(),
-                            message: v.string()
-                        })) },
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.any(),
+                                message: v.string()
+                            }))
+                        },
                     },
                 },
                 404: {
@@ -103,23 +107,23 @@ export const vaultMembersApi = new Hono<App.Api>()
         }),
         async (c) => {
             const session = c.get('currentSession');
-        const invitationId = c.req.param('invitationId');
+            const invitationId = c.req.param('invitationId');
 
-        try {
-            const membership = await acceptVaultInvitation(session.user.id, invitationId, c.env.DB);
-            return c.json({
-                success: true,
-                data: membership,
-                message: 'Invitation accepted successfully'
-            });
-        } catch (error) {
-            const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to accept invitation'
-            }, status);
-        }
-    })
+            try {
+                const membership = await acceptVaultInvitation(session.user.id, invitationId, c.env.DB);
+                return c.json({
+                    success: true,
+                    data: membership,
+                    message: 'Invitation accepted successfully'
+                });
+            } catch (error) {
+                const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to accept invitation'
+                }, status);
+            }
+        })
 
     .put(
         '/invitations/:invitationId/decline',
@@ -130,11 +134,13 @@ export const vaultMembersApi = new Hono<App.Api>()
                 200: {
                     description: 'Successful response',
                     content: {
-                        'application/json': { schema: resolver(v.object({
-                            success: v.boolean(),
-                            data: v.any(),
-                            message: v.string()
-                        })) },
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.any(),
+                                message: v.string()
+                            }))
+                        },
                     },
                 },
                 404: {
@@ -144,23 +150,23 @@ export const vaultMembersApi = new Hono<App.Api>()
         }),
         async (c) => {
             const session = c.get('currentSession');
-        const invitationId = c.req.param('invitationId');
+            const invitationId = c.req.param('invitationId');
 
-        try {
-            const membership = await declineVaultInvitation(session.user.id, invitationId, c.env.DB);
-            return c.json({
-                success: true,
-                data: membership,
-                message: 'Invitation declined successfully'
-            });
-        } catch (error) {
-            const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to decline invitation'
-            }, status);
-        }
-    })
+            try {
+                const membership = await declineVaultInvitation(session.user.id, invitationId, c.env.DB);
+                return c.json({
+                    success: true,
+                    data: membership,
+                    message: 'Invitation declined successfully'
+                });
+            } catch (error) {
+                const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to decline invitation'
+                }, status);
+            }
+        })
 
     .delete(
         '/:vaultId/members/:userId',
@@ -171,11 +177,13 @@ export const vaultMembersApi = new Hono<App.Api>()
                 200: {
                     description: 'Successful response',
                     content: {
-                        'application/json': { schema: resolver(v.object({
-                            success: v.boolean(),
-                            data: v.any(),
-                            message: v.string()
-                        })) },
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.any(),
+                                message: v.string()
+                            }))
+                        },
                     },
                 },
                 400: {
@@ -188,28 +196,28 @@ export const vaultMembersApi = new Hono<App.Api>()
         }),
         async (c) => {
             const session = c.get('currentSession');
-        const vaultId = c.req.param('vaultId');
-        const userId = c.req.param('userId');
+            const vaultId = c.req.param('vaultId');
+            const userId = c.req.param('userId');
 
-        try {
-            const membership = await removeUserFromVault(userId, vaultId, session.user.id, c.env.DB);
-            return c.json({
-                success: true,
-                data: membership,
-                message: 'User removed from vault successfully'
-            });
-        } catch (error) {
-            let status = 500;
-            if (error instanceof Error) {
-                if (error.message.includes('Permission denied')) status = 403;
-                else if (error.message.includes('Cannot remove vault owner')) status = 400;
+            try {
+                const membership = await removeUserFromVault(userId, vaultId, session.user.id, c.env.DB);
+                return c.json({
+                    success: true,
+                    data: membership,
+                    message: 'User removed from vault successfully'
+                });
+            } catch (error) {
+                let status = 500;
+                if (error instanceof Error) {
+                    if (error.message.includes('Permission denied')) status = 403;
+                    else if (error.message.includes('Cannot remove vault owner')) status = 400;
+                }
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to remove user from vault'
+                }, status);
             }
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to remove user from vault'
-            }, status);
-        }
-    })
+        })
 
     .put(
         '/:vaultId/members/:userId',
@@ -220,11 +228,13 @@ export const vaultMembersApi = new Hono<App.Api>()
                 200: {
                     description: 'Successful response',
                     content: {
-                        'application/json': { schema: resolver(v.object({
-                            success: v.boolean(),
-                            data: v.any(),
-                            message: v.string()
-                        })) },
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.any(),
+                                message: v.string()
+                            }))
+                        },
                     },
                 },
                 400: {
@@ -238,29 +248,29 @@ export const vaultMembersApi = new Hono<App.Api>()
         vValidator('json', updateMemberSchema),
         async (c) => {
             const session = c.get('currentSession');
-        const vaultId = c.req.param('vaultId');
-        const userId = c.req.param('userId');
-        const updates = c.req.valid('json');
+            const vaultId = c.req.param('vaultId');
+            const userId = c.req.param('userId');
+            const updates = c.req.valid('json');
 
-        try {
-            const membership = await updateVaultMember(session.user.id, vaultId, userId, updates, c.env.DB);
-            return c.json({
-                success: true,
-                data: membership,
-                message: 'Member updated successfully'
-            });
-        } catch (error) {
-            let status = 500;
-            if (error instanceof Error) {
-                if (error.message.includes('Permission denied')) status = 403;
-                else if (error.message.includes('Cannot update vault owner')) status = 400;
+            try {
+                const membership = await updateVaultMember(session.user.id, vaultId, userId, updates, c.env.DB);
+                return c.json({
+                    success: true,
+                    data: membership,
+                    message: 'Member updated successfully'
+                });
+            } catch (error) {
+                let status = 500;
+                if (error instanceof Error) {
+                    if (error.message.includes('Permission denied')) status = 403;
+                    else if (error.message.includes('Cannot update vault owner')) status = 400;
+                }
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to update member'
+                }, status);
             }
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to update member'
-            }, status);
-        }
-    })
+        })
 
     .get(
         '/invitations',
@@ -271,10 +281,12 @@ export const vaultMembersApi = new Hono<App.Api>()
                 200: {
                     description: 'Successful response',
                     content: {
-                        'application/json': { schema: resolver(v.object({
-                            success: v.boolean(),
-                            data: v.array(v.any())
-                        })) },
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.array(v.any())
+                            }))
+                        },
                     },
                 },
             },
@@ -282,16 +294,16 @@ export const vaultMembersApi = new Hono<App.Api>()
         async (c) => {
             const session = c.get('currentSession');
 
-        try {
-            const invitations = await getUserVaultInvitations(session.user.id, c.env.DB);
-            return c.json({
-                success: true,
-                data: invitations
-            });
-        } catch (error) {
-            return c.json({
-                success: false,
-                error: 'Failed to fetch invitations'
-            }, 500);
-        }
-    });
+            try {
+                const invitations = await getUserVaultInvitations(session.user.id, c.env.DB);
+                return c.json({
+                    success: true,
+                    data: invitations
+                });
+            } catch (error) {
+                return c.json({
+                    success: false,
+                    error: 'Failed to fetch invitations'
+                }, 500);
+            }
+        });

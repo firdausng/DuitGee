@@ -19,24 +19,17 @@ export interface VaultPermissions {
     canEditCategoryGroups: boolean;
     canDeleteCategoryGroups: boolean;
     canManageMembers: boolean;
+    canViewVault: boolean;
     canEditVault: boolean;
     canDeleteVault: boolean;
+    canInviteMemberToVault: boolean;
+    canRemoveMemberFromVault: boolean;
+    canUpdateMemberInVault: boolean;
 }
 
 // Get user's role and permissions for a specific vault
 export const getUserVaultRole = async (userId: string, vaultId: string, db: D1Database): Promise<VaultRole | null> => {
     const client = drizzle(db, { schema });
-
-    // Check if user is vault owner
-    const vaultOwner = await client
-        .select({ id: vaults.id })
-        .from(vaults)
-        .where(and(eq(vaults.id, vaultId), eq(vaults.ownerId, userId)))
-        .limit(1);
-
-    if (vaultOwner.length > 0) {
-        return 'owner';
-    }
 
     // Check vault membership
     const membership = await client
@@ -76,8 +69,12 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
             canEditCategoryGroups: false,
             canDeleteCategoryGroups: false,
             canManageMembers: false,
+            canViewVault: false,
             canEditVault: false,
-            canDeleteVault: false
+            canDeleteVault: false,
+            canInviteMemberToVault: false,
+            canRemoveMemberFromVault: false,
+            canUpdateMemberInVault: false,
         };
     }
 
@@ -98,8 +95,12 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
                 canEditCategoryGroups: true,
                 canDeleteCategoryGroups: true,
                 canManageMembers: true,
+                canViewVault: true,
                 canEditVault: true,
-                canDeleteVault: true
+                canDeleteVault: true,
+                canInviteMemberToVault: true,
+                canRemoveMemberFromVault: true,
+                canUpdateMemberInVault: true,
             };
 
         case 'admin':
@@ -118,8 +119,12 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
                 canEditCategoryGroups: true,
                 canDeleteCategoryGroups: true,
                 canManageMembers: true,
+                canViewVault: true,
                 canEditVault: true,
-                canDeleteVault: false
+                canDeleteVault: false,
+                canInviteMemberToVault: true,
+                canRemoveMemberFromVault: true,
+                canUpdateMemberInVault: true,
             };
 
         case 'member':
@@ -138,8 +143,12 @@ export const getVaultPermissions = (role: VaultRole | null): VaultPermissions =>
                 canEditCategoryGroups: false,
                 canDeleteCategoryGroups: false,
                 canManageMembers: false,
+                canViewVault: true,
                 canEditVault: false,
-                canDeleteVault: false
+                canDeleteVault: false,
+                canInviteMemberToVault: false,
+                canRemoveMemberFromVault: false,
+                canUpdateMemberInVault: false,
             };
 
         default:

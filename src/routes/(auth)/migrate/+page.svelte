@@ -1,8 +1,4 @@
 <script lang="ts">
-    import { createAuthClient } from 'better-auth/client';
-    import { adminClient } from "better-auth/client/plugins";
-    import { onMount } from 'svelte';
-    import type {UserWithRole} from "better-auth/plugins/admin";
     import Button from '$lib/components/ui/Button.svelte';
 
     let {data} = $props();

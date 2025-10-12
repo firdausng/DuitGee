@@ -1,5 +1,5 @@
 import type {BetterAuthOptions} from "better-auth";
-import {admin, bearer} from "better-auth/plugins";
+import {admin, bearer, organization } from "better-auth/plugins";
 
 /**
  * Better Auth Options
@@ -11,5 +11,6 @@ export const betterAuthOptions: BetterAuthOptions = {
     plugins: [
         bearer(),
         admin(),
+        organization(),
     ],
 };

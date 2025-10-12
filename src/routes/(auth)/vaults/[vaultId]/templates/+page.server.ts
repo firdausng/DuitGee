@@ -28,7 +28,7 @@ export const load: PageServerLoad = async ({ locals, platform, params }) => {
 		const [templates, configurations, allMembers] = await Promise.all([
 			getTemplates(vaultId, platform.env.DB),
             getConfigurations(),
-			getVaultMembers(vaultId, platform.env.DB)
+			getVaultMembers(locals.currentUser.id, vaultId, platform.env.DB)
 		]);
 
 		return {

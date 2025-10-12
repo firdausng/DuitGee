@@ -1,13 +1,15 @@
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
 import { vaults, vaultMembers } from "$lib/server/db/schema";
-import { and, eq, or, desc, sql } from "drizzle-orm";
+import {and, eq, or, desc, sql, isNull} from "drizzle-orm";
 import { createId } from '@paralleldrive/cuid2';
 import type {UserVault} from "$lib/types/vaults";
 import {formatISO} from "date-fns";
 import { invalidateUserVaultsCache, invalidateVaultMembersCache } from "$lib/server/utils/kv-cache";
 import type {CreateVault} from "$lib/schemas/expense";
 import { compareDesc } from "date-fns";
+import { UTCDate } from "@date-fns/utc";
+import {requireVaultPermission} from "$lib/server/utils/permissions";
 
 
 // Get all vaults for a user (owned + member of)
@@ -20,34 +22,8 @@ export const getUserVaults = async (userId: string, db: D1Database, kv?: KVNames
 
     const client = drizzle(db, { schema });
 
-    // Get owned vaults
-    const ownedVaults = await client
-        .select({
-            vault: {
-                id: vaults.id,
-                name: vaults.name,
-                description: vaults.description,
-                color: vaults.color,
-                icon: vaults.icon,
-                iconType: vaults.iconType,
-                isPersonal: vaults.isPersonal,
-                ownerId: vaults.ownerId,
-                createdAt: vaults.createdAt
-            },
-            owner: vaults.ownerId,
-            membership: {
-                role: sql`'owner'`.as('role'),
-                permissions: sql`'admin'`.as('permissions'),
-                status: sql`'active'`.as('status'),
-                joinedAt: vaults.createdAt
-            }
-        })
-        .from(vaults)
-        .where(eq(vaults.ownerId, userId))
-        .orderBy(desc(vaults.createdAt));
-
     // Get member vaults (where user is not the owner)
-    const memberVaults = await client
+    const allVaults = await client
         .select({
             vault: {
                 id: vaults.id,
@@ -74,17 +50,18 @@ export const getUserVaults = async (userId: string, db: D1Database, kv?: KVNames
             and(
                 eq(vaultMembers.userId, userId),
                 eq(vaultMembers.status, 'active'),
-                sql`${vaults.ownerId} != ${userId}` // Exclude vaults where user is owner
+                // sql`${vaults.ownerId} != ${userId}` // Exclude vaults where user is owner
             )
         )
         .orderBy(desc(vaults.createdAt));
 
     // Combine and sort all vaults
-    const allVaults = [...ownedVaults, ...memberVaults];
+    // const allVaults = [...ownedVaults, ...memberVaults];
     allVaults.sort((a, b) =>
         compareDesc(new Date(a.vault.createdAt!), new Date(b.vault.createdAt!))
     );
 
+    console.log('allVaults', allVaults);
     // Cache the result in KV
     // await setUserVaultsCache(userId, allVaults, kv);
 
@@ -93,58 +70,49 @@ export const getUserVaults = async (userId: string, db: D1Database, kv?: KVNames
 
 
 // Get vault members (owner + active members)
-export const getVaultMembers = async (vaultId: string, db: D1Database) => {
+export const getVaultMembers = async (userId: string, vaultId: string, db: D1Database) => {
     const client = drizzle(db, { schema });
 
-    // Get vault owner ID
-    const vaultData = await client
+    // First check if user has access to this vault
+    await requireVaultPermission(userId, vaultId, 'canViewVault', db);
+
+    const results = await client
         .select({
-            ownerId: vaults.ownerId
+            userId: sql<string>`COALESCE(${vaultMembers.userId}, ${vaults.ownerId})`,
+            role: sql<string>`
+                CASE 
+                    WHEN ${vaultMembers.role} IS NULL THEN 'owner' 
+                    ELSE ${vaultMembers.role} 
+                END
+            `,
+            status: sql<string>`
+                CASE 
+                    WHEN ${vaultMembers.role} IS NULL THEN 'active' 
+                    ELSE ${vaultMembers.status} 
+                END
+            `,
         })
         .from(vaults)
-        .where(eq(vaults.id, vaultId))
-        .limit(1);
-
-    // Fetch vault members
-    const vaultMembers_list = await client
-        .select({
-            userId: vaultMembers.userId,
-            role: vaultMembers.role,
-            status: vaultMembers.status
-        })
-        .from(vaultMembers)
+        .leftJoin(vaultMembers, eq(vaults.id, vaultMembers.vaultId))
         .where(
             and(
-                eq(vaultMembers.vaultId, vaultId),
-                eq(vaultMembers.status, 'active')
+                eq(vaults.id, vaultId),
+                or(
+                    eq(vaultMembers.status, 'active'),
+                    isNull(vaultMembers.status) // include owner
+                )
             )
         );
 
-    // Combine owner and members
-    const membersMap = new Map();
+    // Deduplicate and normalize (in case of multiple members)
+    const membersMap = new Map<string, any>();
 
-    // Add owner first
-    if (vaultData[0]) {
-        membersMap.set(vaultData[0].ownerId, {
-            userId: vaultData[0].ownerId,
-            firstName: undefined,
-            lastName: undefined,
-            email: '',
-            role: 'owner' as const,
-            status: 'active' as const
-        });
-    }
-
-    // Add other members
-    vaultMembers_list.forEach(m => {
-        if (!membersMap.has(m.userId)) {
-            membersMap.set(m.userId, {
-                userId: m.userId,
-                firstName: undefined,
-                lastName: undefined,
-                email: '',
-                role: m.role,
-                status: m.status
+    results.forEach(row => {
+        if (!membersMap.has(row.userId)) {
+            membersMap.set(row.userId, {
+                userId: row.userId,
+                role: row.role,
+                status: row.status
             });
         }
     });
@@ -157,21 +125,7 @@ export const getVault = async (userId: string, vaultId: string, db: D1Database) 
     const client = drizzle(db, { schema });
 
     // First check if user has access to this vault
-    const hasAccess = await client
-        .select()
-        .from(vaultMembers)
-        .where(
-            and(
-                eq(vaultMembers.vaultId, vaultId),
-                eq(vaultMembers.userId, userId),
-                eq(vaultMembers.status, 'active')
-            )
-        )
-        .limit(1);
-
-    if (hasAccess.length === 0) {
-        throw new Error('Vault not found or access denied');
-    }
+    await requireVaultPermission(userId, vaultId, 'canViewVault', db);
 
     // Get vault details
     const vault = await client
@@ -236,11 +190,6 @@ export const getVault = async (userId: string, vaultId: string, db: D1Database) 
 export const createVault = async (userId: string, data: CreateVault, db: D1Database, kv?: KVNamespace) => {
     const client = drizzle(db, { schema });
 
-    console.log(`[createVault.handler] Creating vault: ${JSON.stringify({
-        ...data,
-        ownerId: userId
-    }, null, 2)}`);
-
     try {
         const vault = await client
             .insert(vaults)
@@ -249,8 +198,8 @@ export const createVault = async (userId: string, data: CreateVault, db: D1Datab
                 ...data,
                 ownerId: userId,
                 createdBy: userId,
-                createdAt: formatISO(new Date()),
-                updatedAt: formatISO(new Date())
+                createdAt: formatISO(new UTCDate()),
+                updatedAt: formatISO(new UTCDate())
             })
             .returning();
 
@@ -265,8 +214,8 @@ export const createVault = async (userId: string, data: CreateVault, db: D1Datab
                     role: 'owner',
                     permissions: 'admin',
                     status: 'active',
-                    joinedAt: formatISO(new Date()),
-                    updatedAt: formatISO(new Date())
+                    joinedAt: formatISO(new UTCDate()),
+                    updatedAt: formatISO(new UTCDate())
                 });
         }
 
@@ -315,7 +264,7 @@ export const updateVault = async (userId: string, vaultId: string, data: any, db
         .update(vaults)
         .set({
             ...data,
-            updatedAt: new Date()
+            updatedAt: formatISO(new UTCDate())
         })
         .where(eq(vaults.id, vaultId))
         .returning();

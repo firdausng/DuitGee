@@ -44,7 +44,7 @@
     async function signInGoogle() {
         const response = await authClient.signIn.social({
             provider: "google",
-            callbackURL: "/callback",
+            callbackURL: "/",
             errorCallbackURL: "/error",
             // newUserCallbackURL: "/",
             // disableRedirect: true,

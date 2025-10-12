@@ -28,7 +28,8 @@ export interface VaultMembership {
 
 export interface UserVault {
 	vault: VaultDetails;
-	membership: VaultMembership;
+    owner: string;
+	membership: VaultMembership|null;
 }
 
 // Statistics for vaults (if needed)

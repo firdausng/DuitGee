@@ -2,23 +2,13 @@
 	import { goto } from '$app/navigation';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
-    import {createAuthClient} from "better-auth/client";
+    import {authClient} from "$lib/auth-client";
 
     let {data} = $props();
 	let email = $state('');
 	let password = $state('');
 	let isLoading = $state(false);
 	let errorMessage = $state('');
-
-    const authClient = createAuthClient({
-        baseURL: data.basePath,
-        session: {
-            cookieCache: {
-                enabled: true,
-                maxAge: 5 * 60 // Cache duration in seconds
-            }
-        }
-    });
 
 	async function handleEmailAuth() {
 		errorMessage = '';
@@ -42,9 +32,9 @@
 	async function handleGoogleLogin() {
 		isLoading = true;
 		try {
-            const response = await authClient.signIn.social({
+            const response = await authClient({basePath: data.basePath}).signIn.social({
                 provider: "google",
-                callbackURL: "/callback",
+                callbackURL: "/",
                 errorCallbackURL: "/error",
             });
 		} catch (error) {
