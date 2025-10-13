@@ -65,21 +65,26 @@
             if(!form.valid){
                 setMessage(form, 'invalid data!');
             }
-            const response = await ofetch(`/api/vaults/${vaultId}/expenses`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    ...form.data,
-                    vaultId,
-                }),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            if(response){
-                await goto(`/vaults/${vaultId}`);
-            } else {
-                // setError(form, 'amount', response.error.message);
-            }
+            alert(JSON.stringify({
+                ...form.data,
+                date: new Date(form.data.date),
+                vaultId,
+            }));
+            // const response = await ofetch(`/api/vaults/${vaultId}/expenses`, {
+            //     method: 'POST',
+            //     body: JSON.stringify({
+            //         ...form.data,
+            //         vaultId,
+            //     }),
+            //     headers: {
+            //         'Content-Type': 'application/json'
+            //     }
+            // });
+            // if(response){
+            //     await goto(`/vaults/${vaultId}`);
+            // } else {
+            //     // setError(form, 'amount', response.error.message);
+            // }
         }
     });
 

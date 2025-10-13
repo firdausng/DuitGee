@@ -21,6 +21,7 @@ declare global {
             currentUser: User
             isAdmin: boolean,
             currentUserVaults: UserVault[]
+            isVaultLimitReach: boolean
         }
 
         // interface Error {

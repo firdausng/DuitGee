@@ -9,7 +9,7 @@ import {
     deleteVault,
 } from "$lib/server/api/vaults/handlers";
 import {describeRoute, resolver} from 'hono-openapi';
-import {getUserVaultsByEmailSchema, updateVaultSchema, vaultSchema} from "$lib/schemas/expense";
+import {createVaultSchema, getUserVaultsByEmailSchema, updateVaultSchema, vaultSchema} from "$lib/schemas/expense";
 
 const VAULT_TAG = ['Vault'];
 const commonVaultConfig = {
@@ -40,7 +40,7 @@ export const vaultsApi = new Hono<App.Api>()
             const session = c.get('currentSession');
 
             try {
-                const vaults = await getUserVaults(session.user.email, c.env.DB);
+                const vaults = await getUserVaults(session.user.id, c.env.DB);
                 return c.json({
                     success: true,
                     data: vaults
@@ -118,13 +118,13 @@ export const vaultsApi = new Hono<App.Api>()
                 },
             },
         }),
-        vValidator('json', vaultSchema),
+        vValidator('json', createVaultSchema),
         async (c) => {
             const session = c.get('currentSession');
             const data = c.req.valid('json');
 
             try {
-                const vault = await createVault(session.user.email, data, c.env.DB, c.env.KV);
+                const vault = await createVault(session.user.id, c.env.VAULT_LIMIT, data, c.env.DB, c.env.KV);
                 return c.json({
                     success: true,
                     data: vault
@@ -167,7 +167,7 @@ export const vaultsApi = new Hono<App.Api>()
             const vaultId = c.req.param('id');
 
             try {
-                const vault = await getVault(session.user.email, vaultId, c.env.DB);
+                const vault = await getVault(session.user.id, vaultId, c.env.DB);
                 return c.json({
                     success: true,
                     data: vault
@@ -213,7 +213,7 @@ export const vaultsApi = new Hono<App.Api>()
             const data = c.req.valid('json');
 
             try {
-                const vault = await updateVault(session.user.email, vaultId, data, c.env.DB, c.env.KV);
+                const vault = await updateVault(session.user.id, vaultId, data, c.env.DB, c.env.KV);
                 return c.json({
                     success: true,
                     data: vault
@@ -258,7 +258,7 @@ export const vaultsApi = new Hono<App.Api>()
             const vaultId = c.req.param('id');
 
             try {
-                const vault = await deleteVault(session.user.email, vaultId, c.env.DB, c.env.KV);
+                const vault = await deleteVault(session.user.id, vaultId, c.env.DB, c.env.KV);
                 return c.json({
                     success: true,
                     data: vault,

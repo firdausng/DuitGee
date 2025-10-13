@@ -1,21 +1,29 @@
 <script lang="ts">
-	import VaultForm from '$lib/components/VaultForm.svelte';
+	import EditVaultForm from '$lib/components/EditVaultForm.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
 	import Trash from 'phosphor-svelte/lib/Trash';
+    import {ofetch} from "ofetch";
 
 	let { data } = $props();
 
-	function handleDelete() {
-		if (data.vault.isPersonal) {
-			alert('Personal vaults cannot be deleted.');
-			return;
-		}
+	async function handleDelete() {
+		// if (data.vault.isPersonal) {
+		// 	alert('Personal vaults cannot be deleted.');
+		// 	return;
+		// }
 
 		if (confirm(`Are you sure you want to delete "${data.vault.name}"? This action cannot be undone and will remove all associated expenses.`)) {
 			// TODO: Implement delete functionality
 			console.log('Delete vault:', data.vault.id);
+            await ofetch(`/api/vaults/${data.vault.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            await goto("/vaults")
 		}
 	}
 </script>
@@ -38,7 +46,7 @@
 
 	<div class="space-y-6">
 		<Card class="p-6">
-			<VaultForm formData={data.form} isEdit={true} vault={data.vault} />
+			<EditVaultForm formData={data.form} vault={data.vault} />
 		</Card>
 
 		{#if !data.vault.isPersonal}

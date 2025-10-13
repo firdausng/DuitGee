@@ -6,60 +6,47 @@
 	import Input from '$lib/components/ui/Input.svelte';
 	import Textarea from '$lib/components/ui/Textarea.svelte';
 	import Label from '$lib/components/ui/Label.svelte';
-	import Card from '$lib/components/ui/Card.svelte';
 	import IconDisplay from '$lib/components/IconDisplay.svelte';
 	import Palette from 'phosphor-svelte/lib/Palette';
-	import Lock from 'phosphor-svelte/lib/Lock';
-	import Globe from 'phosphor-svelte/lib/Globe';
 	import Vault from 'phosphor-svelte/lib/Vault';
 
 	interface Props {
 		formData: SuperValidated<Infer<VaultSchema>>;
-		isEdit?: boolean;
-		vault?: {
+		vault: {
 			id: string;
 			name: string;
 			isPersonal: boolean;
 		};
 	}
 
-	let { formData, isEdit = false, vault }: Props = $props();
+	let { formData, vault }: Props = $props();
 
 	const { form, errors, enhance, submitting } = superForm(formData, {
 		validators: valibotClient(vaultSchema),
-		resetForm: !isEdit,
+		resetForm: false,
 		dataType: 'form'
 	});
 
 	function handleCancel() {
-		window.history.back();
+		history.back();
 	}
 
-	// Initialize default values if not already set
+	// Initialize default values
 	$effect(() => {
-		// Ensure color has a valid value
 		if (!$form.color || $form.color === '') {
 			$form.color = '#3B82F6';
 		}
 
-		// Ensure iconType has a value
 		if (!$form.iconType || $form.iconType === '') {
 			$form.iconType = 'emoji';
 		}
 
-		// Sync selectedIconType with form iconType
 		if ($form.iconType && selectedIconType !== $form.iconType) {
 			selectedIconType = $form.iconType as 'emoji' | 'phosphor';
 		}
 
-		// Ensure icon has a value
 		if (!$form.icon || $form.icon === '') {
 			$form.icon = '🏦';
-		}
-
-		// Set default for isPersonal only for new vaults
-		if (!isEdit && ($form.isPersonal === undefined || $form.isPersonal === null)) {
-			$form.isPersonal = true;
 		}
 	});
 
@@ -119,13 +106,13 @@
 			type="text"
 			placeholder="Enter vault name"
 			bind:value={$form.name}
-			disabled={(vault?.isPersonal && isEdit) || $submitting}
+			disabled={vault.isPersonal || $submitting}
 			aria-invalid={$errors.name ? 'true' : undefined}
 		/>
 		{#if $errors.name}
 			<p class="text-sm text-destructive">{$errors.name}</p>
 		{/if}
-		{#if vault?.isPersonal && isEdit}
+		{#if vault.isPersonal}
 			<p class="text-sm text-muted-foreground">Personal vault names cannot be changed.</p>
 		{/if}
 	</div>
@@ -145,41 +132,6 @@
 			<p class="text-sm text-destructive">{$errors.description}</p>
 		{/if}
 	</div>
-
-	<!-- Vault Type (only for create) -->
-	{#if !isEdit}
-		<div class="space-y-2">
-			<Label>Vault Type</Label>
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-				<button
-					type="button"
-					onclick={() => ($form.isPersonal = true)}
-					class="relative flex items-center p-4 border rounded-input transition-colors theme-transition-fast {$form.isPersonal
-						? 'border-dark bg-accent text-accent-foreground'
-						: 'border-input bg-background hover:bg-accent'}"
-				>
-					<Lock class="w-5 h-5 mr-3 flex-shrink-0" />
-					<div class="text-left">
-						<h3 class="font-medium">Personal Vault</h3>
-						<p class="text-sm text-muted-foreground">Private to you only</p>
-					</div>
-				</button>
-				<button
-					type="button"
-					onclick={() => ($form.isPersonal = false)}
-					class="relative flex items-center p-4 border rounded-input transition-colors theme-transition-fast {!$form.isPersonal
-						? 'border-dark bg-accent text-accent-foreground'
-						: 'border-input bg-background hover:bg-accent'}"
-				>
-					<Globe class="w-5 h-5 mr-3 flex-shrink-0" />
-					<div class="text-left">
-						<h3 class="font-medium">Shared Vault</h3>
-						<p class="text-sm text-muted-foreground">Share with others</p>
-					</div>
-				</button>
-			</div>
-		</div>
-	{/if}
 
 	<!-- Color Selection -->
 	<div class="space-y-2">
@@ -284,9 +236,6 @@
 		<input type="hidden" name="icon" bind:value={$form.icon} />
 		<input type="hidden" name="iconType" bind:value={$form.iconType} />
 		<input type="hidden" name="color" bind:value={$form.color} />
-		{#if !isEdit}
-			<input type="hidden" name="isPersonal" bind:value={$form.isPersonal} />
-		{/if}
 	</div>
 
 	{#if $errors.color}
@@ -297,9 +246,9 @@
 	<div class="flex flex-col sm:flex-row gap-3 pt-6 border-t border-border">
 		<Button type="submit" disabled={$submitting} class="w-full sm:w-auto">
 			{#if $submitting}
-				{isEdit ? 'Saving...' : 'Creating...'}
+				Saving...
 			{:else}
-				{isEdit ? 'Save Changes' : 'Create Vault'}
+				Save Changes
 			{/if}
 		</Button>
 		<Button

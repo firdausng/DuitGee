@@ -65,6 +65,10 @@ export const checkSessionHandler: Handle = async ({ event, resolve }) => {
 
     const vaults = await getUserVaults(session.user.id, event.platform.env.DB, event.platform.env.KV);
 
+    const ownerVaults = vaults.filter(v => v.owner === session.user.id);
+    // console.log('[checkSessionHandler] ownerVaults.length', ownerVaults.length)
+
+    event.locals.isVaultLimitReach = ownerVaults.length > event.platform.env.VAULT_LIMIT;
     event.locals.currentUserVaults = vaults;
     event.locals.currentSession = session;
     event.locals.currentUser = session.user;

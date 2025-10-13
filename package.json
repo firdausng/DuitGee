@@ -43,6 +43,7 @@
     "@date-fns/utc": "^2.1.1",
     "@hono/standard-validator": "^0.1.5",
     "@hono/valibot-validator": "^0.5.3",
+    "@internationalized/date": "^3.10.0",
     "@paralleldrive/cuid2": "^2.2.2",
     "@scalar/hono-api-reference": "^0.9.19",
     "@tsndr/cloudflare-worker-jwt": "^3.2.0",

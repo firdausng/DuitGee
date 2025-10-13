@@ -1,6 +1,9 @@
 <script lang="ts">
-	import VaultForm from '$lib/components/VaultForm.svelte';
+	import CreateVaultForm from '$lib/components/CreateVaultForm.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import { goto } from '$app/navigation';
+	import LockKey from 'phosphor-svelte/lib/LockKey';
 
 	let { data } = $props();
 </script>
@@ -17,7 +20,32 @@
 		</p>
 	</div>
 
-	<Card class="p-6">
-		<VaultForm formData={data.form} isEdit={false} />
-	</Card>
+	{#if data.isVaultLimitReach}
+		<Card class="p-6 border-warning bg-warning/5">
+			<div class="flex items-start space-x-4">
+				<div class="flex-shrink-0">
+					<LockKey class="w-6 h-6 text-warning" />
+				</div>
+				<div class="flex-1 space-y-3">
+					<div>
+						<h3 class="text-lg font-semibold text-foreground">Vault Limit Reached</h3>
+						<p class="mt-1 text-sm text-muted-foreground">
+							You have reached the maximum limit of 5 vaults. To create a new vault, please delete an existing vault first.
+						</p>
+					</div>
+					<Button
+						variant="outline"
+						onclick={() => goto('/vaults')}
+						class="w-full sm:w-auto"
+					>
+						Go to My Vaults
+					</Button>
+				</div>
+			</div>
+		</Card>
+	{:else}
+		<Card class="p-6">
+			<CreateVaultForm formData={data.form} currentUserId={data.currentUserId} />
+		</Card>
+	{/if}
 </div>

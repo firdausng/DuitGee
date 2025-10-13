@@ -187,10 +187,18 @@ export const getVault = async (userId: string, vaultId: string, db: D1Database) 
 
 
 // Create a new vault
-export const createVault = async (userId: string, data: CreateVault, db: D1Database, kv?: KVNamespace) => {
+export const createVault = async (userId: string, limit: number, data: CreateVault, db: D1Database, kv?: KVNamespace) => {
     const client = drizzle(db, { schema });
 
     try {
+        const userVaults = await getUserVaults(userId, db, kv);
+        const ownerVaults = userVaults.filter(v => v.owner === userId);
+        const isVaultLimitReach = ownerVaults.length > limit
+
+        if (isVaultLimitReach) {
+            throw new Error(`You have reached the limit of ${limit} vaults. Please delete some vaults to create a new one.`);
+        }
+
         const vault = await client
             .insert(vaults)
             .values({
@@ -285,6 +293,7 @@ export const updateVault = async (userId: string, vaultId: string, data: any, db
 export const deleteVault = async (userId: string, vaultId: string, db: D1Database, kv?: KVNamespace) => {
     const client = drizzle(db, { schema });
 
+    console.log('deleteVault', userId, vaultId);
     // Only owner can delete vault
     const vault = await client
         .select()

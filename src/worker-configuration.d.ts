@@ -10,6 +10,7 @@ declare namespace Cloudflare {
         BETTER_AUTH_SECRET: string;
         GOOGLE_CLIENT_ID: string;
         GOOGLE_CLIENT_SECRET: string;
+        VAULT_LIMIT: number;
         ASSETS: Fetcher;
         DB: D1Database;
         AUTH_DB: D1Database;
