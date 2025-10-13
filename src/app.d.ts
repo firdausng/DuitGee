@@ -18,7 +18,7 @@ declare global {
             authService: AuthService,
             error: Error
             currentSession: AuthSession
-            currentUser: AppUser
+            currentUser: User
             isAdmin: boolean,
             currentUserVaults: UserVault[]
         }

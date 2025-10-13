@@ -24,10 +24,11 @@
 	import Lightning from 'phosphor-svelte/lib/Lightning';
 	import { goto } from '$app/navigation';
 	import { theme } from '$lib/stores/theme.svelte.js';
-
+    import {authClientBase} from "$lib/auth-client-base";
 
 	let { children, data } = $props();
 
+    let authClient = authClientBase({basePath: data.basePath});
 	// Main navigation sections
 	const mainNavigation = [
 		{ name: 'Vaults', href: '/vaults', icon: Stool, key: 'vaults' },
@@ -228,6 +229,11 @@
 
 		return currentSection === key;
 	}
+
+    async function signOut(){
+        await authClient.signOut();
+        goto('/login');
+    }
 </script>
 
 <svelte:head>
@@ -559,7 +565,7 @@
 
 							<!-- User Dropdown -->
 							<div class="hidden lg:block">
-								<UserDropdown activeUser={data.activeUser} />
+								<UserDropdown activeUser={data.activeUser} onLogout={() => signOut()}  />
 							</div>
 						</div>
 					</div>

@@ -11,5 +11,6 @@ export const load: LayoutServerLoad = async ({locals, url, platform}) => {
         vaults: locals.currentUserVaults,
         isAdmin: locals.isAdmin,
         currentSession: locals.currentSession,
+        basePath: platform.env.BASE_PATH,
     };
 }

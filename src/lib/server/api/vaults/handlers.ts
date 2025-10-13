@@ -61,7 +61,7 @@ export const getUserVaults = async (userId: string, db: D1Database, kv?: KVNames
         compareDesc(new Date(a.vault.createdAt!), new Date(b.vault.createdAt!))
     );
 
-    console.log('allVaults', allVaults);
+    // console.log('allVaults', allVaults);
     // Cache the result in KV
     // await setUserVaultsCache(userId, allVaults, kv);
 

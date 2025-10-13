@@ -4,40 +4,27 @@
     import UserCircle from "phosphor-svelte/lib/UserCircle";
     import SignOut from "phosphor-svelte/lib/SignOut";
     import CheckCircle from "phosphor-svelte/lib/CheckCircle";
-    import type { User } from "$lib/server/api/users/schema";
 
-    let { activeUser }: { activeUser: User } = $props();
+    let { activeUser, onLogout }: { activeUser: App.User, onLogout: ()=> void } = $props();
 
     // Generate avatar URL using ui-avatars service
     let avatar = $derived(() => {
-        const name = encodeURIComponent(`${activeUser.firstName || ''} ${activeUser.lastName || ''}`.trim() || activeUser.email);
+        const name = encodeURIComponent(`${activeUser.name || ''}`.trim() || activeUser.email);
         return `https://ui-avatars.com/api/?name=${name}&background=0D8ABC&color=fff&size=128`;
     });
 
     // Generate initials
     let initials = $derived(() => {
-        if (activeUser.firstName && activeUser.lastName) {
-            return `${activeUser.firstName.charAt(0)}${activeUser.lastName.charAt(0)}`.toUpperCase();
-        }
-        if (activeUser.firstName) {
-            return activeUser.firstName.substring(0, 2).toUpperCase();
-        }
-        if (activeUser.lastName) {
-            return activeUser.lastName.substring(0, 2).toUpperCase();
+        if (activeUser.name) {
+            return `${activeUser.name.charAt(0)}`.toUpperCase();
         }
         return activeUser.email.substring(0, 2).toUpperCase();
     });
 
     // Display name
     let displayName = $derived(() => {
-        if (activeUser.firstName && activeUser.lastName) {
-            return `${activeUser.firstName} ${activeUser.lastName}`;
-        }
-        if (activeUser.firstName) {
-            return activeUser.firstName;
-        }
-        if (activeUser.lastName) {
-            return activeUser.lastName;
+        if (activeUser.name) {
+            return `${activeUser.name}`;
         }
         return activeUser.email.split('@')[0];
     });
@@ -149,13 +136,13 @@
                 <DropdownMenu.Item
                     class="flex items-center space-x-3 w-full p-3 text-sm rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 focus:bg-red-50 dark:focus:bg-red-900/20 transition-colors cursor-pointer focus:outline-none"
                 >
-                    <a href="/logout" class="flex items-center space-x-3 w-full">
+                    <button onclick={()=> onLogout()} class="flex items-center space-x-3 w-full">
                         <SignOut class="w-4 h-4 text-red-600 dark:text-red-400" />
                         <div class="flex flex-col">
                             <span class="text-red-700 dark:text-red-400 font-medium">Sign out</span>
                             <span class="text-xs text-red-600 dark:text-red-500">End your session</span>
                         </div>
-                    </a>
+                    </button>
                 </DropdownMenu.Item>
             </div>
         </DropdownMenu.Content>
