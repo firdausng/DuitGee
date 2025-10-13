@@ -66,6 +66,7 @@
                 method: 'PUT',
                 body: JSON.stringify({
                     ...form.data,
+                    date: new Date(form.data.date),
                     vaultId,
                 }),
                 headers: {

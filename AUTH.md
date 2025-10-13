@@ -12,6 +12,7 @@ wrangler d1 migrations apply "duitgee-auth"
 
 ```sh
 wrangler d1 migrations apply "duitgee-auth" --remote true    
+pnpm run build
 npx wrangler deploy --env production
 ```
 
