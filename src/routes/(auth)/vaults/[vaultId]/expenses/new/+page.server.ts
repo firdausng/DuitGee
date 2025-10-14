@@ -27,12 +27,6 @@ export const load: PageServerLoad = async ({platform, locals, params, url}) => {
     console.log("locals.currentUserVaults", locals.currentUserVaults)
     console.log("allMembers", allMembers)
 
-    // const { data: users, error } = await adminAuthClient({basePath: platform.env.BASE_PATH}).admin.listUsers({
-    //     query: {
-    //         filter: 'email_verified eq true'
-    //     }
-    // });
-
 	const form = await superValidate(valibot(createExpenseSchema));
 
 	// Set default userId to current user
@@ -74,6 +68,7 @@ export const load: PageServerLoad = async ({platform, locals, params, url}) => {
         paymentProviders: configuration.paymentData.paymentProviders,
 		selectedTemplate,
 		isSkipped,
+        basePath: platform.env.BASE_PATH,
     };
 };
 

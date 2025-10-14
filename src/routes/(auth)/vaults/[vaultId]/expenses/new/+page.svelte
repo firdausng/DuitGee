@@ -7,8 +7,13 @@
 	import Play from 'phosphor-svelte/lib/Play';
 	import Lightning from 'phosphor-svelte/lib/Lightning';
 	import Clock from 'phosphor-svelte/lib/Clock';
+    import {authClientBase} from "$lib/auth-client-base";
 
 	let { data } = $props();
+
+    const { data:organization, error } = authClientBase({basePath: data.basePath}).organization.list();
+    console.log("organization", organization)
+    console.log("organization error", error)
 
 	// State to track if user has selected template or skipped
 	// Show form if there's a templateId in URL or if user skipped

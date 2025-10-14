@@ -1,7 +1,7 @@
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad } from '../../../../../../.svelte-kit/types/src/routes';
 import { redirect } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ locals, platform, request }) => {
+export const load: PageServerLoad = async ({ locals, platform, request, params }) => {
     if (!locals.currentUser) {
         throw redirect(302, '/login');
     }
@@ -10,8 +10,8 @@ export const load: PageServerLoad = async ({ locals, platform, request }) => {
         throw new Error('Database not available');
     }
 
-
     return {
         basePath: platform.env.BASE_PATH,
+        organizationSlug: params.organizationSlug,
     };
 };

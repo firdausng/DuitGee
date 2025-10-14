@@ -20,6 +20,11 @@ export const auth = (env: Cloudflare.Env) => {
                     //maximumTeams: 10, // Optional: limit teams per organization
                     allowRemovingAllTeams: false, // Optional: prevent removing the last team
                 },
+                allowUserToCreateOrganization: async (user) => {
+                    // const subscription = await getSubscription(user.email);
+                    //TODO hardcode for now
+                    return user.email === "mail4frenz@gmail.com";
+                },
             }),
         ],
         baseURL: env.BETTER_AUTH_URL,
