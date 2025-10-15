@@ -130,7 +130,7 @@
 						<li><strong>Withdraw consent:</strong> You can withdraw your consent for data processing at any time</li>
 					</ul>
 					<p class="text-foreground/90 mb-4">
-						To exercise these rights, please contact us at privacy@duitgee.com
+						To exercise these rights, please contact us at support@duitgee.com
 					</p>
 				</section>
 
@@ -193,7 +193,6 @@
 						If you have any questions about this Privacy Policy, please contact us:
 					</p>
 					<ul class="list-none pl-0 mb-4 text-foreground/90 space-y-2">
-						<li>Email: privacy@duitgee.com</li>
 						<li>Support: support@duitgee.com</li>
 					</ul>
 				</section>

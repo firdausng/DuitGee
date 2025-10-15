@@ -57,6 +57,7 @@
     "hono-openapi": "^1.0.8",
     "jose": "^6.1.0",
     "ofetch": "^1.4.1",
+    "posthog-js": "^1.275.3",
     "runed": "^0.31.1",
     "tailwind-merge": "^3.3.1"
   },

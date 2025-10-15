@@ -1,10 +1,13 @@
 <script lang="ts">
     import '../app.css';
+    import posthog from 'posthog-js'
     import favicon from '$lib/assets/favicon.svg';
     import { theme } from '$lib/stores/theme.svelte.js';
     import { navigating } from '$app/stores';
+    import {onMount} from "svelte";
+    import {browser, dev} from "$app/environment";
 
-    let {children} = $props();
+    let {children, data} = $props();
 
     // Initialize theme on app start
     $effect(() => {
@@ -17,6 +20,20 @@
         setTimeout(() => {
             document.documentElement.classList.remove('preload');
         }, 100);
+    });
+
+    onMount(() => {
+        if (browser && !dev) {
+            posthog.init(
+                data.posthogKey,
+                {
+                    api_host: 'https://us.i.posthog.com',
+                    defaults: '2025-05-24',
+                    person_profiles: 'always', // or 'always' to create profiles for anonymous users as well
+                }
+            )
+        }
+        return
     });
 </script>
 
