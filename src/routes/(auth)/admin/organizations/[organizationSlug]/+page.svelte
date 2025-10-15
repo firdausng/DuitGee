@@ -3,6 +3,10 @@
     import {onMount} from "svelte";
     import { goto } from '$app/navigation';
     import Button from '$lib/components/ui/Button.svelte';
+    import Dialog from '$lib/components/ui/Dialog.svelte';
+    import CreateTeamForm from '$lib/components/CreateTeamForm.svelte';
+    import AttachVaultToTeamForm from '$lib/components/AttachVaultToTeamForm.svelte';
+    import EditTeamForm from '$lib/components/EditTeamForm.svelte';
     import Buildings from 'phosphor-svelte/lib/Buildings';
     import Users from 'phosphor-svelte/lib/Users';
     import UserPlus from 'phosphor-svelte/lib/UserPlus';
@@ -11,6 +15,10 @@
     import ArrowLeft from 'phosphor-svelte/lib/ArrowLeft';
     import Crown from 'phosphor-svelte/lib/Crown';
     import EnvelopeSimple from 'phosphor-svelte/lib/EnvelopeSimple';
+    import Plus from 'phosphor-svelte/lib/Plus';
+    import Vault from 'phosphor-svelte/lib/Vault';
+    import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+    import {ofetch} from "ofetch";
 
     let {data} = $props()
 
@@ -18,6 +26,14 @@
 
     let currentOrganization = $state<any>();
     let isLoading = $state(true);
+    let showCreateTeamDialog = $state(false);
+    let isCreatingTeam = $state(false);
+    let showAttachVaultDialog = $state(false);
+    let isAttachingVault = $state(false);
+    let showEditTeamDialog = $state(false);
+    let isEditingTeam = $state(false);
+    let selectedTeam = $state<any>(null);
+    let availableVaults = $state<any[]>([]);
 
     onMount(async () => {
         try {
@@ -33,12 +49,41 @@
             } else {
                 currentOrganization = organization;
             }
+
+            // Load available vaults
+            await loadVaults();
         } catch (error) {
             console.error("Failed to load organization:", error);
         } finally {
             isLoading = false;
         }
     })
+
+    async function loadVaults() {
+        try {
+            const response = await ofetch('/api/admin/vaults', {
+                headers: {
+                    // 'Authorization': `Bearer ${data.token || ''}`
+                }
+            });
+
+            if (response.success) {
+                if (response.data) {
+                    // Load all vaults (including those with teamId) for edit functionality
+                    availableVaults = response.data.map((v: any) => ({
+                        id: v.vault.id,
+                        name: v.vault.name,
+                        description: v.vault.description,
+                        icon: v.vault.icon,
+                        isPersonal: v.vault.isPersonal,
+                        teamId: v.vault.teamId
+                    }));
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load vaults:', error);
+        }
+    }
 
     function formatDate(dateString: string | Date | undefined): string {
         if (!dateString) return 'N/A';
@@ -59,6 +104,209 @@
                 return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
             default:
                 return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
+        }
+    }
+
+    async function handleCreateTeam(teamData: { name: string; vaultId?: string }) {
+        isCreatingTeam = true;
+        try {
+            const { data: team, error } = await adminClient.organization.createTeam({
+                name: teamData.name, // required
+                organizationId: currentOrganization.id,
+            });
+
+            if (error) {
+                console.error('Failed to create team:', error);
+                alert('Failed to create team: ' + (error.message || 'Unknown error'));
+                return;
+            }
+
+            // Attach vault if one was selected
+            if (teamData.vaultId) {
+                const selectedVault = availableVaults.find(v => v.id === teamData.vaultId);
+                if (selectedVault) {
+                    await ofetch(`/api/admin/vaults/${teamData.vaultId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify({
+                            ...selectedVault,
+                            teamId: team.id,
+                        }),
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+            }
+
+            // Success - refresh organization data and vaults
+            await Promise.all([
+                (async () => {
+                    const { data: organization, error: orgError } = await adminClient.organization.getFullOrganization({
+                        query: {
+                            organizationSlug: data.organizationSlug,
+                            membersLimit: 100,
+                        },
+                    });
+                    if (!orgError && organization) {
+                        currentOrganization = organization;
+                    }
+                })(),
+                loadVaults()
+            ]);
+
+            showCreateTeamDialog = false;
+        } catch (error) {
+            console.error('Failed to create team:', error);
+            alert('Failed to create team');
+        } finally {
+            isCreatingTeam = false;
+        }
+    }
+
+    function openAttachVaultDialog(team: any) {
+        selectedTeam = team;
+        showAttachVaultDialog = true;
+    }
+
+    function openEditTeamDialog(team: any) {
+        selectedTeam = team;
+        showEditTeamDialog = true;
+    }
+
+    // Get currently attached vault for a team
+    function getTeamVaultId(team: any): string | null {
+        const vault = availableVaults.find(v => v.teamId === team.id);
+        return vault ? vault.id : null;
+    }
+
+    async function handleEditTeam(teamData: { name: string; vaultId?: string | null }) {
+        isEditingTeam = true;
+        try {
+            // Update team name using Better Auth API
+            const { data: updatedTeam, error } = await adminClient.organization.updateTeam({
+                teamId: selectedTeam.id,
+                data: {
+                    name: teamData.name,
+                    organizationId: currentOrganization.id,
+                    createdAt: new Date(selectedTeam.createdAt),
+                    updatedAt: new Date(),
+                }
+            });
+
+            if (error) {
+                console.error('Failed to update team:', error);
+                alert('Failed to update team: ' + (error.message || 'Unknown error'));
+                return;
+            }
+
+            // Handle vault attachment changes
+            const currentVaultId = getTeamVaultId(selectedTeam);
+
+            // If vault changed, update vault teamId
+            if (currentVaultId !== teamData.vaultId) {
+                // Remove old vault attachment
+                if (currentVaultId) {
+                    const oldVault = availableVaults.find(v => v.id === currentVaultId);
+                    if (oldVault) {
+                        await ofetch(`/api/admin/vaults/${currentVaultId}`, {
+                            method: 'PUT',
+                            body: JSON.stringify({
+                                ...oldVault,
+                                teamId: null,
+                            }),
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                    }
+                }
+
+                // Add new vault attachment
+                if (teamData.vaultId) {
+                    const newVault = availableVaults.find(v => v.id === teamData.vaultId);
+                    if (newVault) {
+                        await ofetch(`/api/admin/vaults/${teamData.vaultId}`, {
+                            method: 'PUT',
+                            body: JSON.stringify({
+                                ...newVault,
+                                teamId: selectedTeam.id,
+                            }),
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Refresh organization and vaults data
+            await Promise.all([
+                (async () => {
+                    const { data: organization, error: orgError } = await adminClient.organization.getFullOrganization({
+                        query: {
+                            organizationSlug: data.organizationSlug,
+                            membersLimit: 100,
+                        },
+                    });
+                    if (!orgError && organization) {
+                        currentOrganization = organization;
+                    }
+                })(),
+                loadVaults()
+            ]);
+
+            showEditTeamDialog = false;
+            selectedTeam = null;
+        } catch (error) {
+            console.error('Failed to edit team:', error);
+            alert('Failed to edit team');
+        } finally {
+            isEditingTeam = false;
+        }
+    }
+
+    async function handleAttachVault(vaultData: { vaultId: string }) {
+        isAttachingVault = true;
+        try {
+            const selectedVault = availableVaults.find(v => v.id === vaultData.vaultId);
+            if (!selectedVault) {
+                throw new Error('Vault not found');
+            }
+
+            await ofetch(`/api/admin/vaults/${vaultData.vaultId}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    ...selectedVault,
+                    teamId: selectedTeam.id,
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            // Refresh organization and vaults data
+            await Promise.all([
+                (async () => {
+                    const { data: organization, error: orgError } = await adminClient.organization.getFullOrganization({
+                        query: {
+                            organizationSlug: data.organizationSlug,
+                            membersLimit: 100,
+                        },
+                    });
+                    if (!orgError && organization) {
+                        currentOrganization = organization;
+                    }
+                })(),
+                loadVaults()
+            ]);
+
+            showAttachVaultDialog = false;
+            selectedTeam = null;
+        } catch (error) {
+            console.error('Failed to attach vault:', error);
+            alert('Failed to attach vault');
+        } finally {
+            isAttachingVault = false;
         }
     }
 </script>
@@ -218,9 +466,15 @@
         <!-- Teams Section -->
         <div class="bg-background border rounded-lg shadow-card">
             <div class="px-4 py-4 sm:px-6 border-b">
-                <div class="flex items-center gap-2">
-                    <UsersThree class="w-5 h-5 text-foreground" />
-                    <h2 class="text-lg font-semibold text-foreground">Teams</h2>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <UsersThree class="w-5 h-5 text-foreground" />
+                        <h2 class="text-lg font-semibold text-foreground">Teams</h2>
+                    </div>
+                    <Button size="sm" onclick={() => showCreateTeamDialog = true}>
+                        <Plus class="w-4 h-4 mr-2" />
+                        Create Team
+                    </Button>
                 </div>
             </div>
             <div class="p-4 sm:p-6">
@@ -233,23 +487,66 @@
                 {:else}
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {#each currentOrganization.teams as team}
+                            {@const attachedVault = availableVaults.find(v => v.teamId === team.id)}
                             <div class="bg-background border rounded-lg p-4 hover:shadow-md transition-shadow">
-                                <div class="flex items-start gap-3">
-                                    <div class="flex-shrink-0">
-                                        <div class="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
-                                            <UsersThree class="w-5 h-5 text-accent" />
+                                <div class="flex flex-col gap-3">
+                                    <div class="flex items-start gap-3">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
+                                                <UsersThree class="w-5 h-5 text-accent" />
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <h3 class="font-medium text-foreground truncate">{team.name}</h3>
+                                            <p class="text-xs text-muted-foreground mt-1">
+                                                Created: {formatDate(team.createdAt)}
+                                            </p>
+                                            {#if team.updatedAt && team.updatedAt !== team.createdAt}
+                                                <p class="text-xs text-muted-foreground">
+                                                    Updated: {formatDate(team.updatedAt)}
+                                                </p>
+                                            {/if}
                                         </div>
                                     </div>
-                                    <div class="flex-1 min-w-0">
-                                        <h3 class="font-medium text-foreground truncate">{team.name}</h3>
-                                        <p class="text-xs text-muted-foreground mt-1">
-                                            Created: {formatDate(team.createdAt)}
-                                        </p>
-                                        {#if team.updatedAt && team.updatedAt !== team.createdAt}
-                                            <p class="text-xs text-muted-foreground">
-                                                Updated: {formatDate(team.updatedAt)}
-                                            </p>
-                                        {/if}
+
+                                    <!-- Attached Vault -->
+                                    {#if attachedVault}
+                                        <div class="border-t pt-3">
+                                            <p class="text-xs font-medium text-muted-foreground mb-2">Attached Vault</p>
+                                            <div class="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg">
+                                                {#if attachedVault.icon}
+                                                    <span class="text-lg">{attachedVault.icon}</span>
+                                                {/if}
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-sm font-medium text-primary truncate">{attachedVault.name}</p>
+                                                    {#if attachedVault.description}
+                                                        <p class="text-xs text-muted-foreground truncate">{attachedVault.description}</p>
+                                                    {/if}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {/if}
+
+                                    <!-- Action Buttons -->
+                                    <div class="flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            class="flex-1"
+                                            onclick={() => openEditTeamDialog(team)}
+                                        >
+                                            <PencilSimple class="w-4 h-4 mr-2" />
+                                            Edit
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            class="flex-1"
+                                            onclick={() => openAttachVaultDialog(team)}
+                                        >
+                                            <Vault class="w-4 h-4 mr-2" />
+                                            Attach
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
@@ -260,3 +557,64 @@
         </div>
     {/if}
 </div>
+
+<!-- Create Team Dialog -->
+<Dialog
+    bind:open={showCreateTeamDialog}
+    title="Create New Team"
+    description="Add a new team to this organization"
+>
+    {#snippet children()}
+        <CreateTeamForm
+            vaults={availableVaults.filter(v => !v.teamId)}
+            onSubmit={handleCreateTeam}
+            onCancel={() => showCreateTeamDialog = false}
+            isSubmitting={isCreatingTeam}
+        />
+    {/snippet}
+</Dialog>
+
+<!-- Attach Vault Dialog -->
+<Dialog
+    bind:open={showAttachVaultDialog}
+    title="Attach Vault to Team"
+    description="Select a vault to attach to this team"
+>
+    {#snippet children()}
+        {#if selectedTeam}
+            <AttachVaultToTeamForm
+                vaults={availableVaults.filter(v => !v.teamId || v.teamId === selectedTeam.id)}
+                teamName={selectedTeam.name}
+                onSubmit={handleAttachVault}
+                onCancel={() => {
+                    showAttachVaultDialog = false;
+                    selectedTeam = null;
+                }}
+                isSubmitting={isAttachingVault}
+            />
+        {/if}
+    {/snippet}
+</Dialog>
+
+<!-- Edit Team Dialog -->
+<Dialog
+    bind:open={showEditTeamDialog}
+    title="Edit Team"
+    description="Update team details and vault attachment"
+>
+    {#snippet children()}
+        {#if selectedTeam}
+            <EditTeamForm
+                team={selectedTeam}
+                vaults={availableVaults}
+                currentVaultId={getTeamVaultId(selectedTeam)}
+                onSubmit={handleEditTeam}
+                onCancel={() => {
+                    showEditTeamDialog = false;
+                    selectedTeam = null;
+                }}
+                isSubmitting={isEditingTeam}
+            />
+        {/if}
+    {/snippet}
+</Dialog>

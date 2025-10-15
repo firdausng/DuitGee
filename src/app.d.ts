@@ -49,7 +49,11 @@ declare global {
             email: string
             emailVerified: boolean
             name: string
+            role: string
             image?: string | null | undefined
+            banned: boolean,
+            banReason: string | null | undefined,
+            banExpires: string | null | undefined,
         }
 
         interface Session {
@@ -61,6 +65,9 @@ declare global {
             token: string
             ipAddress?: string | null | undefined
             userAgent?: string | null | undefined
+            activeOrganizationId: string,
+            activeTeamId: string,
+            impersonatedBy: null,
         }
     }
 

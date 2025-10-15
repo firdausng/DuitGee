@@ -106,7 +106,7 @@ export const vaultSchema = v.object({
     iconType: v.nullable(v.picklist(["emoji", "phosphor"])), // DB default 'emoji'
     ownerId: v.string(), // notNull, user id string
     isPersonal: v.boolean(), // boolean, notNull, default true
-
+    teamId: v.nullable(v.string()),
     // Audit fields
     createdAt: v.string(),
     createdBy: v.string(),

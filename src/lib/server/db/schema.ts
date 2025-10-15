@@ -25,6 +25,7 @@ export const vaults = sqliteTable('vaults', {
 	iconType: text('icon_type').default('emoji'), // 'emoji' or 'phosphor'
 	ownerId: text('owner_id').notNull(), // User ID as string, no FK constraint for microservice compatibility
 	isPersonal: integer('is_personal', { mode: 'boolean' }).notNull().default(true), // false for shared vaults
+    teamId: text('team_id'),
     // Audit fields
     createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
     createdBy: text('created_by').notNull(), // User ID as string, no FK constraint

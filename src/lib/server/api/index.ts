@@ -16,6 +16,7 @@ import {jwk} from "hono/jwk";
 import {openAPIRouteHandler} from 'hono-openapi'
 import {Scalar} from "@scalar/hono-api-reference";
 import {auth} from "$lib/server/better-auth";
+import {adminVaultsApi} from "$lib/server/api/admin/vaults/adminVaults";
 
 const router = new Hono<App.Api>()
     // .use('*', cors())
@@ -107,6 +108,10 @@ const router = new Hono<App.Api>()
             return c.body(null, 401);
         }
         c.set("currentSession", session);
+        console.log({
+            message: `[Set Session] ${session}`,
+            session
+        })
         return next();
     })
     .route('/', expensesApi)
@@ -114,6 +119,7 @@ const router = new Hono<App.Api>()
     .route('/', categoryGroupsApi)
     .route('/notifications', notificationApi)
     .route('/vaults', vaultsApi)
+    .route('/admin/vaults', adminVaultsApi)
     .route('/vault-members', vaultMembersApi)
     .route('/', templatesApi);
 

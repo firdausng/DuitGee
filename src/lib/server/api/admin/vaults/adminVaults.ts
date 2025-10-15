@@ -4,19 +4,30 @@ import {vValidator} from "@hono/valibot-validator";
 import {
     getUserVaults,
     getVault,
-    createVault,
     updateVault,
     deleteVault,
-} from "$lib/server/api/vaults/handlers";
+} from "$lib/server/api/admin/vaults/handlers";
 import {describeRoute, resolver} from 'hono-openapi';
 import {createVaultSchema, getUserVaultsByEmailSchema, updateVaultSchema, vaultSchema} from "$lib/schemas/expense";
+import {auth} from "$lib/server/better-auth";
 
 const VAULT_TAG = ['Vault'];
 const commonVaultConfig = {
     tags: VAULT_TAG,
 };
 
-export const vaultsApi = new Hono<App.Api>()
+export const adminVaultsApi = new Hono<App.Api>()
+    .use("*", async (c, next) => {
+        const session = c.get('currentSession');
+        if (session.user.role !== 'admin') {
+            return c.json({
+                success: false,
+                error: 'Unauthorized'
+            }, 401);
+        }
+
+        return next();
+    })
     .get(
         '/',
         describeRoute({
@@ -40,7 +51,7 @@ export const vaultsApi = new Hono<App.Api>()
             const session = c.get('currentSession');
 
             try {
-                const vaults = await getUserVaults(session.user.id, c.env.DB);
+                const vaults = await getUserVaults(c.env.DB);
                 return c.json({
                     success: true,
                     data: vaults
@@ -53,90 +64,6 @@ export const vaultsApi = new Hono<App.Api>()
                 return c.json({
                     success: false,
                     error: 'Failed to fetch vaults'
-                }, 500);
-            }
-        })
-    .get(
-        '/by-email',
-        describeRoute({
-            ...commonVaultConfig,
-            description: 'Get vaults by user email',
-            responses: {
-                200: {
-                    description: 'Successful response',
-                    content: {
-                        'application/json': {
-                            schema: resolver(v.object({
-                                success: v.boolean(),
-                                data: v.array(v.any())
-                            }))
-                        },
-                    },
-                },
-                404: {
-                    description: 'User not found',
-                },
-            },
-        }),
-        vValidator('query', getUserVaultsByEmailSchema),
-        async (c) => {
-            const query = c.req.valid('query');
-
-            try {
-                const vaults = await getUserVaults(query.email, c.env.DB);
-                return c.json({
-                    success: true,
-                    data: vaults
-                });
-            } catch (error) {
-                console.error({
-                    message: 'Error fetching vaults by email',
-                    error
-                });
-                return c.json({
-                    success: false,
-                    error: error instanceof Error ? error.message : 'Failed to fetch vaults'
-                }, error instanceof Error && error.message === 'User not found' ? 404 : 500);
-            }
-        })
-    .post(
-        '/',
-        describeRoute({
-            ...commonVaultConfig,
-            description: 'Create a new vault',
-            responses: {
-                201: {
-                    description: 'Successful response',
-                    content: {
-                        'application/json': {
-                            schema: resolver(v.object({
-                                success: v.boolean(),
-                                data: vaultSchema
-                            }))
-                        },
-                    },
-                },
-            },
-        }),
-        vValidator('json', createVaultSchema),
-        async (c) => {
-            const session = c.get('currentSession');
-            const data = c.req.valid('json');
-
-            try {
-                const vault = await createVault(session, c.env.VAULT_LIMIT, data, c.env);
-                return c.json({
-                    success: true,
-                    data: vault
-                }, 201);
-            } catch (error) {
-                console.error({
-                    message: 'Error creating vault',
-                    error
-                });
-                return c.json({
-                    success: false,
-                    error: 'Failed to create vault'
                 }, 500);
             }
         })
@@ -167,7 +94,7 @@ export const vaultsApi = new Hono<App.Api>()
             const vaultId = c.req.param('id');
 
             try {
-                const vault = await getVault(session.user.id, vaultId, c.env.DB);
+                const vault = await getVault(vaultId, c.env.DB);
                 return c.json({
                     success: true,
                     data: vault
@@ -213,7 +140,7 @@ export const vaultsApi = new Hono<App.Api>()
             const data = c.req.valid('json');
 
             try {
-                const vault = await updateVault(session.user.id, vaultId, data, c.env.DB, c.env.KV);
+                const vault = await updateVault(vaultId, data, c.env.DB, c.env.KV);
                 return c.json({
                     success: true,
                     data: vault
@@ -258,7 +185,7 @@ export const vaultsApi = new Hono<App.Api>()
             const vaultId = c.req.param('id');
 
             try {
-                const vault = await deleteVault(session.user.id, vaultId, c.env.DB, c.env.KV);
+                const vault = await deleteVault(vaultId, c.env.DB, c.env.KV);
                 return c.json({
                     success: true,
                     data: vault,
