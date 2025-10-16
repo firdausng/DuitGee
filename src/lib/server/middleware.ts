@@ -2,6 +2,7 @@
 import { redirect } from '@sveltejs/kit';
 import {getUserVaults} from "$lib/server/api/vaults/handlers";
 import {auth} from "$lib/server/better-auth";
+import {Resend} from "resend";
 
 export const setupServicesHandler: Handle = async ({ event, resolve }) => {
     if(event.platform === undefined){

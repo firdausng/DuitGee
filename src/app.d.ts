@@ -1,6 +1,5 @@
 import type {RequestIdVariables} from "hono/request-id";
 import type {AuthService} from "$lib/server/auth-service.svelte";
-import type {User as AppUser} from "$lib/server/api/users/schema";
 import type {UserVault} from "$lib/types";
 import type {CategoryData} from "$lib/configuration/categories";
 import {PUBLIC_CATEGORIES_KEY} from "$lib/server/constants";
@@ -23,11 +22,6 @@ declare global {
             currentUserVaults: UserVault[]
             isVaultLimitReach: boolean
         }
-
-        // interface Error {
-        //     message: string,
-        //     code: number,
-        // }
 
         interface Api {
             Bindings: Cloudflare.Env,

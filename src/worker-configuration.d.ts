@@ -4,7 +4,9 @@
 declare namespace Cloudflare {
     interface Env {
         BASE_PATH: string;
+        EMAIL_FROM: string;
         POSTHOG_KEY: string;
+        RESEND_API_KEY: string;
         CALLBACK_PATH: string;
         ADMIN_EMAILS: string;
         BETTER_AUTH_URL: string;

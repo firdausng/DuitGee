@@ -23,14 +23,37 @@
 
 		isLoading = true;
 		try {
-			// TODO: Implement authentication logic
-			console.log('Login', { email, password });
+            const response = await authClient.signIn.email({
+                email,
+                password
+            }, {
+                onError: (ctx) => {
+                    // Handle the error
+                    if(ctx.error.status === 403) {
+                        alert("Please verify your email address")
+                    }
+                }
+            });
 		} catch (error) {
 			errorMessage = error instanceof Error ? error.message : 'Authentication failed';
 		} finally {
 			isLoading = false;
 		}
 	}
+
+    async function sendVerificationEmail() {
+        isLoading = true;
+        try {
+            const response = await authClient.sendVerificationEmail({
+                email,
+                callbackURL: "/login"
+            });
+        } catch (error) {
+            errorMessage = error instanceof Error ? error.message : 'sendVerificationEmail failed';
+        } finally {
+            isLoading = false;
+        }
+    }
 
 	async function handleGoogleLogin() {
 		isLoading = true;
