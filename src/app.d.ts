@@ -49,11 +49,11 @@ declare global {
             email: string
             emailVerified: boolean
             name: string
-            role: string
+            role?: string | null | undefined
             image?: string | null | undefined
-            banned: boolean,
-            banReason: string | null | undefined,
-            banExpires: string | null | undefined,
+            banned: boolean | null | undefined,
+            banReason?: string | null | undefined,
+            banExpires?: Date | null | undefined,
         }
 
         interface Session {
@@ -65,9 +65,9 @@ declare global {
             token: string
             ipAddress?: string | null | undefined
             userAgent?: string | null | undefined
-            activeOrganizationId: string,
-            activeTeamId: string,
-            impersonatedBy: null,
+            activeOrganizationId?: string | null | undefined,
+            activeTeamId?: string | null | undefined,
+            impersonatedBy?: string | null | undefined ,
         }
     }
 

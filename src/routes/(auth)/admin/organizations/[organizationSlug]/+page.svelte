@@ -7,6 +7,7 @@
     import CreateTeamForm from '$lib/components/CreateTeamForm.svelte';
     import AttachVaultToTeamForm from '$lib/components/AttachVaultToTeamForm.svelte';
     import EditTeamForm from '$lib/components/EditTeamForm.svelte';
+    import AddMemberToOrganizationForm from '$lib/components/AddMemberToOrganizationForm.svelte';
     import Buildings from 'phosphor-svelte/lib/Buildings';
     import Users from 'phosphor-svelte/lib/Users';
     import UserPlus from 'phosphor-svelte/lib/UserPlus';
@@ -32,8 +33,11 @@
     let isAttachingVault = $state(false);
     let showEditTeamDialog = $state(false);
     let isEditingTeam = $state(false);
+    let showAddMemberDialog = $state(false);
+    let isAddingMember = $state(false);
     let selectedTeam = $state<any>(null);
     let availableVaults = $state<any[]>([]);
+    let allUsers = $state<any[]>([]);
 
     onMount(async () => {
         try {
@@ -50,8 +54,11 @@
                 currentOrganization = organization;
             }
 
-            // Load available vaults
-            await loadVaults();
+            // Load available vaults and users
+            await Promise.all([
+                loadVaults(),
+                loadUsers()
+            ]);
         } catch (error) {
             console.error("Failed to load organization:", error);
         } finally {
@@ -82,6 +89,22 @@
             }
         } catch (error) {
             console.error('Failed to load vaults:', error);
+        }
+    }
+
+    async function loadUsers() {
+        try {
+            const response = await adminClient.admin.listUsers({
+                query: {
+                    limit: 1000 // Get all users for member selection
+                }
+            });
+
+            if (response.data?.users) {
+                allUsers = response.data.users;
+            }
+        } catch (error) {
+            console.error('Failed to load users:', error);
         }
     }
 
@@ -188,8 +211,6 @@
                 data: {
                     name: teamData.name,
                     organizationId: currentOrganization.id,
-                    createdAt: new Date(selectedTeam.createdAt),
-                    updatedAt: new Date(),
                 }
             });
 
@@ -309,6 +330,57 @@
             isAttachingVault = false;
         }
     }
+
+    async function handleAddMember(memberData: { userId: string; role: string }) {
+        isAddingMember = true;
+        try {
+            // const { error } = await adminClient.organization.addMember({
+            //     userId: memberData.userId,
+            //     role: memberData.role,
+            //     organizationId: currentOrganization.id,
+            // });
+
+            const response = await ofetch(`/api/admin/organizations/${currentOrganization.id}/add-member`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    userId: memberData.userId,
+                    role: [memberData.role],
+                    organizationId: currentOrganization.id,
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.success === false) {
+                console.error({
+                    message: 'Failed to add member:',
+                    error: response.error
+                });
+                alert('Failed to add member: ' + (response.error.message || 'Unknown error'));
+                return;
+            }
+
+            // Refresh organization data
+            const { data: organization, error: orgError } = await adminClient.organization.getFullOrganization({
+                query: {
+                    organizationSlug: data.organizationSlug,
+                    membersLimit: 100,
+                },
+            });
+
+            if (!orgError && organization) {
+                currentOrganization = organization;
+            }
+
+            showAddMemberDialog = false;
+        } catch (error) {
+            console.error('Failed to add member:', error);
+            alert('Failed to add member');
+        } finally {
+            isAddingMember = false;
+        }
+    }
 </script>
 
 <svelte:head>
@@ -414,6 +486,10 @@
                         <Users class="w-5 h-5 text-foreground" />
                         <h2 class="text-lg font-semibold text-foreground">Members</h2>
                     </div>
+                    <Button size="sm" onclick={() => showAddMemberDialog = true}>
+                        <UserPlus class="w-4 h-4 mr-2" />
+                        Add Member
+                    </Button>
                 </div>
             </div>
             <div class="p-4 sm:p-6">
@@ -616,5 +692,22 @@
                 isSubmitting={isEditingTeam}
             />
         {/if}
+    {/snippet}
+</Dialog>
+
+<!-- Add Member Dialog -->
+<Dialog
+    bind:open={showAddMemberDialog}
+    title="Add Member to Organization"
+    description="Select a user to add as a member"
+>
+    {#snippet children()}
+        <AddMemberToOrganizationForm
+            users={allUsers}
+            currentMembers={currentOrganization?.members || []}
+            onSubmit={handleAddMember}
+            onCancel={() => showAddMemberDialog = false}
+            isSubmitting={isAddingMember}
+        />
     {/snippet}
 </Dialog>
