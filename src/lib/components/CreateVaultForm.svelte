@@ -17,9 +17,10 @@
 	interface Props {
 		formData: SuperValidated<CreateVault>;
         currentUserId: string
+        onSubmit: (data: CreateVault) => void;
 	}
 
-	let { formData, currentUserId }: Props = $props();
+	let { formData, currentUserId, onSubmit }: Props = $props();
 
 	const { form, errors, enhance, submitting } = superForm(formData, {
 		validators: valibotClient(createVaultSchema),
@@ -28,22 +29,26 @@
             if(!form.valid){
                 setMessage(form, 'invalid data!');
             }
-            console.log(form.data, currentUserId);
-            const response = await ofetch(`/api/vaults`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    ...form.data,
-                    ownerId: currentUserId
-                }),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+            onSubmit({
+                ...form.data,
+                ownerId: currentUserId
             });
-            if(response.success){
-                await goto(`/vaults/${response.data.id}`);
-            } else {
-                setError(form, response.error.message);
-            }
+            // console.log(form.data, currentUserId);
+            // const response = await ofetch(`/api/vaults`, {
+            //     method: 'POST',
+            //     body: JSON.stringify({
+            //         ...form.data,
+            //         ownerId: currentUserId
+            //     }),
+            //     headers: {
+            //         'Content-Type': 'application/json'
+            //     }
+            // });
+            // if(response.success){
+            //     await goto(`/vaults/${response.data.id}`);
+            // } else {
+            //     setError(form, response.error.message);
+            // }
         }
 	});
 

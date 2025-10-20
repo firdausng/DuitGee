@@ -64,6 +64,25 @@ export const checkSessionHandler: Handle = async ({ event, resolve }) => {
     //         event.platform.env.DB);
     // }
 
+    const authClient = auth(event.platform.env);
+    const organizationList = await authClient.api.listOrganizations({
+        headers: event.request.headers,
+    });
+
+    if(organizationList.length === 0){
+        const metadata = { someKey: "someValue" };
+        const data = await authClient.api.createOrganization({
+            body: {
+                name: session.user.id, // required
+                slug: "my-org", // required
+                metadata,
+                userId: session.user.id, // server-only
+                // keepCurrentActiveOrganization: false,
+            },
+            headers: event.request.headers,
+        });
+    }
+
     const vaults = await getUserVaults(session.user.id, event.platform.env.DB, event.platform.env.KV);
 
     const ownerVaults = vaults.filter(v => v.owner === session.user.id);

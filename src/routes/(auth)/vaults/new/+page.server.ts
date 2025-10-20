@@ -1,9 +1,7 @@
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
-import { redirect } from '@sveltejs/kit';
-import {type CreateVault, createVaultSchema} from '$lib/schemas/expense';
-import type { PageServerLoad, Actions } from './$types.js';
-import {createVault} from "$lib/server/api/vaults/handlers";
+import {createVaultSchema} from '$lib/schemas/expense';
+import type { PageServerLoad } from './$types.js';
 
 export const load: PageServerLoad = async ({platform, locals}) => {
     if(platform === undefined){
@@ -24,5 +22,6 @@ export const load: PageServerLoad = async ({platform, locals}) => {
 		form,
         isVaultLimitReach,
         currentUserId: locals.currentUser.id,
+        basePath: platform.env.BASE_PATH,
 	};
 };

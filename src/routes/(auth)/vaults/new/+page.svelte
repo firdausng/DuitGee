@@ -3,9 +3,47 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
-	import LockKey from 'phosphor-svelte/lib/LockKey';
+    import {ofetch} from "ofetch";
+    import type {CreateVault} from "$lib/schemas/expense";
+    import {authClientBase} from "$lib/auth-client-base";
 
 	let { data } = $props();
+
+    async function handleSubmit(data: CreateVault) {
+
+        if(!data.isPersonal){
+            let authClient = authClientBase({basePath: data.basePath});
+
+            const { data: organizationList, error } = await authClient.organization.list();
+
+            if(error){
+                console.error(error);
+                return;
+            }
+
+            if(organizationList.length === 0){
+                const metadata = { someKey: "someValue" };
+                const org = await authClient.organization.create({
+                    name: "abc", // required
+                    slug: "my-org", // required
+                    metadata,
+                    userId: data.currentUserId, // server-only
+                    // keepCurrentActiveOrganization: false,
+                });
+            }
+        }
+
+        const response = await ofetch(`/api/vaults`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if(response.success){
+            await goto(`/vaults/${response.data.id}`);
+        }
+    }
 </script>
 
 <svelte:head>
@@ -45,7 +83,7 @@
 		</Card>
 	{:else}
 		<Card class="p-6">
-			<CreateVaultForm formData={data.form} currentUserId={data.currentUserId} />
+			<CreateVaultForm formData={data.form} currentUserId={data.currentUserId} onSubmit={() => goto('/vaults')} />
 		</Card>
 	{/if}
 </div>

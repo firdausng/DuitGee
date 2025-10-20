@@ -23,6 +23,12 @@ export const auth = (env: Cloudflare.Env) => {
                 },
                 allowUserToCreateOrganization: async (user: UserWithRole) => {
                     // const subscription = await getSubscription(user.email);
+
+                    return user.role === "admin";
+                },
+                organizationLimit: async (user: UserWithRole) => {
+                    // const subscription = await getSubscription(user.email);
+
                     return user.role === "admin";
                 },
             }),
@@ -60,5 +66,14 @@ export const auth = (env: Cloudflare.Env) => {
                 console.log(`${user.email} has been successfully verified!`);
             }
         },
+        logger: {
+            disabled: false,
+            disableColors: false,
+            level: "info",
+            log: (level, message, ...args) => {
+                // Custom logging implementation
+                console.log(`[${level}] ${message}`, ...args);
+            }
+        }
     });
 };
