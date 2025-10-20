@@ -14,6 +14,17 @@ export const setupServicesHandler: Handle = async ({ event, resolve }) => {
         throw new Error("Database not defined");
     }
 
+    const betterAuth = auth(event.platform.env);
+
+    const session = await betterAuth.api.getSession({
+        headers: event.request.headers,
+    });
+
+    if(session){
+        event.locals.currentSession = session;
+        event.locals.currentUser = session.user;
+    }
+
     return resolve(event);
 };
 
@@ -44,12 +55,12 @@ export const checkSessionHandler: Handle = async ({ event, resolve }) => {
 
     const betterAuth = auth(event.platform.env);
 
-    const session = await betterAuth.api.getSession({
-        headers: event.request.headers,
-    });
+    // const session = await betterAuth.api.getSession({
+    //     headers: event.request.headers,
+    // });
 
-    if(!session){
-        console.warn({session, message: "[checkSessionHandler] user not authenticated"});
+    if(!event.locals.currentSession){
+        console.warn({message: "[checkSessionHandler] user not authenticated"});
         return redirect(307, "/login");
     }
 
@@ -64,34 +75,15 @@ export const checkSessionHandler: Handle = async ({ event, resolve }) => {
     //         event.platform.env.DB);
     // }
 
-    const authClient = auth(event.platform.env);
-    const organizationList = await authClient.api.listOrganizations({
-        headers: event.request.headers,
-    });
+    const vaults = await getUserVaults(event.locals.currentSession.user.id, event.platform.env.DB, event.platform.env.KV);
 
-    if(organizationList.length === 0){
-        const metadata = { someKey: "someValue" };
-        const data = await authClient.api.createOrganization({
-            body: {
-                name: session.user.id, // required
-                slug: "my-org", // required
-                metadata,
-                userId: session.user.id, // server-only
-                // keepCurrentActiveOrganization: false,
-            },
-            headers: event.request.headers,
-        });
-    }
-
-    const vaults = await getUserVaults(session.user.id, event.platform.env.DB, event.platform.env.KV);
-
-    const ownerVaults = vaults.filter(v => v.owner === session.user.id);
+    const ownerVaults = vaults.filter(v => v.owner === event.locals.currentSession.user.id);
     // console.log('[checkSessionHandler] ownerVaults.length', ownerVaults.length)
 
     event.locals.isVaultLimitReach = ownerVaults.length > event.platform.env.VAULT_LIMIT;
     event.locals.currentUserVaults = vaults;
-    event.locals.currentSession = session;
-    event.locals.currentUser = session.user;
+    // event.locals.currentSession = event.locals.currentSession;
+    // event.locals.currentUser = event.locals.currentSession.user;
     return resolve(event);
 };
 

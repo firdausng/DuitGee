@@ -34,6 +34,7 @@
                     }
                 }
             });
+            goto("/vaults");
 		} catch (error) {
 			errorMessage = error instanceof Error ? error.message : 'Authentication failed';
 		} finally {

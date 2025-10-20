@@ -1,4 +1,5 @@
 import type { PageServerLoad } from './$types';
+import {redirect} from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ locals, platform }) => {
     if(platform === undefined){
@@ -7,6 +8,10 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 
     if (!platform?.env?.DB) {
         throw new Error('Database not available');
+    }
+
+    if(locals.currentUser){
+        redirect(302, '/');
     }
 
     return {
