@@ -21,6 +21,7 @@ export const setupServicesHandler: Handle = async ({ event, resolve }) => {
     });
 
     if(session){
+        // console.log({message: "[setupServicesHandler] setting user session"});
         event.locals.currentSession = session;
         event.locals.currentUser = session.user;
     }

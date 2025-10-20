@@ -2,6 +2,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
     import {authClientBase} from "$lib/auth-client-base";
+    import {goto} from "$app/navigation";
 
     let {data} = $props();
 	let email = $state('');
@@ -34,8 +35,6 @@
 		}
 
 		try {
-			// TODO: Implement authentication logic
-			console.log('Register', { email, password, firstName, lastName });
             const { data, error } = await authClient.signUp.email({
                 email, // user email address
                 password, // user password -> min 8 characters by default
@@ -47,7 +46,7 @@
                     isLoading = true;
                 },
                 onSuccess: (ctx) => {
-                    //redirect to the dashboard or sign in page
+                    goto('/vaults');
                 },
                 onError: (ctx) => {
                     // display the error message

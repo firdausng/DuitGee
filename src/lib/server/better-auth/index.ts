@@ -37,7 +37,7 @@ export const auth = (env: Cloudflare.Env) => {
         secret: env.BETTER_AUTH_SECRET,
         emailAndPassword: {
             enabled: true,
-            requireEmailVerification: true,
+            requireEmailVerification: false,
         },
         socialProviders: {
             google: {

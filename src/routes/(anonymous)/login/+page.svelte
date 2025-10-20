@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+    import {goto, invalidateAll } from '$app/navigation';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
     import {authClientBase} from "$lib/auth-client-base";
@@ -34,7 +34,8 @@
                     }
                 }
             });
-            goto("/vaults");
+            await invalidateAll();
+            await goto("/vaults");
 		} catch (error) {
 			errorMessage = error instanceof Error ? error.message : 'Authentication failed';
 		} finally {

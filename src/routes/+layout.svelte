@@ -6,8 +6,25 @@
     import { navigating } from '$app/stores';
     import {onMount} from "svelte";
     import {browser, dev} from "$app/environment";
+    import EmailVerificationReminder from '$lib/components/EmailVerificationReminder.svelte';
 
     let {children, data} = $props();
+
+    let userState = $derived.by(() => {
+        if(!data.currentSession){
+           return {
+               loggedIn: false,
+               emailVerified: false,
+               user: {}
+           };
+        }
+        return {
+            loggedIn: true,
+            emailVerified: data.currentSession.user.emailVerified,
+            user: data.currentSession.user
+        };
+    });
+
 
     // Initialize theme on app start
     $effect(() => {
@@ -45,6 +62,17 @@
 {#if $navigating}
     <div class="loading-bar"></div>
 {/if}
+
+<!-- Email verification reminder -->
+{#if userState.loggedIn && !userState.emailVerified}
+    <EmailVerificationReminder
+            emailVerified={data.currentSession.user.emailVerified}
+            userEmail={data.currentSession.user.email}
+            basePath={data.basePath}
+            callbackPath={data.callbackPath}
+    />
+{/if}
+
 
 <style>
     .loading-bar {
