@@ -32,9 +32,9 @@
 
 		isLoading = true;
 		try {
-			await authClient.forgetPassword({
+			await authClient.requestPasswordReset({
 				email,
-				redirectTo: data.callbackPath || '/'
+				redirectTo: data.basePath + '/reset-password',
 			});
 
 			successMessage = `Password reset instructions have been sent to ${email}. Please check your inbox and spam folder.`;

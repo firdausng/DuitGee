@@ -34,6 +34,7 @@ const publicRoutes = [
     '/register',
     '/logged-out',
     '/forgot-password',
+    '/reset-password',
     '/callback',
     '/unauthorized',
     '/privacy',
