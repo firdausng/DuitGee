@@ -35,8 +35,7 @@ wrangler d1 migrations apply "duitgee"
 ## Deploy Production
 
 ```sh
-wrangler d1 migrations apply "duitgee" --remote true
-wrangler d1 migrations apply "duitgee-auth" --remote true    
+wrangler d1 migrations apply "duitgee" --remote true --env production 
 npx wrangler deploy --env production
 ```
 
@@ -49,5 +48,5 @@ npx wrangler d1 execute duitgee --file=./seed/0001_setup_categories.sql
 
 Production
 ```sh
-npx wrangler d1 execute duitgee--remote --file=./seed/0001_setup_categories.sql
+npx wrangler d1 execute duitgee--remote --env production --file=./seed/0001_setup_categories.sql
 ```
