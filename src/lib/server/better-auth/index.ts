@@ -38,6 +38,19 @@ export const auth = (env: Cloudflare.Env) => {
         emailAndPassword: {
             enabled: true,
             requireEmailVerification: false,
+            sendResetPassword: async ({user, url, token}, request) => {
+                const emailService = new MailService(env);
+
+                await emailService.sendEmail({
+                    to: user.email,
+                    subject: "Reset your password",
+                    text: `Click the link to reset your password: ${url}`,
+                });
+            },
+            onPasswordReset: async ({ user }, request) => {
+                // your logic here
+                console.log(`Password for user ${user.email} has been reset.`);
+            },
         },
         socialProviders: {
             google: {

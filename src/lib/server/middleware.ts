@@ -33,6 +33,7 @@ const publicRoutes = [
     '/login',
     '/register',
     '/logged-out',
+    '/forgot-password',
     '/callback',
     '/unauthorized',
     '/privacy',
@@ -61,7 +62,7 @@ export const checkSessionHandler: Handle = async ({ event, resolve }) => {
     // });
 
     if(!event.locals.currentSession){
-        console.warn({message: "[checkSessionHandler] user not authenticated"});
+        console.warn({message: `[checkSessionHandler] user not authenticated, cannot access ${pathname}, register this to public route if this meant to be public`});
         return redirect(307, "/login");
     }
 
