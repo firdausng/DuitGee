@@ -7,6 +7,11 @@ declare namespace Cloudflare {
 		ADMIN_EMAILS: string;
 		BASE_PATH: "http://localhost:5173" | "https://duitgee.com";
 		BETTER_AUTH_URL: "http://localhost:5173" | "https://duitgee.com";
+        BETTER_AUTH_SECRET: string;
+        GOOGLE_CLIENT_ID: string;
+        GOOGLE_CLIENT_SECRET: string;
+        POSTHOG_KEY: string;
+        RESEND_API_KEY: string;
 		CALLBACK_PATH: string;
 		ENVIRONMENT: "development" | "staging" | "production";
 		EMAIL_FROM: string;
