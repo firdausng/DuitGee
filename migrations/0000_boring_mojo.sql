@@ -1,0 +1,62 @@
+CREATE TABLE `expense_templates` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`vault_id` text NOT NULL,
+	`name` text NOT NULL,
+	`description` text,
+	`icon` text DEFAULT '📝',
+	`icon_type` text DEFAULT 'emoji',
+	`note` text,
+	`default_amount` real,
+	`category_id` text,
+	`default_user_id` text,
+	`payment_type_id` text,
+	`usage_count` integer DEFAULT 0 NOT NULL,
+	`last_used_at` text,
+	`created_at` text,
+	`created_by` text NOT NULL,
+	`updated_at` text,
+	`updated_by` text,
+	`deleted_at` text,
+	`deleted_by` text,
+	FOREIGN KEY (`vault_id`) REFERENCES `vaults`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `expenses` (
+	`id` text PRIMARY KEY NOT NULL,
+	`description` text,
+	`amount` real NOT NULL,
+	`category_id` text NOT NULL,
+	`date` text NOT NULL,
+	`user_id` text,
+	`vault_id` text NOT NULL,
+	`expense_template_id` text,
+	`payment_type_id` text,
+	`created_at` text,
+	`created_by` text NOT NULL,
+	`updated_at` text,
+	`updated_by` text,
+	`deleted_at` text,
+	`deleted_by` text,
+	FOREIGN KEY (`vault_id`) REFERENCES `vaults`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`expense_template_id`) REFERENCES `expense_templates`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `vaults` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`description` text,
+	`color` text DEFAULT '#3B82F6' NOT NULL,
+	`icon` text DEFAULT '🏦',
+	`icon_type` text DEFAULT 'emoji',
+	`creator_id` text NOT NULL,
+	`is_public` integer DEFAULT true NOT NULL,
+	`team_id` text,
+	`organization_id` text,
+	`created_at` text,
+	`created_by` text NOT NULL,
+	`updated_at` text,
+	`updated_by` text,
+	`deleted_at` text,
+	`deleted_by` text
+);
