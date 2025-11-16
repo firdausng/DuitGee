@@ -2,8 +2,8 @@ import * as v from 'valibot';
 import {createSelectSchema, createInsertSchema} from "drizzle-valibot";
 import {vaults} from "$lib/server/db/schema";
 
-export const vaultSelectSchema = createSelectSchema(vaults);
-export type SelectVault = v.InferOutput<typeof vaultSelectSchema>;
+export const selectVaultSchema = createSelectSchema(vaults);
+export type SelectVault = v.InferOutput<typeof selectVaultSchema>;
 
-export const vaultCreateSchema = createInsertSchema(vaults);
-export type CreateVault = v.InferOutput<typeof vaultCreateSchema>;
+export const createVaultSchema = createInsertSchema(vaults);
+export type CreateVault = v.InferOutput<typeof createVaultSchema>;

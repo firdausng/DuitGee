@@ -5,6 +5,8 @@ import {prettyJSON} from 'hono/pretty-json';
 import {Scalar} from "@scalar/hono-api-reference";
 import {openAPIRouteHandler} from "hono-openapi";
 import {authConfig} from "$lib/server/better-auth";
+import {expensesApi} from "$lib/server/api/expenses/expenses-api";
+import {vaultsApi} from "$lib/server/api/vaults/vaults-api";
 
 const router = new Hono<App.Api>()
     .use('*', trimTrailingSlash())
@@ -23,11 +25,11 @@ const router = new Hono<App.Api>()
         })
         return next();
     })
-    // .route('/', expensesApi)
+    .route('/', expensesApi)
+    .route('/vaults', vaultsApi)
     // .route('/', categoriesApi)
     // .route('/', categoryGroupsApi)
     // .route('/notifications', notificationApi)
-    // .route('/vaults', vaultsApi)
     // .route('/admin/vaults', adminVaultsApi)
     // .route('/admin/organizations', adminOrganizationApi)
     // .route('/vault-members', vaultMembersApi)

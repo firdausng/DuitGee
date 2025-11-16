@@ -1,6 +1,8 @@
 <script lang="ts">
+	import '../app.css';
+	import posthog from 'posthog-js';
 	import favicon from '$lib/assets/favicon.svg';
-
+	
 	let { children } = $props();
 </script>
 

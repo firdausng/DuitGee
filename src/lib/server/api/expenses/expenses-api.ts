@@ -1,11 +1,11 @@
 import {Hono} from 'hono';
 import * as v from "valibot";
 import {describeRoute, resolver} from "hono-openapi";
-import {getExpenses} from "$lib/server/api/expenses/getExpensesHandlers";
+import {getExpenses} from "$lib/server/api/expenses/getExpensesHandler";
 import {vValidator} from "@hono/valibot-validator";
 import {createExpenseSchema} from "$lib/server/schemas/expenses";
 import {createExpense} from "$lib/server/api/expenses/createExpenseHandler";
-import {getExpense} from "$lib/server/api/expenses/getExpenseHandlers";
+import {getExpense} from "$lib/server/api/expenses/getExpenseHandler";
 
 const EXPENSE_TAG = ['Expense'];
 const commonExpenseConfig = {
