@@ -32,6 +32,9 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
+      drizzle-valibot:
+        specifier: ^0.4.2
+        version: 0.4.2(drizzle-orm@0.44.7(@cloudflare/workers-types@4.20251014.0)(@libsql/client@0.15.15)(kysely@0.28.8))(valibot@1.1.0(typescript@5.9.3))
       hono:
         specifier: ^4.9.5
         version: 4.10.4
@@ -1744,6 +1747,12 @@ packages:
         optional: true
       sqlite3:
         optional: true
+
+  drizzle-valibot@0.4.2:
+    resolution: {integrity: sha512-tzjT7g0Di/HX7426marIy8IDtWODjPgrwvgscdevLQRUe5rzYzRhx6bDsYLdDFF9VI/eaYgnjNeF/fznWJoUjg==}
+    peerDependencies:
+      drizzle-orm: '>=0.36.0'
+      valibot: '>=1.0.0-beta.7'
 
   effect@3.18.4:
     resolution: {integrity: sha512-b1LXQJLe9D11wfnOKAk3PKxuqYshQ0Heez+y5pnkd3jLj1yx9QhM72zZ9uUrOQyNvrs2GZZd/3maL0ZV18YuDA==}
@@ -3787,6 +3796,11 @@ snapshots:
       '@cloudflare/workers-types': 4.20251014.0
       '@libsql/client': 0.15.15
       kysely: 0.28.8
+
+  drizzle-valibot@0.4.2(drizzle-orm@0.44.7(@cloudflare/workers-types@4.20251014.0)(@libsql/client@0.15.15)(kysely@0.28.8))(valibot@1.1.0(typescript@5.9.3)):
+    dependencies:
+      drizzle-orm: 0.44.7(@cloudflare/workers-types@4.20251014.0)(@libsql/client@0.15.15)(kysely@0.28.8)
+      valibot: 1.1.0(typescript@5.9.3)
 
   effect@3.18.4:
     dependencies:

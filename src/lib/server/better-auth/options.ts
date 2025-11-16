@@ -5,6 +5,7 @@ export const plugins = [
     bearer(),
     admin(),
     organization({
+
         teams: {
             enabled: true,
             //maximumTeams: 10, // Optional: limit teams per organization
@@ -20,6 +21,7 @@ export const plugins = [
 
             return user.role === "admin";
         },
+
     }),
     anonymous({
         onLinkAccount: async ({ anonymousUser, newUser }) => {

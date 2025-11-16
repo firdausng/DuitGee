@@ -59,6 +59,27 @@ export const authConfig = (env: Cloudflare.Env) => {
                 console.log(`${user.email} has been successfully verified!`);
             }
         },
+        databaseHooks: {
+            user: {
+                create: {
+                    after: async (user: UserWithRole, context) => {
+                        const name = user.email.split("@")[0];
+                        const data = await authConfig(env).api.createOrganization({
+                            body: {
+                                name: name, // required
+                                slug: name, // required
+                                // logo: "https://example.com/logo.png",
+                                // metadata,
+                                userId: user.id, // server-only
+                                keepCurrentActiveOrganization: false,
+                            },
+                            // This endpoint requires session cookies.
+                            headers:  context?.request?.headers,
+                        });
+                    }
+                }
+            }
+        },
         logger: {
             disabled: false,
             disableColors: false,

@@ -5,6 +5,7 @@ declare global {
             cf: CfProperties
             ctx: ExecutionContext
         }
+
         interface Api {
             Bindings: Cloudflare.Env,
             Variables: RequestIdVariables & {
@@ -37,11 +38,21 @@ declare global {
             banReason?: string | null | undefined,
             banExpires?: Date | null | undefined,
         }
+
+        interface GetVaultExpensesOptions {
+            page?: number;
+            limit?: number;
+            categoryId?: string;
+            startDate?: string;
+            endDate?: string;
+            memberIds?: string[];
+        }
     }
 
     namespace Client {
 
     }
+
 }
 
 export {};
