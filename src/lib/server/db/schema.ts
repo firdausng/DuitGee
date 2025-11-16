@@ -3,11 +3,6 @@ import { createId } from '@paralleldrive/cuid2';
 import { UTCDate } from "@date-fns/utc";
 import { formatISO } from "date-fns";
 
-export const user = sqliteTable('user', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-	age: integer('age')
-});
-
 // Vaults - shared expense containers
 export const vaults = sqliteTable('vaults', {
     id: text('id').primaryKey().$defaultFn(() => createId()),
