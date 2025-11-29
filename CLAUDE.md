@@ -135,6 +135,13 @@ The API follows RPC (Remote Procedure Call) style with CQRS (Command Query Respo
 - `POST /api/updateExpense` - Update an existing expense
 - `POST /api/deleteExpense` - Soft delete an expense
 
+*Expense Templates API:*
+- `GET /api/getExpenseTemplates?vaultId=xxx` - Get all expense templates for a vault
+- `GET /api/getExpenseTemplate?vaultId=xxx&id=xxx` - Get single expense template
+- `POST /api/createExpenseTemplate` - Create new expense template
+- `POST /api/updateExpenseTemplate` - Update an existing expense template
+- `POST /api/deleteExpenseTemplate` - Soft delete an expense template
+
 *Invitations API:*
 - `POST /api/createInvitation` - Invite user to vault
 - `POST /api/acceptInvitation` - Accept vault invitation
@@ -210,9 +217,10 @@ export const updateVault = async (
 **Permission Types:**
 
 Available permission keys (defined in `VaultPermissions` interface):
-- `canCreateExpenses`: Create new expenses
-- `canEditExpenses`: Edit existing expenses
-- `canDeleteExpenses`: Delete expenses
+- `canCreateExpenses`: Create new expenses and expense templates
+- `canEditExpenses`: Edit existing expenses and expense templates
+- `canDeleteExpenses`: Delete expenses and expense templates
+- `canViewExpenses`: View expenses and expense templates (all members have this)
 - `canManageMembers`: Invite/remove vault members
 - `canEditVault`: Update vault settings
 - `canDeleteVault`: Soft delete the vault

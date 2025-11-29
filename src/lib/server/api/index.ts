@@ -8,6 +8,7 @@ import {authConfig} from "$lib/server/better-auth";
 import {expensesApi} from "$lib/server/api/expenses/expenses-api";
 import {vaultsApi} from "$lib/server/api/vaults/vaults-api";
 import {invitationsApi} from "$lib/server/api/invitations/invitations-api";
+import {expenseTemplatesApi} from "$lib/server/api/expense-templates/expense-templates-api";
 
 const router = new Hono<App.Api>()
     .use('*', trimTrailingSlash())
@@ -29,6 +30,7 @@ const router = new Hono<App.Api>()
     // RPC-style routes
     .route('/', vaultsApi)
     .route('/', expensesApi)
+    .route('/', expenseTemplatesApi)
     .route('/', invitationsApi)
     // .route('/user-team', teamVaultsApi)
     // .route('/', categoriesApi)
@@ -37,7 +39,6 @@ const router = new Hono<App.Api>()
     // .route('/admin/vaults', adminVaultsApi)
     // .route('/admin/organizations', adminOrganizationApi)
     // .route('/vault-members', vaultMembersApi)
-    // .route('/', templatesApi);
 
 export const api = new Hono<App.Api>().route('/api', router);
 
