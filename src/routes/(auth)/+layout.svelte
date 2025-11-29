@@ -1,7 +1,16 @@
 <script lang="ts">
 	import ThemeToggle from "$lib/components/theme-toggle.svelte";
+    import {authClientBase} from "$lib/client/auth-client-base";
+    import {goto} from "$app/navigation";
 
-	let { children } = $props();
+	let { children, data } = $props();
+
+    let authClient = authClientBase({basePath: data.basePath});
+
+    async function signOut(){
+        await authClient.signOut();
+        await goto('/login');
+    }
 </script>
 
 <div class="min-h-screen bg-background">
@@ -23,6 +32,9 @@
 			</div>
 			<div class="flex items-center gap-2">
 				<ThemeToggle />
+                <button class="btn btn-sm btn-ghost" onclick={() => signOut()}>
+                    logout
+                </button>
 			</div>
 		</div>
 	</header>

@@ -3,8 +3,6 @@
     import {ofetch} from "ofetch";
     import { superForm } from 'sveltekit-superforms';
     import { valibotClient } from 'sveltekit-superforms/adapters';
-    import { authClientBase } from "$lib/client/auth-client-base";
-    import { slugify } from "$lib/utils";
     import { Button } from "$lib/components/ui/button";
     import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
     import { Input } from "$lib/components/ui/input";
@@ -13,7 +11,7 @@
 
 	let { data } = $props();
 
-    const { form, errors, enhance, delayed, validate, constraints } = superForm(data.form, {
+    const { form, errors, enhance, constraints } = superForm(data.form, {
         validators: valibotClient(createVaultSchema),
         SPA: true,
         dataType: 'json',
@@ -29,23 +27,6 @@
             console.log('Form data:', form.data);
 
             try {
-                let authClient = authClientBase({basePath: data.basePath});
-
-                const { data: organizationList, error } = await authClient.organization.list();
-
-                if(error){
-                    console.error(error);
-                    return;
-                }
-
-                if(organizationList.length === 0){
-                    await authClient.organization.create({
-                        name: form.data.name,
-                        slug: slugify(form.data.name),
-                        userId: data.currentUserId,
-                    });
-                }
-
                 // Set required fields
                 const vaultData = {
                     ...form.data,
@@ -53,7 +34,7 @@
                     createdBy: data.currentUserId,
                 };
 
-                const response = await ofetch<{success: boolean, data: {id: string}}>(`/api/vaults`, {
+                const response = await ofetch<{success: boolean, data: {vault: {id: string}}}>(`/api/createVault`, {
                     method: 'POST',
                     body: JSON.stringify(vaultData),
                     headers: {
@@ -62,7 +43,7 @@
                 });
 
                 if(response.success){
-                    await goto(`/vaults/${response.data.id}`);
+                    await goto(`/vaults/${response.data.vault.id}`);
                 }
             } catch (error) {
                 console.error('Error creating vault:', error);

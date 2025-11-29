@@ -12,12 +12,9 @@ export const getExpense = async (
 ) => {
     const client = drizzle(env.DB, { schema });
 
-    // First get the expense to verify it belongs to the vault
-    const expenseResult = await client
+    const [expenseResult] = await client
         .select()
         .from(expenses)
-        // .leftJoin(schema.paymentTypes, eq(expenses.paymentTypeId, schema.paymentTypes.id))
-        // .leftJoin(schema.paymentProviders, eq(expenses.paymentProviderId, schema.paymentProviders.id))
         .where(
             and(
                 eq(expenses.id, expenseId),
@@ -26,24 +23,19 @@ export const getExpense = async (
         )
         .limit(1);
 
-    if (!expenseResult[0]) {
+    if (!expenseResult) {
         return undefined;
     }
 
-    // expenseResult
-
-    const row = expenseResult[0];
-
     // Transform to match our Expense type with additional fields
     return {
-        id: row.id,
-        note: row.note,
-        amount: row.amount,
-        date: row.date,
-        createdAt: row.createdAt,
-        vaultId: row.vaultId || undefined,
-        paymentType: paymentData.paymentTypes.find(p => p.code === row.paymentType)?.code || null,
+        id: expenseResult.id,
+        note: expenseResult.note,
+        amount: expenseResult.amount,
+        date: expenseResult.date,
+        createdAt: expenseResult.createdAt,
+        vaultId: expenseResult.vaultId || undefined,
         vault: null, // Not included in this query
-        category: categoryData.categories.find(c => c.name === row.categoryName) || null,
+        category: categoryData.categories.find(c => c.name === expenseResult.categoryName) || null,
     };
 };

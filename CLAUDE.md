@@ -112,17 +112,110 @@ The API is built using **Hono** framework and mounted to SvelteKit via catch-all
 - OpenAPI documentation at `/openapi.json`
 - Scalar API reference at `/scalar`
 
-**Current API modules:**
-- `/api/vaults`: Vault management (create, get, list)
-- `/api/vaults/:vaultId/expenses`: Expense management (create, get, list with pagination/filters)
+**RPC-Style Endpoints with CQRS:**
+
+The API follows RPC (Remote Procedure Call) style with CQRS (Command Query Responsibility Segregation) principles:
+- **Queries** (read operations) use `GET` method with query parameters
+- **Commands** (write operations) use `POST` method with JSON body
+- Action-oriented naming (e.g., `getVaults`, `createExpense`, `acceptInvitation`)
+
+**Current API Endpoints:**
+
+*Vaults API:*
+- `GET /api/getVaults` - Get user's vaults list
+- `GET /api/getVault?id=xxx` - Get single vault by ID
+- `POST /api/createVault` - Create a new vault
+- `POST /api/updateVault` - Update an existing vault
+- `POST /api/deleteVault` - Soft delete a vault
+
+*Expenses API:*
+- `GET /api/getExpenses?vaultId=xxx&page=1&limit=10` - Get expenses list with pagination/filters
+- `GET /api/getExpense?vaultId=xxx&id=xxx` - Get single expense
+- `POST /api/createExpense` - Create new expense
+- `POST /api/updateExpense` - Update an existing expense
+- `POST /api/deleteExpense` - Soft delete an expense
+
+*Invitations API:*
+- `POST /api/createInvitation` - Invite user to vault
+- `POST /api/acceptInvitation` - Accept vault invitation
 
 **API Development Pattern:**
+
 Each API module follows this structure:
 1. Route definition file: `*-api.ts` (e.g., `expenses-api.ts`)
 2. Handler files: `*Handler.ts` for each operation
-3. Schema file: `src/lib/server/schemas/*.ts` for validation
+3. Schema file: `src/lib/schemas/*.ts` for validation
 4. Uses `hono-openapi` for route documentation
 5. Uses `valibot` for request/response validation
+
+**RPC Naming Conventions:**
+- Action-oriented verbs: `get`, `create`, `update`, `delete`, `accept`, `send`, etc.
+- Plural for collections: `getVaults`, `getExpenses`
+- Singular for single items: `getVault`, `createExpense`, `acceptInvitation`
+- GET for safe operations (no side effects, cacheable)
+- POST for state changes (create, update, modify operations)
+
+### Vault Permission System
+
+The application implements a role-based access control (RBAC) system for vault operations.
+
+**Vault Roles:**
+- `owner`: Full control over the vault
+- `admin`: Can manage vault and expenses but cannot delete vault
+- `member`: Can only create expenses
+
+**Permission Matrix:**
+
+| Permission | Owner | Admin | Member |
+|------------|-------|-------|--------|
+| Create Expenses | ✅ | ✅ | ✅ |
+| Edit Expenses | ✅ | ✅ | ❌ |
+| Delete Expenses | ✅ | ✅ | ❌ |
+| Manage Members | ✅ | ✅ | ❌ |
+| Edit Vault | ✅ | ✅ | ❌ |
+| Delete Vault | ✅ | ❌ | ❌ |
+
+**Permission Utilities:**
+
+Located in `src/lib/server/utils/vaultPermissions.ts`:
+
+```typescript
+// Get user's role in a vault
+const role = await getUserVaultRole(userId, vaultId, env);
+
+// Check if user has specific permission
+const canEdit = await checkVaultPermission(userId, vaultId, 'canEditVault', env);
+
+// Enforce permission (throws error if denied)
+await requireVaultPermission(session, vaultId, 'canDeleteVault', env);
+```
+
+**Using Permissions in Handlers:**
+
+All vault operation handlers should enforce permissions:
+
+```typescript
+export const updateVault = async (
+    session: App.AuthSession,
+    data: UpdateVaultRequest,
+    env: Cloudflare.Env
+) => {
+    // Enforce permission check
+    await requireVaultPermission(session, data.id, 'canEditVault', env);
+
+    // Proceed with operation...
+};
+```
+
+**Permission Types:**
+
+Available permission keys (defined in `VaultPermissions` interface):
+- `canCreateExpenses`: Create new expenses
+- `canEditExpenses`: Edit existing expenses
+- `canDeleteExpenses`: Delete expenses
+- `canManageMembers`: Invite/remove vault members
+- `canEditVault`: Update vault settings
+- `canDeleteVault`: Soft delete the vault
 
 ### Database Schema and Audit Pattern
 
@@ -346,11 +439,106 @@ export const actions = {
 
 ### Adding a New API Endpoint
 
-1. Create handler file in appropriate module (e.g., `src/lib/server/api/vaults/createVaultHandler.ts`)
-2. Create/update validation schema in `src/lib/server/schemas/`
-3. Add route to API file (e.g., `vaults-api.ts`) with OpenAPI documentation
-4. Use session from context: `const session = c.get('currentSession')`
-5. Apply audit fields using utilities from `src/lib/server/utils/audit.ts`
+Follow these steps to add a new RPC-style endpoint:
+
+1. **Create validation schemas** in `src/lib/schemas/[feature].ts`:
+   ```ts
+   import * as v from 'valibot';
+
+   // For POST commands (body validation)
+   export const createItemSchema = v.object({
+       name: v.string(),
+       // ... other fields
+   });
+
+   // For GET queries (query parameter validation)
+   export const getItemQuerySchema = v.object({
+       id: v.string(),
+   });
+   ```
+
+2. **Create handler file** in `src/lib/server/api/[module]/[action]Handler.ts`:
+   ```ts
+   import { requireVaultPermission } from '$lib/server/utils/vaultPermissions';
+   import { updateAuditFields } from '$lib/server/utils/audit';
+
+   export const updateItem = async (
+       session: App.AuthSession,
+       data: UpdateItem,
+       env: Cloudflare.Env
+   ) => {
+       const client = drizzle(env.DB, { schema });
+
+       // Enforce permission check (for vault-scoped operations)
+       await requireVaultPermission(session, data.vaultId, 'canEditExpenses', env);
+
+       // Implementation with audit fields...
+       const [updated] = await client
+           .update(items)
+           .set({
+               ...data,
+               ...updateAuditFields({ userId: session.user.id })
+           })
+           .where(eq(items.id, data.id))
+           .returning();
+
+       return updated;
+   };
+   ```
+
+3. **Add route to API file** (e.g., `items-api.ts`) following RPC naming:
+   ```ts
+   import { Hono } from 'hono';
+   import { describeRoute, resolver } from 'hono-openapi';
+   import { vValidator } from '@hono/valibot-validator';
+
+   export const itemsApi = new Hono<App.Api>()
+       // Query: GET for read operations
+       .get(
+           '/getItems',
+           describeRoute({ /* OpenAPI config */ }),
+           vValidator('query', getItemsQuerySchema),
+           async (c) => {
+               const session = c.get('currentSession');
+               const query = c.req.valid('query');
+               // Call handler...
+           }
+       )
+       // Command: POST for write operations
+       .post(
+           '/createItem',
+           describeRoute({ /* OpenAPI config */ }),
+           vValidator('json', createItemSchema),
+           async (c) => {
+               const session = c.get('currentSession');
+               const data = c.req.valid('json');
+               // Call handler...
+           }
+       );
+   ```
+
+4. **Mount the API** in `src/lib/server/api/index.ts`:
+   ```ts
+   .route('/', itemsApi)
+   ```
+
+5. **Apply audit fields** using utilities from `src/lib/server/utils/audit.ts`:
+   - `initialAuditFields({ userId })` for new records
+   - `updateAuditFields({ userId })` for updates
+   - `deleteAuditFields({ userId })` for soft deletes
+
+6. **Enforce permissions** (for vault-scoped operations):
+   - Use `requireVaultPermission(session, vaultId, permission, env)` at the start of handlers
+   - Throws error if user lacks required permission
+   - See [Vault Permission System](#vault-permission-system) for available permissions
+
+**Key Points:**
+- Use action-oriented endpoint names (e.g., `/getItems`, `/createItem`, `/updateItem`)
+- GET requests validate with `vValidator('query', schema)`
+- POST requests validate with `vValidator('json', schema)`
+- Always get session with: `const session = c.get('currentSession')`
+- Enforce permissions for vault-scoped operations before proceeding
+- Return consistent response format: `{ success: boolean, data?: any, error?: string }`
 
 ### Database Schema Changes
 

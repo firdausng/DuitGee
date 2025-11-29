@@ -7,6 +7,7 @@ import {openAPIRouteHandler} from "hono-openapi";
 import {authConfig} from "$lib/server/better-auth";
 import {expensesApi} from "$lib/server/api/expenses/expenses-api";
 import {vaultsApi} from "$lib/server/api/vaults/vaults-api";
+import {invitationsApi} from "$lib/server/api/invitations/invitations-api";
 
 const router = new Hono<App.Api>()
     .use('*', trimTrailingSlash())
@@ -19,14 +20,17 @@ const router = new Hono<App.Api>()
             return c.body(null, 401);
         }
         c.set("currentSession", session);
-        console.log({
-            message: `[Set Session] ${session}`,
-            session
-        })
+        // console.log({
+        //     message: `[Set Session] ${session}`,
+        //     session
+        // })
         return next();
     })
+    // RPC-style routes
+    .route('/', vaultsApi)
     .route('/', expensesApi)
-    .route('/vaults', vaultsApi)
+    .route('/', invitationsApi)
+    // .route('/user-team', teamVaultsApi)
     // .route('/', categoriesApi)
     // .route('/', categoryGroupsApi)
     // .route('/notifications', notificationApi)

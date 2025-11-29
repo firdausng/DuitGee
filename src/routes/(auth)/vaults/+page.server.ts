@@ -6,13 +6,6 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies }) =
         throw new Error("No platform")
     }
 
-    console.log({
-        message: "[vaults] loading vaults",
-        locals,
-        session: locals.currentSession,
-        user: locals.currentUser
-    });
-
     try {
         return {
             activeUser: locals.currentUser,

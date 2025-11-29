@@ -3,9 +3,10 @@ import * as schema from "$lib/server/db/schema";
 import {createId} from "@paralleldrive/cuid2";
 import type {CreateVault} from "$lib/schemas/vaults";
 import {authConfig} from "$lib/server/better-auth";
-import {vaults} from "$lib/server/db/schema";
+import {vaultMembers, vaults} from "$lib/server/db/schema";
 import {formatISO} from "date-fns";
 import {UTCDate} from "@date-fns/utc";
+import {initialAuditFields} from "$lib/server/utils/audit";
 
 export const createVault = async (
     session: App.AuthSession,
@@ -13,31 +14,33 @@ export const createVault = async (
     env: Cloudflare.Env
 ) => {
     const client = drizzle(env.DB, { schema });
-    const authServer = authConfig(env);
-
     const vaultData = {
         id: createId(),
         ...data,
     };
 
-    const team = await authServer.api.createTeam({
-        body: {
-            name: data.name, // required
-            organizationId: session.session.activeOrganizationId,
-        },
-    });
-    vaultData.teamId = team.id;
-    vaultData.organizationId = session.session.activeOrganizationId;
-
-    const vault = await client
+    const [newVault] = await client
         .insert(vaults)
         .values({
             ...vaultData,
-            createdBy: session.user.id,
-            createdAt: formatISO(new UTCDate()),
-            updatedAt: formatISO(new UTCDate())
+            ...initialAuditFields({ userId: session.user.id })
         })
         .returning();
 
-    return vault[0];
-};
+    const newMember = await client
+        .insert(vaultMembers)
+        .values({
+            vaultId: newVault.id,
+            userId: session.user.id,
+            role: 'owner',
+            invitedBy: session.user.id,
+            status: 'active',
+            joinedAt: formatISO(new UTCDate()),
+        })
+        .returning();
+
+    return {
+        vault: newVault,
+        member: newMember,
+    };
+}

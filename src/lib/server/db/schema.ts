@@ -1,7 +1,8 @@
-import { integer, sqliteTable, text, real } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, real, index  } from 'drizzle-orm/sqlite-core';
 import { createId } from '@paralleldrive/cuid2';
 import { UTCDate } from "@date-fns/utc";
 import { formatISO } from "date-fns";
+import {sql} from "drizzle-orm";
 
 // Vaults - shared expense containers
 export const vaults = sqliteTable('vaults', {
@@ -11,9 +12,8 @@ export const vaults = sqliteTable('vaults', {
     color: text('color').notNull().default('#3B82F6'),
     icon: text('icon').default('🏦'),
     iconType: text('icon_type').default('emoji'),
-    isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(true), // false for shared vaults
-    teamId: text('team_id'),
     organizationId: text('organization_id'),
+    isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
     // Audit fields
     createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
     createdBy: text('created_by').notNull(), // User ID as string, no FK constraint
@@ -21,6 +21,23 @@ export const vaults = sqliteTable('vaults', {
     updatedBy: text('updated_by'), // User ID as string, no FK constraint
     deletedAt: text('deleted_at'),
     deletedBy: text('deleted_by'), // User ID as string, no FK constraint
+}, (table) => ({
+    uniqueDefaultPerUser: index('idx_one_default_vault_per_user')
+        .on(table.createdBy)
+        .where(sql`${table.isDefault} = 1`),
+}));
+
+export const vaultMembers = sqliteTable('vault_members', {
+    id: text('id').primaryKey().$defaultFn(() => createId()),
+    vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull(),
+    role: text('role').notNull().default('member'), // 'owner', 'admin', 'member'
+    invitedBy: text('invited_by'),
+    status: text('status').notNull().default('pending'), // 'pending', 'active', 'declined', 'removed'
+    invitedAt: text('created_at').$defaultFn(() => formatISO(new Date())),
+    joinedAt: text('created_at'),
+    updatedAt: text('updated_at').$defaultFn(() => formatISO(new Date())),
+    deletedAt: text('updated_at'),
 });
 
 export const expenseTemplates = sqliteTable('expense_templates', {
@@ -36,7 +53,6 @@ export const expenseTemplates = sqliteTable('expense_templates', {
     defaultAmount: real('default_amount'),
     defaultCategoryName: text('category_id'),
     defaultPaidBy: text('default_user_id'), // Who the expense should be assigned to: "__creator__", null (vault), or specific user ID
-    defaultPaymentType: text('payment_type_id'),
     // Usage tracking
     usageCount: integer('usage_count').notNull().default(0),
     lastUsedAt: text('last_used_at'),
@@ -59,8 +75,6 @@ export const expenses = sqliteTable('expenses', {
     // related fields
     vaultId: text('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }), // required vault
     expenseTemplateId: text('expense_template_id').references(() => expenseTemplates.id, { onDelete: 'cascade' }), // required vault
-    // Payment information - references to payment tables
-    paymentType: text('payment_type_id'),
     // Audit fields
     createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
     createdBy: text('created_by').notNull(), // User ID as string, no FK constraint - who created the record (different from userId which is who the expense is for)
@@ -68,4 +82,15 @@ export const expenses = sqliteTable('expenses', {
     updatedBy: text('updated_by'), // User ID as string, no FK constraint
     deletedAt: text('deleted_at'),
     deletedBy: text('deleted_by'), // User ID as string, no FK constraint
+});
+
+export const invitation = sqliteTable("invitation", {
+    id: text("id").primaryKey(),
+    vaultId: text("vault_id")
+        .notNull()
+        .references(() => vaults.id, { onDelete: "cascade" }),
+    role: text("role"),
+    status: text("status").default("pending").notNull(),
+    inviterId: text('inviter_id'),
+    inviteeId: text('inviter_id'),
 });

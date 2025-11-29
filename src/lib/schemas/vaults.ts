@@ -7,9 +7,9 @@ export const vaultSchema = v.object({
     color: v.string(), // default "#3B82F6"
     icon: v.nullable(v.string()), // default "🏦"
     iconType: v.nullable(v.picklist(["emoji", "phosphor"])), // DB default 'emoji'
-    isPublic: v.boolean(), // boolean, notNull, default true
     teamId: v.nullable(v.string()),
     organizationId: v.nullable(v.string()),
+    isDefault: v.boolean(),
     // Audit fields
     createdAt: v.string(),
     createdBy: v.string(),
@@ -26,5 +26,26 @@ export const createVaultSchema = v.object({
 
 export type CreateVault = v.InferOutput<typeof createVaultSchema>;
 export const updateVaultSchema = v.partial(createVaultSchema);
-
 export type UpdateVault = v.InferOutput<typeof updateVaultSchema>;
+
+// RPC-style request schemas
+export const getVaultRequestSchema = v.object({
+    vaultId: v.string(),
+});
+export type GetVaultRequest = v.InferOutput<typeof getVaultRequestSchema>;
+
+export const listVaultsRequestSchema = v.optional(v.object({
+    // Future: add filtering options here if needed
+}));
+export type ListVaultsRequest = v.InferOutput<typeof listVaultsRequestSchema>;
+
+export const updateVaultRequestSchema = v.object({
+    id: v.string(),
+    ...v.partial(v.pick(createVaultSchema, ['name', 'description', 'color', 'icon', 'iconType'])).entries
+});
+export type UpdateVaultRequest = v.InferOutput<typeof updateVaultRequestSchema>;
+
+export const deleteVaultRequestSchema = v.object({
+    id: v.string(),
+});
+export type DeleteVaultRequest = v.InferOutput<typeof deleteVaultRequestSchema>;
