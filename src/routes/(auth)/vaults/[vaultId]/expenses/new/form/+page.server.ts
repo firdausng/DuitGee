@@ -1,0 +1,88 @@
+import { superValidate } from 'sveltekit-superforms';
+import { valibot } from 'sveltekit-superforms/adapters';
+import { fail, redirect } from '@sveltejs/kit';
+import { createExpenseSchema } from '$lib/schemas/expenses';
+import { formatISO } from 'date-fns';
+import { UTCDate } from '@date-fns/utc';
+
+export const load = async ({ params, url, platform, fetch }) => {
+	const vaultId = params.vaultId;
+	const templateId = url.searchParams.get('templateId');
+
+	// Initialize form with vaultId and current date in YYYY-MM-DD format for date input
+	const today = new UTCDate();
+	const dateString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+	const form = await superValidate(
+		valibot(createExpenseSchema, {
+			defaults: {
+				vaultId,
+				date: dateString,
+				amount: 0
+			}
+		})
+	);
+
+	// If templateId is provided, fetch template and pre-populate form
+	let template = null;
+	if (templateId) {
+		try {
+			const response = await fetch(
+				`/api/getExpenseTemplate?vaultId=${vaultId}&id=${templateId}`
+			);
+
+			if (response.ok) {
+				const result = await response.json();
+				if (result.success) {
+					template = result.data;
+					// Pre-populate form with template defaults
+					form.data.note = template.defaultNote || '';
+					form.data.amount = template.defaultAmount || 0;
+					form.data.categoryName = template.defaultCategoryName || '';
+					form.data.paidBy = template.defaultPaidBy || '';
+					form.data.templateId = templateId;
+				}
+			}
+		} catch (error) {
+			console.error('Failed to fetch template:', error);
+		}
+	}
+
+	return {
+		form,
+		vaultId,
+		template
+	};
+};
+
+export const actions = {
+	default: async ({ request, params, fetch }) => {
+		const form = await superValidate(request, valibot(createExpenseSchema));
+
+		if (!form.valid) {
+			return fail(400, { form });
+		}
+
+		try {
+			const response = await fetch('/api/createExpense', {
+				method: 'POST',
+				body: JSON.stringify(form.data),
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to create expense');
+			}
+
+			return redirect(303, `/vaults/${params.vaultId}`);
+		} catch (error) {
+			console.error('Failed to create expense:', error);
+			return fail(500, {
+				form,
+				error: 'Failed to create expense. Please try again.'
+			});
+		}
+	}
+};

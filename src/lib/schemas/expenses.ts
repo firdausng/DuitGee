@@ -23,14 +23,14 @@ export type Expense = v.InferOutput<typeof expenseSchema>;
 
 export const createExpenseSchema = v.object({
     ...v.pick(expenseSchema, ['note', 'amount', 'categoryName', 'paidBy', 'vaultId', 'date']).entries,
-    templateId: v.string(),
+    templateId: v.optional(v.string()),
 })
 
 export type CreateExpense = v.InferOutput<typeof createExpenseSchema>;
 
 export const updateExpenseSchema = v.object({
     ...v.pick(createExpenseSchema, ['note', 'amount', 'categoryName', 'paidBy', 'date']).entries,
-    templateId: v.string(),
+    templateId: v.optional(v.string()),
 })
 
 export type UpdateExpense = v.InferOutput<typeof updateExpenseSchema>;

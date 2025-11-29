@@ -14,7 +14,7 @@ export const getExpenseTemplate = async (
 	const { vaultId, id } = query;
 
 	// Check if user is a member of this vault
-	const hasAccess = await checkVaultPermission(session.user.id, vaultId, 'canViewExpenses', env);
+	const hasAccess = await checkVaultPermission(session.user.id, vaultId, 'canEditExpenses', env);
 	if (!hasAccess) {
 		throw new Error('You do not have access to this vault');
 	}
