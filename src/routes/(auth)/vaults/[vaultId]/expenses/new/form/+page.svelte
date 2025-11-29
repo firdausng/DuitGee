@@ -7,6 +7,8 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import { CategoryCombobox } from '$lib/components/ui/category-combobox';
+	import { categoryData } from '$lib/configurations/categories';
 
 	let { data } = $props();
 
@@ -103,21 +105,15 @@
 				</div>
 
 				<!-- Category -->
-				<div class="space-y-2">
-					<Label for="categoryName">Category *</Label>
-					<Input
-						id="categoryName"
-						name="categoryName"
-						type="text"
-						bind:value={$form.categoryName}
-						disabled={$delayed}
-						placeholder="e.g., Food, Transportation, Entertainment"
-						class={$errors.categoryName ? 'border-destructive' : ''}
-					/>
-					{#if $errors.categoryName}
-						<p class="text-sm text-destructive">{$errors.categoryName}</p>
-					{/if}
-				</div>
+				<CategoryCombobox
+					name="categoryName"
+					label="Category"
+					categories={categoryData.categories}
+					bind:value={$form.categoryName}
+					disabled={$delayed}
+					error={$errors.categoryName}
+					required={true}
+				/>
 
 				<!-- Paid By -->
 				<div class="space-y-2">
