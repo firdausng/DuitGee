@@ -15,11 +15,11 @@ export const load: LayoutServerLoad = async ({locals, url, params, platform}) =>
     //         teamId,
     //     },
     // });
-    console.log({
-        message: "[vault:layout]vaultId",
-        vaultId,
-        session: locals.currentSession
-    })
+    // console.log({
+    //     message: "[vault:layout]vaultId",
+    //     vaultId,
+    //     session: locals.currentSession
+    // })
 
     return {
         activeUser: locals.currentUser,

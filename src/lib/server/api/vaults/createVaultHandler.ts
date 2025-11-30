@@ -2,7 +2,6 @@ import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
 import {createId} from "@paralleldrive/cuid2";
 import type {CreateVault} from "$lib/schemas/vaults";
-import {authConfig} from "$lib/server/better-auth";
 import {vaultMembers, vaults} from "$lib/server/db/schema";
 import {formatISO} from "date-fns";
 import {UTCDate} from "@date-fns/utc";

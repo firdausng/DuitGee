@@ -12,17 +12,22 @@ export const createExpenseTemplate = async (
 ) => {
 	const client = drizzle(env.DB, { schema });
 
-	// Check if user has permission to create templates in this vault
-	await requireVaultPermission(session, data.vaultId, 'canCreateExpenses', env);
+    try {
+        // Check if user has permission to create templates in this vault
+        await requireVaultPermission(session, data.vaultId, 'canCreateExpenses', env);
 
-	const [template] = await client
-		.insert(expenseTemplates)
-		.values({
-			...data,
-			userId: session.user.id,
-			...createAuditFields({ userId: session.user.id })
-		})
-		.returning();
+        const [template] = await client
+            .insert(expenseTemplates)
+            .values({
+                ...data,
+                userId: session.user.id,
+                ...createAuditFields({ userId: session.user.id })
+            })
+            .returning();
 
-	return template;
+        return template;
+    }catch (e) {
+        console.log(e);
+    }
+
 };

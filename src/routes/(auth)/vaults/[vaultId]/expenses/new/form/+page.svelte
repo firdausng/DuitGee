@@ -47,7 +47,8 @@
 
 		<h1 class="text-2xl font-bold">
 			{#if data.template}
-				Create Expense from "{data.template.name}"
+				Expense created from
+                <span class="text-sky-500"><a href="/vaults/{data.vaultId}/templates/{data.template.id}">{data.template.icon} {data.template.name}</a></span>
 			{:else}
 				Create Expense
 			{/if}

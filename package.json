@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@libsql/client": "^0.15.15",
-    "@lucide/svelte": "^0.553.0",
+    "@lucide/svelte": "^0.544.0",
     "@paralleldrive/cuid2": "^2.2.2",
     "@playwright/test": "^1.55.1",
     "@sveltejs/adapter-auto": "^6.1.0",
