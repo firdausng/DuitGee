@@ -24,6 +24,7 @@
             group: string;
         }
         paidBy: string | null;
+        paidByName: string | null;
         date: string;
         createdAt: string | null;
         createdBy: string;
@@ -221,7 +222,7 @@
                                             {/if}
                                             {#if expense.paidBy}
                                                 <span class="text-xs text-muted-foreground">
-                                                    Paid by: {expense.paidBy}
+                                                    Paid by: {expense.paidByName}
                                                 </span>
                                             {/if}
                                         </div>

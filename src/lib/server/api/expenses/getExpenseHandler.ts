@@ -33,6 +33,7 @@ export const getExpense = async (
         note: expenseResult.note,
         amount: expenseResult.amount,
         date: expenseResult.date,
+        paidBy: expenseResult.paidBy,
         createdAt: expenseResult.createdAt,
         vaultId: expenseResult.vaultId || undefined,
         vault: null, // Not included in this query

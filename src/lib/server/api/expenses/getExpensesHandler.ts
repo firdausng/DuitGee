@@ -27,8 +27,12 @@ export const getExpenses = async (
     }
 
     const expensesList = await client
-        .select()
+        .select({
+            ...expenses,
+            paidByName: vaultMembers.displayName
+        })
         .from(expenses)
+        .leftJoin(vaultMembers, eq(expenses.vaultId, vaultMembers.vaultId))
         .where(whereClause)
         .orderBy(desc(expenses.date))
         .limit(limit)
@@ -48,6 +52,7 @@ export const getExpenses = async (
             date: parsedExpense.date,
             createdAt: parsedExpense.createdAt,
             paidBy: parsedExpense.paidBy || undefined,
+            paidByName: row.paidByName,
             vaultId: parsedExpense.vaultId || undefined,
             category: categoryData.categories.find(c => c.name === parsedExpense.categoryName) || null,
         }
