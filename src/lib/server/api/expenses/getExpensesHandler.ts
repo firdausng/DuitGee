@@ -1,7 +1,7 @@
 import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
 import {expenses, vaultMembers, vaults} from "$lib/server/db/schema";
-import {and, desc, eq, isNull, sql} from "drizzle-orm";
+import {and, desc, asc, eq, isNull, sql} from "drizzle-orm";
 import {categoryData} from "$lib/configurations/categories";
 import {createSelectSchema} from "drizzle-valibot";
 import {parse} from "valibot";
@@ -32,9 +32,12 @@ export const getExpenses = async (
             paidByName: vaultMembers.displayName
         })
         .from(expenses)
-        .leftJoin(vaultMembers, eq(expenses.vaultId, vaultMembers.vaultId))
+        .leftJoin(vaultMembers, and(
+            eq(expenses.vaultId, vaultMembers.vaultId),
+            eq(expenses.paidBy, vaultMembers.userId)
+        ))
         .where(whereClause)
-        .orderBy(desc(expenses.date))
+        .orderBy(asc(expenses.date))
         .limit(limit)
         .offset(offset);
 

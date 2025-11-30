@@ -74,14 +74,14 @@
 	onMount(() => {
 		loadInvitations();
 		// Poll for new invitations every 30 seconds
-		const interval = setInterval(loadInvitations, 30000);
-
-		document.addEventListener('click', handleClickOutside);
-
-		return () => {
-			clearInterval(interval);
-			document.removeEventListener('click', handleClickOutside);
-		};
+		// const interval = setInterval(loadInvitations, 30000);
+        //
+		// document.addEventListener('click', handleClickOutside);
+        //
+		// return () => {
+		// 	clearInterval(interval);
+		// 	document.removeEventListener('click', handleClickOutside);
+		// };
 	});
 </script>
 
