@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ThemeToggle from "$lib/components/theme-toggle.svelte";
+	import InvitationsNotification from "$lib/components/invitations-notification.svelte";
     import {authClientBase} from "$lib/client/auth-client-base";
     import {goto} from "$app/navigation";
 
@@ -31,6 +32,7 @@
 				</nav>
 			</div>
 			<div class="flex items-center gap-2">
+				<InvitationsNotification />
 				<ThemeToggle />
                 <button class="btn btn-sm btn-ghost" onclick={() => signOut()}>
                     logout

@@ -5,6 +5,8 @@
     import type {VaultWithMember} from "$lib/schemas/read/vaultWithMember";
     import { Button } from "$lib/components/ui/button";
     import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
+    import { Input } from "$lib/components/ui/input";
+    import { Label } from "$lib/components/ui/label";
 
     let { data } = $props();
     let { url, vaultId } = data;
@@ -38,6 +40,10 @@
     let expenses = $state<Expense[]>([]);
     let isLoadingVault = $state(true);
     let isLoadingExpenses = $state(true);
+    let showInviteForm = $state(false);
+    let inviteEmail = $state('');
+    let inviteRole = $state<'admin' | 'member'>('member');
+    let isInviting = $state(false);
 
     onMount(async()=>{
         // Load vault data
@@ -107,6 +113,52 @@
         });
     }
 
+    function toggleInviteForm() {
+        showInviteForm = !showInviteForm;
+        if (!showInviteForm) {
+            // Reset form when closing
+            inviteEmail = '';
+            inviteRole = 'member';
+        }
+    }
+
+    async function handleInviteUser() {
+        if (!inviteEmail.trim()) {
+            alert('Please enter an email address');
+            return;
+        }
+
+        isInviting = true;
+
+        try {
+            const response = await ofetch('/api/createInvitation', {
+                method: 'POST',
+                body: {
+                    vaultId,
+                    inviteeEmail: inviteEmail.trim(),
+                    role: inviteRole
+                },
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (response.success) {
+                alert(`Invitation sent to ${inviteEmail}`);
+                // Reset form
+                inviteEmail = '';
+                inviteRole = 'member';
+                showInviteForm = false;
+            } else {
+                throw new Error(response.error || 'Failed to send invitation');
+            }
+        } catch (error: any) {
+            console.error('Failed to invite user:', error);
+            const errorMessage = error?.data?.error || error?.message || 'Failed to send invitation. Please try again.';
+            alert(errorMessage);
+        } finally {
+            isInviting = false;
+        }
+    }
+
 </script>
 
 <svelte:head>
@@ -163,14 +215,78 @@
                         {/if}
                     </div>
                 </div>
-                <Button onclick={handleCreateExpense}>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                    </svg>
-                    Add Expense
-                </Button>
+                <div class="flex gap-2">
+                    <Button variant="outline" onclick={toggleInviteForm}>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+                        </svg>
+                        <span class="hidden sm:inline">Invite User</span>
+                        <span class="sm:hidden">Invite</span>
+                    </Button>
+                    <Button onclick={handleCreateExpense}>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="hidden sm:inline">Add Expense</span>
+                        <span class="sm:hidden">Add</span>
+                    </Button>
+                </div>
             </div>
         </div>
+
+        <!-- Invite User Form -->
+        {#if showInviteForm}
+            <Card class="mb-6">
+                <CardHeader>
+                    <CardTitle>Invite User to Vault</CardTitle>
+                    <CardDescription>Send an invitation to collaborate on this vault</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form onsubmit={(e) => { e.preventDefault(); handleInviteUser(); }} class="space-y-4">
+                        <div class="space-y-2">
+                            <Label for="inviteEmail">Email Address *</Label>
+                            <Input
+                                id="inviteEmail"
+                                type="email"
+                                bind:value={inviteEmail}
+                                placeholder="user@example.com"
+                                disabled={isInviting}
+                                required
+                            />
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label for="inviteRole">Role *</Label>
+                            <select
+                                id="inviteRole"
+                                bind:value={inviteRole}
+                                disabled={isInviting}
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <option value="member">Member</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                            <p class="text-xs text-muted-foreground">
+                                Members can view and add expenses. Admins can also manage vault settings and invite users.
+                            </p>
+                        </div>
+
+                        <div class="flex gap-3 pt-2">
+                            <Button type="submit" disabled={isInviting} class="flex-1">
+                                {#if isInviting}
+                                    Sending...
+                                {:else}
+                                    Send Invitation
+                                {/if}
+                            </Button>
+                            <Button type="button" variant="outline" onclick={toggleInviteForm} disabled={isInviting}>
+                                Cancel
+                            </Button>
+                        </div>
+                    </form>
+                </CardContent>
+            </Card>
+        {/if}
 
         <!-- Expenses Table -->
         <Card>

@@ -93,5 +93,5 @@ export const invitation = sqliteTable("invitation", {
     role: text("role"),
     status: text("status").default("pending").notNull(),
     inviterId: text('inviter_id'),
-    inviteeId: text('inviter_id'),
+    inviteeId: text('invitee_id'),
 });

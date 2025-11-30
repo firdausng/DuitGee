@@ -11,7 +11,9 @@ export const acceptVaultInvitation = async ( // Renamed for clarity
     env: Cloudflare.Env,
 ) => {
     const client = drizzle(env.DB, { schema });
-    const { userId, name, email } = session.user;
+    const userId = session.user.id;
+    const name = session.user.name;
+    const email = session.user.email;
 
     const [invite] = await client
         .select()

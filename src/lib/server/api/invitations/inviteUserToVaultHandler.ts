@@ -28,9 +28,11 @@ export const inviteUserToVault = async (
         .where(eq(user.email, inviteeEmail))
         .limit(1);
 
-    if (!invitees) {
-        throw new Error('User do not exist');
+    if (!invitees || invitees.length === 0) {
+        throw new Error('User does not exist');
     }
+
+    const invitee = invitees[0];
 
     const invitationId = createId();
 
@@ -40,7 +42,7 @@ export const inviteUserToVault = async (
             id: invitationId,
             vaultId,
             role,
-            inviteeId: invitees.id,
+            inviteeId: invitee.id,
             inviterId: session.user.id,
             status: 'pending',
         })
@@ -51,8 +53,8 @@ export const inviteUserToVault = async (
         .insert(vaultMembers)
         .values({
             vaultId,
-            userId: invitees.id,
-            displayName: invitees.name ?? invitees.email,
+            userId: invitee.id,
+            displayName: invitee.name ?? invitee.email,
             role,
             invitedBy: session.user.id,
             status: 'pending',

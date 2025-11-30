@@ -5,6 +5,7 @@ import {vValidator} from "@hono/valibot-validator";
 import {createInvitationSchema, acceptInvitationSchema} from "$lib/schemas/invitations";
 import {inviteUserToVault} from "$lib/server/api/invitations/inviteUserToVaultHandler";
 import {acceptVaultInvitation} from "$lib/server/api/invitations/AcceptInvitationToVaultHandler";
+import {getPendingInvitations} from "$lib/server/api/invitations/getPendingInvitationsHandler";
 
 const INVITATION_TAG = ['Invitation'];
 const commonInvitationConfig = {
@@ -12,6 +13,46 @@ const commonInvitationConfig = {
 };
 
 export const invitationsApi = new Hono<App.Api>()
+    // Query: Get pending invitations (GET)
+    .get(
+        '/getPendingInvitations',
+        describeRoute({
+            ...commonInvitationConfig,
+            description: 'Get all pending invitations for current user',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.array(v.any())
+                            }))
+                        },
+                    },
+                },
+            },
+        }),
+        async (c) => {
+            const session = c.get('currentSession');
+
+            try {
+                const invitations = await getPendingInvitations(session, c.env);
+                return c.json({
+                    success: true,
+                    data: invitations
+                });
+            } catch (error) {
+                console.error({
+                    message: 'Error fetching pending invitations',
+                    error
+                });
+                return c.json({
+                    success: false,
+                    error: 'Failed to fetch pending invitations'
+                }, 500);
+            }
+        })
     // Command: Create invitation (POST)
     .post(
         '/createInvitation',
@@ -59,7 +100,7 @@ export const invitationsApi = new Hono<App.Api>()
                 });
                 return c.json({
                     success: false,
-                    error: 'Failed to create invitation'
+                    error: error instanceof Error ? error.message : 'Failed to create invitation'
                 }, 500);
             }
         })
@@ -97,7 +138,7 @@ export const invitationsApi = new Hono<App.Api>()
             try {
                 const result = await acceptVaultInvitation(
                     invitationId,
-                    session.user.id,
+                    session,
                     c.env
                 );
 
