@@ -16,6 +16,7 @@ import {getVault} from "$lib/server/api/vaults/getVaultHandler";
 import {updateVault} from "$lib/server/api/vaults/updateVaultHandler";
 import {deleteVault} from "$lib/server/api/vaults/deleteVaultHandler";
 import {setDefaultVault} from "$lib/server/api/vaults/setDefaultVaultHandler";
+import {getVaultStatistics} from "$lib/server/api/vaults/getVaultStatisticsHandler";
 
 const VAULT_TAG = ['Vault'];
 const commonVaultConfig = {
@@ -284,6 +285,52 @@ export const vaultsApi = new Hono<App.Api>()
                 return c.json({
                     success: false,
                     error: error instanceof Error ? error.message : 'Failed to set default vault'
+                }, status);
+            }
+        })
+    // Query: Get vault statistics (GET)
+    .get(
+        '/getVaultStatistics',
+        describeRoute({
+            ...commonVaultConfig,
+            description: 'Get statistics for a specific vault',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.any()
+                            }))
+                        },
+                    },
+                },
+                404: {
+                    description: 'Vault not found',
+                },
+            },
+        }),
+        vValidator('query', getVaultRequestSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const { vaultId } = c.req.valid('query');
+
+            try {
+                const stats = await getVaultStatistics(vaultId, session, c.env);
+                return c.json({
+                    success: true,
+                    data: stats
+                });
+            } catch (error) {
+                console.error({
+                    message: 'Error fetching vault statistics',
+                    error
+                });
+                const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to fetch vault statistics'
                 }, status);
             }
         })

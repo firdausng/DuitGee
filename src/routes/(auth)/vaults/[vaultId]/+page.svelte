@@ -36,10 +36,37 @@
         deletedBy: string | null;
     };
 
+    type VaultStatistics = {
+        total: {
+            amount: number;
+            count: number;
+        };
+        byTemplate: Array<{
+            templateId: string | null;
+            templateName: string;
+            templateIcon: string;
+            totalAmount: number;
+            count: number;
+        }>;
+        byCategory: Array<{
+            categoryName: string;
+            totalAmount: number;
+            count: number;
+        }>;
+        byMember: Array<{
+            userId: string | null;
+            displayName: string;
+            totalAmount: number;
+            count: number;
+        }>;
+    };
+
     let currentVault = $state<VaultWithMember>();
     let expenses = $state<Expense[]>([]);
+    let statistics = $state<VaultStatistics | null>(null);
     let isLoadingVault = $state(true);
     let isLoadingExpenses = $state(true);
+    let isLoadingStats = $state(true);
     let showInviteForm = $state(false);
     let inviteEmail = $state('');
     let inviteRole = $state<'admin' | 'member'>('member');
@@ -65,6 +92,16 @@
         } finally {
             isLoadingExpenses = false;
         }
+
+        // Load statistics
+        try {
+            const response = await ofetch<{success: boolean, data: VaultStatistics}>(`/api/getVaultStatistics?vaultId=${vaultId}`);
+            statistics = response.data;
+        } catch (error) {
+            console.error('Failed to fetch statistics:', error);
+        } finally {
+            isLoadingStats = false;
+        }
     });
 
     function handleCreateExpense() {
@@ -88,6 +125,14 @@
             // Refresh expenses list
             const response = await ofetch<{expenses: Expense[], pagination: any}>(`/api/getExpenses?vaultId=${vaultId}&page=1&limit=50`);
             expenses = response.expenses || [];
+
+            // Refresh statistics
+            try {
+                const statsResponse = await ofetch<{success: boolean, data: VaultStatistics}>(`/api/getVaultStatistics?vaultId=${vaultId}`);
+                statistics = statsResponse.data;
+            } catch (error) {
+                console.error('Failed to refresh statistics:', error);
+            }
         } catch (error) {
             console.error('Failed to delete expense:', error);
             alert('Failed to delete expense. Please try again.');
@@ -233,6 +278,96 @@
                 </div>
             </div>
         </div>
+
+        <!-- Statistics Section -->
+        {#if !isLoadingStats && statistics}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <!-- Total Summary -->
+                <Card>
+                    <CardHeader class="pb-3">
+                        <CardDescription>Total Expenses</CardDescription>
+                        <CardTitle class="text-3xl">{formatCurrency(statistics.total.amount)}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p class="text-sm text-muted-foreground">{statistics.total.count} expense{statistics.total.count !== 1 ? 's' : ''}</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <!-- Expenses by Template -->
+            {#if statistics.byTemplate.length > 0}
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold mb-3">Expenses by Template</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {#each statistics.byTemplate as template}
+                            <Card>
+                                <CardHeader class="pb-3">
+                                    <div class="flex items-center gap-2">
+                                        <div class="text-2xl">{template.templateIcon}</div>
+                                        <CardTitle class="text-base">{template.templateName}</CardTitle>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div class="space-y-1">
+                                        <div class="font-bold text-xl">{formatCurrency(template.totalAmount)}</div>
+                                        <p class="text-sm text-muted-foreground">{template.count} expense{template.count !== 1 ? 's' : ''}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        {/each}
+                    </div>
+                </div>
+            {/if}
+
+            <!-- Expenses by Category and Member -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- By Category -->
+                {#if statistics.byCategory.length > 0}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>By Category</CardTitle>
+                            <CardDescription>Top spending categories</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="space-y-2">
+                                {#each statistics.byCategory.slice(0, 5) as category}
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm font-medium">{category.categoryName}</span>
+                                        <div class="text-right">
+                                            <div class="font-semibold">{formatCurrency(category.totalAmount)}</div>
+                                            <div class="text-xs text-muted-foreground">{category.count} item{category.count !== 1 ? 's' : ''}</div>
+                                        </div>
+                                    </div>
+                                {/each}
+                            </div>
+                        </CardContent>
+                    </Card>
+                {/if}
+
+                <!-- By Member -->
+                {#if statistics.byMember.length > 0}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>By Member</CardTitle>
+                            <CardDescription>Expenses paid by each member</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="space-y-2">
+                                {#each statistics.byMember as member}
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm font-medium">{member.displayName}</span>
+                                        <div class="text-right">
+                                            <div class="font-semibold">{formatCurrency(member.totalAmount)}</div>
+                                            <div class="text-xs text-muted-foreground">{member.count} item{member.count !== 1 ? 's' : ''}</div>
+                                        </div>
+                                    </div>
+                                {/each}
+                            </div>
+                        </CardContent>
+                    </Card>
+                {/if}
+            </div>
+        {/if}
 
         <!-- Invite User Form -->
         {#if showInviteForm}
