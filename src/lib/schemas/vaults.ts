@@ -41,7 +41,7 @@ export type ListVaultsRequest = v.InferOutput<typeof listVaultsRequestSchema>;
 
 export const updateVaultRequestSchema = v.object({
     id: v.string(),
-    ...v.partial(v.pick(createVaultSchema, ['name', 'description', 'color', 'icon', 'iconType'])).entries
+    ...v.partial(v.pick(createVaultSchema, ['name', 'description', 'color', 'icon', 'iconType', "isDefault"])).entries
 });
 export type UpdateVaultRequest = v.InferOutput<typeof updateVaultRequestSchema>;
 

@@ -59,6 +59,8 @@
 	function handleBack() {
 		goto(`/vaults/${data.vaultId}/expenses/new`);
 	}
+
+    const iconOptions = ['🏦', '💰', '💳', '💵', '🏢', '🏠', '🚗', '✈️', '🍔', '🎮', '📱', '🎯'];
 </script>
 
 <svelte:head>
@@ -140,23 +142,48 @@
                         {/if}
                     </div>
 
-                    <!-- Icon -->
+                    <!-- Icon Picker -->
                     <div class="space-y-2">
-                        <Label for="icon">Icon</Label>
-                        <Input
-                                id="icon"
-                                name="icon"
-                                type="text"
-                                bind:value={$form.icon}
-                                disabled={$delayed}
-                                placeholder="📝"
-                                class={$errors.icon ? 'border-destructive' : ''}
-                        />
+                        <Label>Icon</Label>
+                        <div class="grid grid-cols-6 sm:grid-cols-12 gap-2">
+                            {#each iconOptions as iconOption}
+                                <button
+                                        type="button"
+                                        class="w-10 h-10 text-2xl rounded-md border-2 transition-all hover:scale-110 flex items-center justify-center"
+                                        class:ring-2={$form.icon === iconOption}
+                                        class:ring-ring={$form.icon === iconOption}
+                                        class:ring-offset-2={$form.icon === iconOption}
+                                        class:border-primary={$form.icon === iconOption}
+                                        onclick={() => $form.icon = iconOption}
+                                        disabled={isLoading}
+                                        aria-label={`Icon ${iconOption}`}
+                                >
+                                    {iconOption}
+                                </button>
+                            {/each}
+                        </div>
                         {#if $errors.icon}
                             <p class="text-sm text-destructive">{$errors.icon}</p>
                         {/if}
-                        <p class="text-xs text-muted-foreground">Enter an emoji to represent this template</p>
                     </div>
+
+                    <!-- Icon -->
+<!--                    <div class="space-y-2">-->
+<!--                        <Label for="icon">Icon</Label>-->
+<!--                        <Input-->
+<!--                                id="icon"-->
+<!--                                name="icon"-->
+<!--                                type="text"-->
+<!--                                bind:value={$form.icon}-->
+<!--                                disabled={$delayed}-->
+<!--                                placeholder="📝"-->
+<!--                                class={$errors.icon ? 'border-destructive' : ''}-->
+<!--                        />-->
+<!--                        {#if $errors.icon}-->
+<!--                            <p class="text-sm text-destructive">{$errors.icon}</p>-->
+<!--                        {/if}-->
+<!--                        <p class="text-xs text-muted-foreground">Enter an emoji to represent this template</p>-->
+<!--                    </div>-->
 
                     <div class="border-t pt-6">
                         <h3 class="font-semibold mb-4">Default Expense Values</h3>
