@@ -7,14 +7,31 @@ import { checkVaultPermission } from "$lib/server/utils/vaultPermissions";
 export const getVaultStatistics = async (
     vaultId: string,
     session: App.AuthSession,
-    env: Cloudflare.Env
+    env: Cloudflare.Env,
+    options?: { startDate?: string; endDate?: string }
 ) => {
     const client = drizzle(env.DB, { schema });
+    const { startDate, endDate } = options || {};
 
     // Check if user has access to this vault
     const hasAccess = await checkVaultPermission(session.user.id, vaultId, 'canEditVault', env);
     if (!hasAccess) {
         throw new Error('You do not have access to this vault');
+    }
+
+    // Build base where clause
+    let baseWhereClause = and(
+        eq(expenses.vaultId, vaultId),
+        isNull(expenses.deletedAt)
+    );
+
+    // Add date range filter if provided
+    if (startDate && endDate) {
+        baseWhereClause = and(
+            baseWhereClause,
+            sql`${expenses.date} >= ${startDate}`,
+            sql`${expenses.date} <= ${endDate}`
+        );
     }
 
     // Get total expenses and count
@@ -24,12 +41,7 @@ export const getVaultStatistics = async (
             count: sql<number>`COUNT(*)`,
         })
         .from(expenses)
-        .where(
-            and(
-                eq(expenses.vaultId, vaultId),
-                isNull(expenses.deletedAt)
-            )
-        );
+        .where(baseWhereClause);
 
     // Get expenses by template
     const expensesByTemplate = await client
@@ -42,12 +54,7 @@ export const getVaultStatistics = async (
         })
         .from(expenses)
         .leftJoin(expenseTemplates, eq(expenses.expenseTemplateId, expenseTemplates.id))
-        .where(
-            and(
-                eq(expenses.vaultId, vaultId),
-                isNull(expenses.deletedAt)
-            )
-        )
+        .where(baseWhereClause)
         .groupBy(expenses.expenseTemplateId, expenseTemplates.name, expenseTemplates.icon);
 
     // Get expenses by category
@@ -58,12 +65,7 @@ export const getVaultStatistics = async (
             count: sql<number>`COUNT(*)`,
         })
         .from(expenses)
-        .where(
-            and(
-                eq(expenses.vaultId, vaultId),
-                isNull(expenses.deletedAt)
-            )
-        )
+        .where(baseWhereClause)
         .groupBy(expenses.categoryName);
 
     // Get expenses by member
@@ -79,12 +81,7 @@ export const getVaultStatistics = async (
             eq(expenses.vaultId, vaultMembers.vaultId),
             eq(expenses.paidBy, vaultMembers.userId)
         ))
-        .where(
-            and(
-                eq(expenses.vaultId, vaultId),
-                isNull(expenses.deletedAt)
-            )
-        )
+        .where(baseWhereClause)
         .groupBy(expenses.paidBy, vaultMembers.displayName);
 
     return {

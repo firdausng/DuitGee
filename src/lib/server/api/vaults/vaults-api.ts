@@ -311,13 +311,20 @@ export const vaultsApi = new Hono<App.Api>()
                 },
             },
         }),
-        vValidator('query', getVaultRequestSchema),
+        vValidator('query', v.object({
+            vaultId: v.string(),
+            startDate: v.optional(v.string()),
+            endDate: v.optional(v.string()),
+        })),
         async (c) => {
             const session = c.get('currentSession');
-            const { vaultId } = c.req.valid('query');
+            const { vaultId, startDate, endDate } = c.req.valid('query');
 
             try {
-                const stats = await getVaultStatistics(vaultId, session, c.env);
+                const stats = await getVaultStatistics(vaultId, session, c.env, {
+                    startDate,
+                    endDate
+                });
                 return c.json({
                     success: true,
                     data: stats

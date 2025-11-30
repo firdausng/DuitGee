@@ -72,6 +72,121 @@
     let inviteRole = $state<'admin' | 'member'>('member');
     let isInviting = $state(false);
 
+    // Filter state
+    let filterType = $state<'all' | 'today' | 'week' | 'month' | 'year' | 'custom'>('all');
+    let customStartDate = $state('');
+    let customEndDate = $state('');
+
+    function getDateRange(): { startDate?: string; endDate?: string } {
+        const now = new Date();
+
+        switch (filterType) {
+            case 'all':
+                return {};
+
+            case 'today': {
+                const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+                return {
+                    startDate: start.toISOString(),
+                    endDate: end.toISOString()
+                };
+            }
+
+            case 'week': {
+                const dayOfWeek = now.getDay();
+                const start = new Date(now);
+                start.setDate(now.getDate() - dayOfWeek);
+                start.setHours(0, 0, 0, 0);
+
+                const end = new Date(start);
+                end.setDate(start.getDate() + 6);
+                end.setHours(23, 59, 59, 999);
+
+                return {
+                    startDate: start.toISOString(),
+                    endDate: end.toISOString()
+                };
+            }
+
+            case 'month': {
+                const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+                const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+                return {
+                    startDate: start.toISOString(),
+                    endDate: end.toISOString()
+                };
+            }
+
+            case 'year': {
+                const start = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
+                const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+                return {
+                    startDate: start.toISOString(),
+                    endDate: end.toISOString()
+                };
+            }
+
+            case 'custom': {
+                if (!customStartDate || !customEndDate) return {};
+                return {
+                    startDate: new Date(customStartDate).toISOString(),
+                    endDate: new Date(customEndDate).toISOString()
+                };
+            }
+
+            default:
+                return {};
+        }
+    }
+
+    async function loadExpenses() {
+        isLoadingExpenses = true;
+        try {
+            const dateRange = getDateRange();
+            const params = new URLSearchParams({
+                vaultId,
+                page: '1',
+                limit: '50'
+            });
+
+            if (dateRange.startDate) params.append('startDate', dateRange.startDate);
+            if (dateRange.endDate) params.append('endDate', dateRange.endDate);
+
+            const response = await ofetch<{expenses: Expense[], pagination: any}>(`/api/getExpenses?${params.toString()}`);
+            expenses = response.expenses || [];
+        } catch (error) {
+            console.error('Failed to fetch expenses:', error);
+        } finally {
+            isLoadingExpenses = false;
+        }
+    }
+
+    async function loadStatistics() {
+        isLoadingStats = true;
+        try {
+            const dateRange = getDateRange();
+            const params = new URLSearchParams({ vaultId });
+
+            if (dateRange.startDate) params.append('startDate', dateRange.startDate);
+            if (dateRange.endDate) params.append('endDate', dateRange.endDate);
+
+            const response = await ofetch<{success: boolean, data: VaultStatistics}>(`/api/getVaultStatistics?${params.toString()}`);
+            statistics = response.data;
+        } catch (error) {
+            console.error('Failed to fetch statistics:', error);
+        } finally {
+            isLoadingStats = false;
+        }
+    }
+
+    async function handleFilterChange() {
+        await Promise.all([
+            loadExpenses(),
+            loadStatistics()
+        ]);
+    }
+
     onMount(async()=>{
         // Load vault data
         try {
@@ -83,25 +198,11 @@
             isLoadingVault = false;
         }
 
-        // Load expenses
-        try {
-            const response = await ofetch<{expenses: Expense[], pagination: any}>(`/api/getExpenses?vaultId=${vaultId}&page=1&limit=50`);
-            expenses = response.expenses || [];
-        } catch (error) {
-            console.error('Failed to fetch expenses:', error);
-        } finally {
-            isLoadingExpenses = false;
-        }
-
-        // Load statistics
-        try {
-            const response = await ofetch<{success: boolean, data: VaultStatistics}>(`/api/getVaultStatistics?vaultId=${vaultId}`);
-            statistics = response.data;
-        } catch (error) {
-            console.error('Failed to fetch statistics:', error);
-        } finally {
-            isLoadingStats = false;
-        }
+        // Load expenses and statistics
+        await Promise.all([
+            loadExpenses(),
+            loadStatistics()
+        ]);
     });
 
     function handleCreateExpense() {
@@ -122,17 +223,11 @@
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            // Refresh expenses list
-            const response = await ofetch<{expenses: Expense[], pagination: any}>(`/api/getExpenses?vaultId=${vaultId}&page=1&limit=50`);
-            expenses = response.expenses || [];
-
-            // Refresh statistics
-            try {
-                const statsResponse = await ofetch<{success: boolean, data: VaultStatistics}>(`/api/getVaultStatistics?vaultId=${vaultId}`);
-                statistics = statsResponse.data;
-            } catch (error) {
-                console.error('Failed to refresh statistics:', error);
-            }
+            // Refresh expenses and statistics with current filter
+            await Promise.all([
+                loadExpenses(),
+                loadStatistics()
+            ]);
         } catch (error) {
             console.error('Failed to delete expense:', error);
             alert('Failed to delete expense. Please try again.');
@@ -276,6 +371,83 @@
                         <span class="sm:hidden">Add</span>
                     </Button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="mb-6 p-4 border rounded-lg bg-card">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-medium">Filter</h3>
+            </div>
+            <div class="space-y-3">
+                <!-- Preset Filters -->
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {filterType === 'all' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
+                        onclick={() => { filterType = 'all'; handleFilterChange(); }}
+                    >
+                        All Time
+                    </button>
+                    <button
+                        class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {filterType === 'today' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
+                        onclick={() => { filterType = 'today'; handleFilterChange(); }}
+                    >
+                        Today
+                    </button>
+                    <button
+                        class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {filterType === 'week' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
+                        onclick={() => { filterType = 'week'; handleFilterChange(); }}
+                    >
+                        This Week
+                    </button>
+                    <button
+                        class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {filterType === 'month' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
+                        onclick={() => { filterType = 'month'; handleFilterChange(); }}
+                    >
+                        This Month
+                    </button>
+                    <button
+                        class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {filterType === 'year' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
+                        onclick={() => { filterType = 'year'; handleFilterChange(); }}
+                    >
+                        This Year
+                    </button>
+                    <button
+                        class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {filterType === 'custom' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
+                        onclick={() => { filterType = 'custom'; }}
+                    >
+                        Custom Range
+                    </button>
+                </div>
+
+                <!-- Custom Date Range -->
+                {#if filterType === 'custom'}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 border rounded-lg bg-muted/50">
+                        <div class="space-y-1.5">
+                            <Label for="startDate" class="text-xs">Start Date & Time</Label>
+                            <Input
+                                id="startDate"
+                                type="datetime-local"
+                                bind:value={customStartDate}
+                                class="h-9 text-sm"
+                            />
+                        </div>
+                        <div class="space-y-1.5">
+                            <Label for="endDate" class="text-xs">End Date & Time</Label>
+                            <Input
+                                id="endDate"
+                                type="datetime-local"
+                                bind:value={customEndDate}
+                                class="h-9 text-sm"
+                            />
+                        </div>
+                        <div class="md:col-span-2">
+                            <Button onclick={handleFilterChange} size="sm" class="w-full md:w-auto">
+                                Apply Filter
+                            </Button>
+                        </div>
+                    </div>
+                {/if}
             </div>
         </div>
 
@@ -427,7 +599,21 @@
         <Card>
             <CardHeader>
                 <CardTitle>Expenses</CardTitle>
-                <CardDescription>All expenses in this vault</CardDescription>
+                <CardDescription>
+                    {#if filterType === 'all'}
+                        All expenses in this vault
+                    {:else if filterType === 'today'}
+                        Expenses for today
+                    {:else if filterType === 'week'}
+                        Expenses for this week
+                    {:else if filterType === 'month'}
+                        Expenses for this month
+                    {:else if filterType === 'year'}
+                        Expenses for this year
+                    {:else if filterType === 'custom'}
+                        Expenses in selected date range
+                    {/if}
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 {#if isLoadingExpenses}
