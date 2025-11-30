@@ -206,13 +206,13 @@
 						emptyLabel="Vault-level expense (no specific person)"
 					/>
 
-					<!-- Date -->
+					<!-- Date and Time -->
 					<div class="space-y-2">
-						<Label for="date">Date *</Label>
+						<Label for="date">Date & Time *</Label>
 						<Input
 							id="date"
 							name="date"
-							type="date"
+							type="datetime-local"
 							bind:value={$form.date}
 							disabled={$delayed}
 							class={$errors.date ? 'border-destructive' : ''}

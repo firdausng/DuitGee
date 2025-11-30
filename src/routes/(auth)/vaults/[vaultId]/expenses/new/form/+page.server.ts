@@ -1,21 +1,15 @@
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { createExpenseSchema } from '$lib/schemas/expenses';
-import { UTCDate } from '@date-fns/utc';
 
 export const load = async ({ params, url, platform, fetch }) => {
 	const vaultId = params.vaultId;
 	const templateId = url.searchParams.get('templateId');
 
-	// Initialize form with vaultId and current date in YYYY-MM-DD format for date input
-	const today = new UTCDate();
-	const dateString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
-
 	const form = await superValidate(
 		valibot(createExpenseSchema, {
 			defaults: {
 				vaultId,
-				date: dateString,
 				amount: 0
 			}
 		})

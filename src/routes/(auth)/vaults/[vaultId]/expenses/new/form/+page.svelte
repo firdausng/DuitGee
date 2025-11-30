@@ -17,6 +17,7 @@
     let isLoading = $state(false)
 	let formElement: HTMLFormElement | undefined = $state();
 
+    console.log(data.form)
 	const { form, errors, enhance, delayed } = superForm(data.form, {
 		validators: valibotClient(createExpenseSchema),
         SPA: true,
@@ -64,6 +65,23 @@
 			formElement.requestSubmit();
 		}
 	}
+
+    function formatDateForInput(date: Date | string): string {
+        const dateObj = typeof date === 'string' ? new Date(date) : date;
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const hours = String(dateObj.getHours()).padStart(2, '0');
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    // Set default date to current date and time
+    if (!$form.date) {
+        $form.date = formatDateForInput(new Date());
+    } else {
+        $form.date = formatDateForInput($form.date);
+    }
 </script>
 
 <svelte:head>
@@ -174,13 +192,13 @@
 					emptyLabel="Vault-level expense (no specific person)"
 				/>
 
-				<!-- Date -->
+				<!-- Date and Time -->
 				<div class="space-y-2">
-					<Label for="date">Date *</Label>
+					<Label for="date">Date & Time *</Label>
 					<Input
 						id="date"
 						name="date"
-						type="date"
+						type="datetime-local"
 						bind:value={$form.date}
 						disabled={$delayed}
 						class={$errors.date ? 'border-destructive' : ''}
