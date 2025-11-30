@@ -27,13 +27,13 @@
     {
       "binding": "DB",
       "database_id": "74afa6fa-30aa-4279-953a-f55a1d46b7e0",
-      "database_name": "duitgee",
+      "database_name": "duitgee-app",
       "migrations_dir": "migrations"
     },
     {
       "binding": "AUTH_DB",
       "database_id": "8350c8b7-dcb7-4349-ba04-2d94b22fba03",
-      "database_name": "duitgee-auth",
+      "database_name": "duitgee-app-auth",
       "migrations_dir": "auth-migrations"
     }
   ],
@@ -83,21 +83,21 @@
       "d1_databases": [
         {
           "binding": "DB",
-          "database_id": "be0c9a11-0acf-4ce6-9508-a7b650c1ce6f",
-          "database_name": "duitgee",
+          "database_id": "8cb9bb59-4a3b-446c-bf0b-d6fa7242afac",
+          "database_name": "duitgee-app",
           "migrations_dir": "migrations"
         },
         {
           "binding": "AUTH_DB",
-          "database_id": "7fda852c-4b07-4149-99c4-4f130dcc606e",
-          "database_name": "duitgee-auth",
+          "database_id": "dbd7643f-98a1-4c23-9aaa-eeb45d673666",
+          "database_name": "duitgee-app-auth",
           "migrations_dir": "auth-migrations"
         }
       ],
       "kv_namespaces": [
         {
           "binding": "KV",
-          "id": "6d7a242513654de8be683bd8c3c5cd97"
+          "id": "37ba36f23a9e4149a41dc45c20ad98b0"
         }
       ]
     }

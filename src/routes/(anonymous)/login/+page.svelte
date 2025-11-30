@@ -17,7 +17,7 @@
 		resetForm: false,
 		onUpdated({ form }) {
 			if (form.valid && form.message && typeof form.message === 'object' && 'success' in form.message && form.message.success) {
-				goto('/vaults');
+				goto('/');
 			}
 		}
 	});

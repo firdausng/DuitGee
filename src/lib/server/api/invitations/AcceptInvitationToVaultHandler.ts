@@ -58,12 +58,28 @@ export const acceptVaultInvitation = async ( // Renamed for clarity
         throw new Error(`Cannot accept invitation with status: ${existingMember.status}`);
     }
 
+    // Check if user has any other active vault memberships
+    const activeVaultMemberships = await client
+        .select()
+        .from(vaultMembers)
+        .where(
+            and(
+                eq(vaultMembers.userId, userId),
+                eq(vaultMembers.status, 'active')
+            )
+        )
+        .limit(1);
+
+    // Set as default if this is the user's first active vault membership
+    const isFirstVault = activeVaultMemberships.length === 0;
+
     const [updatedMember] = await client
         .update(vaultMembers)
         .set({
             status: 'active',
             joinedAt: formatISO(new UTCDate()),
             displayName: name || email,
+            isDefault: isFirstVault,
         })
         .where(eq(vaultMembers.id, existingMember.id))
         .returning();

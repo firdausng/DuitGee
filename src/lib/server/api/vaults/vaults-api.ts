@@ -8,12 +8,14 @@ import {
     getVaultRequestSchema,
     listVaultsRequestSchema,
     updateVaultRequestSchema,
-    deleteVaultRequestSchema
+    deleteVaultRequestSchema,
+    setDefaultVaultRequestSchema
 } from "$lib/schemas/vaults";
 import {createVault} from "$lib/server/api/vaults/createVaultHandler";
 import {getVault} from "$lib/server/api/vaults/getVaultHandler";
 import {updateVault} from "$lib/server/api/vaults/updateVaultHandler";
 import {deleteVault} from "$lib/server/api/vaults/deleteVaultHandler";
+import {setDefaultVault} from "$lib/server/api/vaults/setDefaultVaultHandler";
 
 const VAULT_TAG = ['Vault'];
 const commonVaultConfig = {
@@ -236,6 +238,52 @@ export const vaultsApi = new Hono<App.Api>()
                 return c.json({
                     success: false,
                     error: error instanceof Error ? error.message : 'Failed to delete vault'
+                }, status);
+            }
+        })
+    // Command: Set default vault (POST)
+    .post(
+        '/setDefaultVault',
+        describeRoute({
+            ...commonVaultConfig,
+            description: 'Set a vault as default for the current user',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.any()
+                            }))
+                        },
+                    },
+                },
+                404: {
+                    description: 'Vault not found or user is not a member',
+                },
+            },
+        }),
+        vValidator('json', setDefaultVaultRequestSchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const { vaultId } = c.req.valid('json');
+
+            try {
+                const result = await setDefaultVault(vaultId, session, c.env);
+                return c.json({
+                    success: true,
+                    data: result
+                });
+            } catch (error) {
+                console.error({
+                    message: 'Error setting default vault',
+                    error
+                });
+                const status = error instanceof Error && error.message.includes('not a member') ? 404 : 500;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to set default vault'
                 }, status);
             }
         })

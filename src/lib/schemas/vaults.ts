@@ -49,3 +49,8 @@ export const deleteVaultRequestSchema = v.object({
     id: v.string(),
 });
 export type DeleteVaultRequest = v.InferOutput<typeof deleteVaultRequestSchema>;
+
+export const setDefaultVaultRequestSchema = v.object({
+    vaultId: v.string(),
+});
+export type SetDefaultVaultRequest = v.InferOutput<typeof setDefaultVaultRequestSchema>;

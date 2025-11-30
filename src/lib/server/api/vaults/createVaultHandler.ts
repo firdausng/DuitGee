@@ -6,6 +6,7 @@ import {vaultMembers, vaults} from "$lib/server/db/schema";
 import {formatISO} from "date-fns";
 import {UTCDate} from "@date-fns/utc";
 import {initialAuditFields} from "$lib/server/utils/audit";
+import {eq, and} from "drizzle-orm";
 
 export const createVault = async (
     session: App.AuthSession,
@@ -13,6 +14,22 @@ export const createVault = async (
     env: Cloudflare.Env
 ) => {
     const client = drizzle(env.DB, { schema });
+
+    // Check if user has any existing active vault memberships
+    const existingMemberships = await client
+        .select()
+        .from(vaultMembers)
+        .where(
+            and(
+                eq(vaultMembers.userId, session.user.id),
+                eq(vaultMembers.status, 'active')
+            )
+        )
+        .limit(1);
+
+    // Set as default if this is the user's first active vault membership
+    const isFirstVault = existingMemberships.length === 0;
+
     const vaultData = {
         id: createId(),
         ...data,
@@ -35,6 +52,7 @@ export const createVault = async (
             role: 'owner',
             invitedBy: session.user.id,
             status: 'active',
+            isDefault: isFirstVault,
             joinedAt: formatISO(new UTCDate()),
         })
         .returning();

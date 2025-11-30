@@ -1,0 +1,2 @@
+ALTER TABLE `vault_members` ADD `is_default` integer DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE INDEX `idx_one_default_vault_per_user_member` ON `vault_members` (`user_id`) WHERE "vault_members"."is_default" = 1;

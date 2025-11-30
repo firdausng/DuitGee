@@ -29,13 +29,13 @@ You can preview the production build with `npm run preview`.
 
 ```sh
 pnpm drizzle-kit generate
-wrangler d1 migrations apply "duitgee"
+wrangler d1 migrations apply "duitgee-app"
 ```
 
 ## Deploy Production
 
 ```sh
-wrangler d1 migrations apply "duitgee" --remote true --env production 
+wrangler d1 migrations apply "duitgee-app" --remote true --env production 
 npx wrangler deploy --env production
 ```
 

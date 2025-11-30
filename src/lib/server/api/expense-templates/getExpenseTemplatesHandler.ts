@@ -20,6 +20,7 @@ export const getExpenseTemplates = async (
 	}
 
 	// Get all non-deleted templates for this vault
+	// Order by: most recently used first, then by newest created
 	const templates = await client
 		.select()
 		.from(expenseTemplates)
@@ -29,7 +30,7 @@ export const getExpenseTemplates = async (
 				isNull(expenseTemplates.deletedAt)
 			)
 		)
-		.orderBy(desc(expenseTemplates.updatedAt), asc(expenseTemplates.name));
+		.orderBy(desc(expenseTemplates.lastUsedAt), desc(expenseTemplates.createdAt));
 
 	return { templates };
 };

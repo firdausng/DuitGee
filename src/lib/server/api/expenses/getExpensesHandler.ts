@@ -37,7 +37,7 @@ export const getExpenses = async (
             eq(expenses.paidBy, vaultMembers.userId)
         ))
         .where(whereClause)
-        .orderBy(asc(expenses.date))
+        .orderBy(desc(expenses.date))
         .limit(limit)
         .offset(offset);
 

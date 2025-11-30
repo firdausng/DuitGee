@@ -22,6 +22,7 @@ export type VaultWithMember = {
         role: string;
         invitedBy: string | null;
         status: string;
+        isDefault: boolean;
         invitedAt: string | null;
         joinedAt: string | null;
         updatedAt: string | null;

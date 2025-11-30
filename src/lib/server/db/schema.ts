@@ -35,11 +35,16 @@ export const vaultMembers = sqliteTable('vault_members', {
     role: text('role').notNull().default('member'), // 'owner', 'admin', 'member'
     invitedBy: text('invited_by'),
     status: text('status').notNull().default('pending'), // 'pending', 'active', 'declined', 'removed'
+    isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
     invitedAt: text('created_at').$defaultFn(() => formatISO(new Date())),
     joinedAt: text('created_at'),
     updatedAt: text('updated_at').$defaultFn(() => formatISO(new Date())),
     deletedAt: text('updated_at'),
-});
+}, (table) => ({
+    uniqueDefaultPerUser: index('idx_one_default_vault_per_user_member')
+        .on(table.userId)
+        .where(sql`${table.isDefault} = 1`),
+}));
 
 export const expenseTemplates = sqliteTable('expense_templates', {
     id: text('id').primaryKey().$defaultFn(() => createId()),

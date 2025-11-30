@@ -9,7 +9,7 @@
     onMount(async () => {
         try {
             const response = await ofetch<{success: boolean, data: VaultWithMember[]}>(`/api/getVaults`);
-            const defaultVault = response.data.filter(d => d.vaults.isDefault);
+            const defaultVault = response.data.filter(d => d.vaultMembers.isDefault);
 
             if(defaultVault.length > 0){
                 goto(`/vaults/${defaultVault[0].vaults.id}`);
