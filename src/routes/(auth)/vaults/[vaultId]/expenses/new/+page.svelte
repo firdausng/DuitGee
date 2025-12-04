@@ -127,41 +127,46 @@
 				</Button>
 			</div>
 
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+			<div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
 				{#each templates as template (template.id)}
 					<Card class="hover:shadow-md transition-shadow flex flex-col">
-						<CardContent class="flex flex-col h-full py-4">
-							<div class="flex items-start gap-3 mb-4">
+						<CardContent class="flex flex-col h-full py-4 relative">
+							<!-- Edit Button (Top Right) -->
+							<Button
+								variant="ghost"
+								size="sm"
+								onclick={() => handleEditTemplate(template.id)}
+								class="absolute top-2 right-2 px-2"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									class="h-4 w-4"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+								>
+									<path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+								</svg>
+								<span class="sr-only">Edit</span>
+							</Button>
+
+							<!-- Icon -->
+							<div class="flex justify-center mb-3">
 								<div
-									class="text-3xl w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10 flex-shrink-0"
+									class="text-3xl w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10"
 								>
 									{template.icon || '📝'}
 								</div>
-								<div class="flex-1 min-w-0">
-									<h3 class="font-semibold truncate">{template.name}</h3>
-									{#if template.description}
-										<p class="text-sm text-muted-foreground line-clamp-2">{template.description}</p>
-									{/if}
-								</div>
-								<Button
-									variant="ghost"
-									size="sm"
-									onclick={() => handleEditTemplate(template.id)}
-									class="px-2 -mt-1 -mr-2 flex-shrink-0"
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										class="h-4 w-4"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-									>
-										<path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-									</svg>
-									<span class="sr-only">Edit</span>
-								</Button>
 							</div>
 
-							<div class="flex flex-wrap gap-2 mb-4 text-xs">
+							<!-- Name and Description -->
+							<div class="mb-4">
+								<h3 class="font-semibold break-words text-center mb-1">{template.name}</h3>
+								{#if template.description}
+									<p class="text-sm text-muted-foreground line-clamp-2 text-center">{template.description}</p>
+								{/if}
+							</div>
+
+							<div class="flex flex-wrap justify-center gap-2 mb-4 text-xs">
 								{#if template.defaultAmount}
 									<span class="inline-flex items-center px-2 py-1 rounded-md bg-muted font-medium">
 										${template.defaultAmount.toFixed(2)}
@@ -175,13 +180,13 @@
 							</div>
 
 							{#if template.usageCount > 0}
-								<p class="text-xs text-muted-foreground mb-3">
+								<p class="text-xs text-muted-foreground mb-3 text-center">
 									Used {template.usageCount} {template.usageCount === 1 ? 'time' : 'times'}
 								</p>
 							{/if}
 
-							<div class="mt-auto">
-								<Button onclick={() => handleUseTemplate(template.id)} class="w-full">
+							<div class="mt-auto flex justify-center">
+								<Button onclick={() => handleUseTemplate(template.id)} class="w-full max-w-[200px]">
 									Use Template
 								</Button>
 							</div>

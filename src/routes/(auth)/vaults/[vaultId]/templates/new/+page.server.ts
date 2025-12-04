@@ -9,6 +9,7 @@ export const load = async ({ params, fetch }) => {
 		valibot(createExpenseTemplateSchema, {
 			defaults: {
 				vaultId,
+				name: '',
 				icon: '📝',
 				iconType: 'emoji'
 			}

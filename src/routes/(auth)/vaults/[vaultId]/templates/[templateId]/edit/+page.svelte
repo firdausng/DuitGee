@@ -264,6 +264,8 @@
 								required={false}
 								allowEmpty={true}
 								emptyLabel="Vault-level expense (no specific person)"
+								allowCreator={true}
+								creatorLabel="Me (Expense Creator)"
 							/>
 						</div>
 					</div>

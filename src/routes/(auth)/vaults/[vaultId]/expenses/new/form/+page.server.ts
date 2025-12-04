@@ -2,9 +2,10 @@ import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { createExpenseSchema } from '$lib/schemas/expenses';
 
-export const load = async ({ params, url, platform, fetch }) => {
+export const load = async ({ params, url, platform, fetch, locals }) => {
 	const vaultId = params.vaultId;
 	const templateId = url.searchParams.get('templateId');
+	const currentUserId = locals.currentUser?.id || '';
 
 	const form = await superValidate(
 		valibot(createExpenseSchema, {
@@ -31,7 +32,12 @@ export const load = async ({ params, url, platform, fetch }) => {
 					form.data.note = template.defaultNote || '';
 					form.data.amount = template.defaultAmount || 0;
 					form.data.categoryName = template.defaultCategoryName || '';
-					form.data.paidBy = template.defaultPaidBy || '';
+					// Replace __creator__ with current user ID
+					if (template.defaultPaidBy === '__creator__') {
+						form.data.paidBy = currentUserId;
+					} else {
+						form.data.paidBy = template.defaultPaidBy || '';
+					}
 					form.data.templateId = templateId;
 				}
 			}

@@ -20,6 +20,8 @@
 		name: string;
 		allowEmpty?: boolean;
 		emptyLabel?: string;
+		allowCreator?: boolean;
+		creatorLabel?: string;
 	};
 
 	let {
@@ -33,7 +35,9 @@
 		required = false,
 		name,
 		allowEmpty = true,
-		emptyLabel = 'Vault-level expense (no specific person)'
+		emptyLabel = 'Vault-level expense (no specific person)',
+		allowCreator = false,
+		creatorLabel = 'Me (Expense Creator)'
 	}: Props = $props();
 
 	let searchQuery = $state('');
@@ -43,6 +47,7 @@
 	// Get display name for selected value
 	const selectedMemberName = $derived(() => {
 		if (!value) return '';
+		if (value === '__creator__') return creatorLabel;
 		const member = members.find(m => m.userId === value);
 		return member?.displayName || '';
 	});
@@ -72,15 +77,26 @@
 		onValueChange?.('');
 	}
 
+	function handleSelectCreator() {
+		value = '__creator__';
+		searchQuery = '';
+		isOpen = false;
+		onValueChange?.('__creator__');
+	}
+
 	function handleInputFocus() {
 		isOpen = true;
 	}
 
-	function handleInputBlur() {
-		// Delay to allow click on member
-		setTimeout(() => {
-			isOpen = false;
-		}, 200);
+	function handleInputBlur(e: FocusEvent) {
+		// Only delay close if focusing within the dropdown
+		// This allows dropdown clicks to work while closing immediately for outside clicks
+		const relatedTarget = e.relatedTarget as HTMLElement;
+		if (relatedTarget && relatedTarget.closest('.member-combobox-dropdown')) {
+			return; // Don't close if clicking inside dropdown
+		}
+		// Close immediately for outside clicks (like form submit button)
+		isOpen = false;
 	}
 
 	function handleClear() {
@@ -138,7 +154,7 @@
 
 		<!-- Dropdown -->
 		{#if isOpen}
-			<div class="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+			<div class="member-combobox-dropdown absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
 				<div class="max-h-60 overflow-auto p-1">
 					{#if allowEmpty}
 						<button
@@ -150,6 +166,19 @@
 							}}
 						>
 							<span class="text-muted-foreground italic">{emptyLabel}</span>
+						</button>
+					{/if}
+
+					{#if allowCreator}
+						<button
+							type="button"
+							class="w-full text-left px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors border-b mb-1"
+							onmousedown={(e) => {
+								e.preventDefault();
+								handleSelectCreator();
+							}}
+						>
+							<span class="font-medium">{creatorLabel}</span>
 						</button>
 					{/if}
 
