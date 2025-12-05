@@ -7,19 +7,39 @@
         statistics: VaultStatistics;
         isLoading: boolean;
         formatCurrency: (amount: number) => string;
+        vaultId: string;
+        onCardClick?: (type: 'template' | 'category' | 'member', id: string | null, name: string) => void;
     };
 
 
-    let { statistics=$bindable({
-        total: {amount: 0, count: 0},
-        byTemplate: [],
-        byCategory: [],
-        byMember: []
-    }), isLoading, formatCurrency }: Props = $props();
+    let {
+        statistics=$bindable({
+            total: {amount: 0, count: 0},
+            byTemplate: [],
+            byCategory: [],
+            byMember: []
+        }),
+        isLoading,
+        formatCurrency,
+        vaultId,
+        onCardClick
+    }: Props = $props();
 
     let showFilterByTemplate = $derived(statistics.byTemplate.length > 0);
     let showFilterByCategory = $derived(statistics.byCategory.length > 0);
     let showFilterByMember = $derived(statistics.byMember.length > 0);
+
+    function handleTemplateClick(templateId: string | null, templateName: string) {
+        onCardClick?.('template', templateId, templateName);
+    }
+
+    function handleCategoryClick(categoryName: string) {
+        onCardClick?.('category', null, categoryName);
+    }
+
+    function handleMemberClick(userId: string | null, displayName: string) {
+        onCardClick?.('member', userId, displayName);
+    }
 </script>
 
 
@@ -42,7 +62,13 @@
             <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 justify-items-center">
                 {#each statistics.byTemplate as template (template.templateId)}
                     <div in:scale|local={{ start: 0.95, duration: 400 }} class="w-full max-w-[200px]">
-                        <Card class="p-3">
+                        <Card
+                            class="p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 hover:border-primary/50"
+                            role="button"
+                            tabindex="0"
+                            onclick={() => handleTemplateClick(template.templateId, template.templateName)}
+                            onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTemplateClick(template.templateId, template.templateName); }}
+                        >
                             <div class="space-y-2">
                                 <div class="flex flex-col items-center text-center gap-1">
                                     <div class="text-2xl">{template.templateIcon}</div>
@@ -67,7 +93,13 @@
             <div class="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3 justify-items-center">
                 {#each statistics.byCategory.slice(0, 8) as category}
                     <div class="w-full max-w-[200px]">
-                        <Card class="p-3">
+                        <Card
+                            class="p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 hover:border-primary/50"
+                            role="button"
+                            tabindex="0"
+                            onclick={() => handleCategoryClick(category.categoryName)}
+                            onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCategoryClick(category.categoryName); }}
+                        >
                             <div class="space-y-1 text-center">
                                 <div class="text-xs font-medium break-words">{category.categoryName}</div>
                                 <div class="font-bold text-sm">{formatCurrency(category.totalAmount)}</div>
@@ -87,7 +119,13 @@
             <div class="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3 justify-items-center">
                 {#each statistics.byMember as member}
                     <div class="w-full max-w-[200px]">
-                        <Card class="p-3">
+                        <Card
+                            class="p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 hover:border-primary/50"
+                            role="button"
+                            tabindex="0"
+                            onclick={() => handleMemberClick(member.userId, member.displayName)}
+                            onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleMemberClick(member.userId, member.displayName); }}
+                        >
                             <div class="space-y-1 text-center">
                                 <div class="text-xs font-medium break-words">{member.displayName}</div>
                                 <div class="font-bold text-sm">{formatCurrency(member.totalAmount)}</div>

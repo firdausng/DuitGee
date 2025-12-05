@@ -256,6 +256,25 @@
         }
     }
 
+    function handleStatisticsCardClick(type: 'template' | 'category' | 'member', id: string | null, name: string) {
+        // Navigate to statistics page with filter parameters
+        const searchParams = new URLSearchParams();
+        searchParams.set('filterType', type);
+        if (id) searchParams.set('filterId', id);
+        searchParams.set('filterName', name);
+
+        // Preserve current date filter if any
+        if (filterType && filterType !== 'all') {
+            searchParams.set('dateFilter', filterType);
+            if (filterType === 'custom' && params.startDate && params.endDate) {
+                searchParams.set('startDate', params.startDate);
+                searchParams.set('endDate', params.endDate);
+            }
+        }
+
+        goto(`/vaults/${vaultId}/statistics?${searchParams.toString()}`);
+    }
+
 </script>
 
 <svelte:head>
@@ -315,6 +334,8 @@
                 statistics={statistics}
                 isLoading={isLoadingStats}
                 formatCurrency={formatCurrency}
+                vaultId={vaultId}
+                onCardClick={handleStatisticsCardClick}
         />
 
         <!-- Invite User Form -->
