@@ -2,6 +2,7 @@ import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { updateExpenseRequestSchema } from '$lib/schemas/expenses';
 import { error } from '@sveltejs/kit';
+import { utcToLocalDatetimeString } from '$lib/utils';
 
 export const load = async ({ params, fetch }) => {
 	const vaultId = params.vaultId;
@@ -49,7 +50,7 @@ export const load = async ({ params, fetch }) => {
 			amount: expenseData.amount,
 			categoryName: expenseData.category?.name || '',
 			paidBy: expenseData.paidBy,
-			date: expenseData.date
+			date: utcToLocalDatetimeString(expenseData.date)
 		},
 		valibot(updateExpenseRequestSchema)
 	);

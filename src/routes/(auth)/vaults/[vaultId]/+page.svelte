@@ -14,6 +14,7 @@
     import ExpenseList from "./ExpenseList.svelte";
     import InviteForm from "./InviteForm.svelte";
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
+    import {localDatetimeToUtcIso} from "$lib/utils";
 
     let {data} = $props();
     let {vaultId} = data;
@@ -86,8 +87,8 @@
             case 'custom': {
                 if (!params.startDate || !params.endDate) return {};
                 return {
-                    startDate: new Date(params.startDate).toISOString(),
-                    endDate: new Date(params.endDate).toISOString()
+                    startDate: localDatetimeToUtcIso(params.startDate),
+                    endDate: localDatetimeToUtcIso(params.endDate)
                 };
             }
 

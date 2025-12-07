@@ -12,7 +12,7 @@
     import type {Expense, VaultStatistics} from "../types";
     import ExpenseFilters from "../ExpenseFilters.svelte";
     import {filterSchema} from "../schemas";
-    import {cn} from "$lib/utils";
+    import {cn, localDatetimeToUtcIso} from "$lib/utils";
 
     let {data} = $props();
     let {vaultId} = data;
@@ -91,8 +91,8 @@
             case 'custom': {
                 if (!params.startDate || !params.endDate) return {};
                 return {
-                    startDate: new Date(params.startDate).toISOString(),
-                    endDate: new Date(params.endDate).toISOString()
+                    startDate: localDatetimeToUtcIso(params.startDate),
+                    endDate: localDatetimeToUtcIso(params.endDate)
                 };
             }
 

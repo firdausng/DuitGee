@@ -12,6 +12,7 @@
 	import { categoryData } from '$lib/configurations/categories';
 	import { ofetch } from 'ofetch';
 	import { Spinner } from '$lib/components/ui/spinner';
+	import { localDatetimeToUtcIso } from '$lib/utils';
 
 	let { data } = $props();
 
@@ -30,9 +31,15 @@
 			isLoading = true;
 
 			try {
+				// Convert local datetime to UTC ISO format before sending
+				const payload = {
+					...form.data,
+					date: form.data.date ? localDatetimeToUtcIso(form.data.date) : form.data.date
+				};
+
 				const response = await ofetch('/api/updateExpense', {
 					method: 'POST',
-					body: form.data,
+					body: payload,
 					headers: {
 						'Content-Type': 'application/json'
 					}

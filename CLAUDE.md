@@ -249,6 +249,96 @@ import { formatISO } from "date-fns";
 createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate()))
 ```
 
+### DateTime Handling
+
+The application follows a **"Store UTC, Display Local"** pattern for all datetime operations:
+
+- **Storage**: All dates are stored in UTC ISO 8601 format in the database
+- **Display**: Dates are converted to user's local timezone for display and input
+- **Library**: Uses `date-fns` for consistent datetime operations across client and server
+
+**DateTime Utility Functions** (in `src/lib/utils.ts`):
+
+```ts
+import { format, parseISO, formatISO } from "date-fns";
+
+/**
+ * Convert UTC ISO string to local datetime-local format
+ * Use: Loading server data into datetime-local inputs
+ */
+export const utcToLocalDatetimeString = (utcIsoString: string): string => {
+    const date = parseISO(utcIsoString);
+    return format(date, "yyyy-MM-dd'T'HH:mm");
+};
+// Example: "2025-12-08T10:30:00.000Z" → "2025-12-08T18:30"
+
+/**
+ * Convert local datetime-local string to UTC ISO format
+ * Use: Sending form data to API
+ */
+export const localDatetimeToUtcIso = (localDatetime: string): string => {
+    const date = new Date(localDatetime);
+    return formatISO(date);
+};
+// Example: "2025-12-08T18:30" → "2025-12-08T10:30:00.000Z"
+
+/**
+ * Format Date object to local datetime-local format
+ * Use: Setting default values in forms
+ */
+export const formatDatetimeLocal = (date: Date | string): string => {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    return format(dateObj, "yyyy-MM-dd'T'HH:mm");
+};
+// Example: new Date() → "2025-12-08T18:30"
+```
+
+**Common Patterns:**
+
+*Loading data from server for editing:*
+```ts
+// +page.server.ts
+import { utcToLocalDatetimeString } from '$lib/utils';
+
+const form = await superValidate({
+    date: utcToLocalDatetimeString(expenseData.date)
+}, valibot(schema));
+```
+
+*Submitting form data to API:*
+```svelte
+<!-- +page.svelte -->
+<script>
+import { localDatetimeToUtcIso } from '$lib/utils';
+
+const payload = {
+    ...form.data,
+    date: localDatetimeToUtcIso(form.data.date)
+};
+</script>
+```
+
+*Setting default date/time in forms:*
+```svelte
+<script>
+import { formatDatetimeLocal } from '$lib/utils';
+
+// Set to current local time
+if (!$form.date) {
+    $form.date = formatDatetimeLocal(new Date());
+}
+</script>
+
+<Input type="datetime-local" bind:value={$form.date} />
+```
+
+**Important Notes:**
+- **Always convert** when crossing client-server boundary
+- **datetime-local inputs** expect format: `YYYY-MM-DDTHH:mm` (no timezone)
+- **API expects** ISO 8601 format with timezone: `YYYY-MM-DDTHH:mm:ss.sssZ`
+- **Filter dates** for API queries also need conversion via `localDatetimeToUtcIso()`
+- Use `date-fns` functions for consistency with server-side schema defaults
+
 ### Data Model
 
 **Vaults:** Containers for expenses with access control

@@ -11,7 +11,8 @@
 	import { MemberCombobox } from '$lib/components/ui/member-combobox';
 	import { FloatingActionButton } from '$lib/components/ui/floating-action-button';
 	import { categoryData } from '$lib/configurations/categories';
-    import {ofetch} from "ofetch";
+	import { ofetch } from 'ofetch';
+	import { localDatetimeToUtcIso, formatDatetimeLocal } from '$lib/utils';
 
 	let { data } = $props();
     let isLoading = $state(false)
@@ -29,9 +30,15 @@
             isLoading = true;
 
             try {
+                // Convert local datetime to UTC ISO format before sending
+                const payload = {
+                    ...form.data,
+                    date: form.data.date ? localDatetimeToUtcIso(form.data.date) : form.data.date
+                };
+
                 const response = await ofetch('/api/createExpense', {
                     method: 'POST',
-                    body: form.data,
+                    body: payload,
                     headers: {
                         'Content-Type': 'application/json'
                     }
@@ -66,22 +73,12 @@
 		}
 	}
 
-    function formatDateForInput(date: Date | string): string {
-        const dateObj = typeof date === 'string' ? new Date(date) : date;
-        const year = dateObj.getFullYear();
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        const hours = String(dateObj.getHours()).padStart(2, '0');
-        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-    }
-
-    // Set default date to current date and time
-    if (!$form.date) {
-        $form.date = formatDateForInput(new Date());
-    } else {
-        $form.date = formatDateForInput($form.date);
-    }
+	// Set default date to current date and time
+	if (!$form.date) {
+		$form.date = formatDatetimeLocal(new Date());
+	} else {
+		$form.date = formatDatetimeLocal($form.date);
+	}
 </script>
 
 <svelte:head>
