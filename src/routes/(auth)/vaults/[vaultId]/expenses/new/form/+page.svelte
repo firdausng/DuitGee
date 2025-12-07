@@ -2,7 +2,7 @@
 	import { superForm } from 'sveltekit-superforms';
 	import { valibotClient } from 'sveltekit-superforms/adapters';
 	import { createExpenseSchema } from '$lib/schemas/expenses';
-	import { goto } from '$app/navigation';
+    import {afterNavigate, goto} from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -13,6 +13,7 @@
 	import { categoryData } from '$lib/configurations/categories';
 	import { ofetch } from 'ofetch';
 	import { localDatetimeToUtcIso, formatDatetimeLocal } from '$lib/utils';
+    import {resolve} from "$app/paths";
 
 	let { data } = $props();
     let isLoading = $state(false)
@@ -63,8 +64,13 @@
         }
 	});
 
+    let previousPage : string = resolve(`/vaults/${data.vaultId}`) ;
+    afterNavigate(({from}) => {
+        previousPage = from?.url.pathname || previousPage
+    })
+
 	function handleBack() {
-		goto(`/vaults/${data.vaultId}`);
+		goto(previousPage);
 	}
 
 	function handleSubmit() {
@@ -102,7 +108,7 @@
 					clip-rule="evenodd"
 				/>
 			</svg>
-			Back to Vault
+			Back
 		</Button>
 
 		<h1 class="text-2xl font-bold">

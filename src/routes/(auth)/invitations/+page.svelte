@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, afterNavigate } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { ofetch } from 'ofetch';
+    import { resolve } from '$app/paths'
 
 	let { data } = $props();
 
@@ -71,8 +72,13 @@
 		}
 	}
 
-	function handleBack() {
-		goto('/vaults');
+    let previousPage : string = resolve('/vaults') ;
+    afterNavigate(({from}) => {
+        previousPage = from?.url.pathname || previousPage
+    })
+
+    function handleBack() {
+		goto(previousPage);
 	}
 
 	function getStatusBadgeClass(status: string): string {
@@ -109,7 +115,7 @@
 					clip-rule="evenodd"
 				/>
 			</svg>
-			Back to Vaults
+			Back
 		</Button>
 
 		<h1 class="text-2xl font-bold">Invitations</h1>

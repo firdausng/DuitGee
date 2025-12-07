@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { goto } from "$app/navigation";
+    import {afterNavigate, goto} from "$app/navigation";
 	import { ofetch } from "ofetch";
 	import { Button } from "$lib/components/ui/button";
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
+    import {resolve} from "$app/paths";
 
 	let { data } = $props();
 	let { vaultId } = data;
@@ -48,9 +49,14 @@
 		goto(`/vaults/${vaultId}/expenses/new/form`);
 	}
 
-	function handleBack() {
-		goto(`/vaults/${vaultId}`);
-	}
+    let previousPage : string = resolve(`/vaults/${vaultId}`) ;
+    afterNavigate(({from}) => {
+        previousPage = from?.url.pathname || previousPage
+    })
+
+    function handleBack() {
+        goto(previousPage);
+    }
 
 	function handleCreateTemplate() {
 		goto(`/vaults/${vaultId}/templates/new`);
@@ -76,7 +82,7 @@
 					clip-rule="evenodd"
 				/>
 			</svg>
-			Back to Vault
+			Back
 		</Button>
 
 		<div class="flex items-center justify-between">
