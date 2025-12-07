@@ -24,3 +24,9 @@ export const acceptInvitationSchema = v.object({
 });
 
 export type AcceptInvitation = v.InferOutput<typeof acceptInvitationSchema>;
+
+export const declineInvitationSchema = v.object({
+    invitationId: v.pipe(v.string(), v.minLength(1, 'Invitation ID is required')),
+});
+
+export type DeclineInvitation = v.InferOutput<typeof declineInvitationSchema>;
