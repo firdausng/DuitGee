@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { format, parseISO, formatISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -44,14 +44,14 @@ export const utcToLocalDatetimeString = (utcIsoString: string): string => {
  * Converts a local datetime-local string to UTC ISO format
  * for sending to the API
  *
- * Uses date-fns for consistent date handling across the application.
+ * Uses native toISOString() to ensure consistent UTC format with 'Z' suffix.
  *
  * @param localDatetime - Local datetime string (e.g., "2025-12-08T18:30")
  * @returns UTC ISO string (e.g., "2025-12-08T10:30:00.000Z")
  */
 export const localDatetimeToUtcIso = (localDatetime: string): string => {
     const date = new Date(localDatetime);
-    return formatISO(date);
+    return date.toISOString();
 };
 
 /**

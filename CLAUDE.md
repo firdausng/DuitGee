@@ -36,8 +36,8 @@ pnpm run db:generate            # Generate migrations from schema
 pnpm run db:push                # Push schema changes to DB
 pnpm run db:migrate             # Run migrations
 pnpm run db:studio              # Open Drizzle Studio
-wrangler d1 migrations apply "duitgee"                    # Apply migrations locally
-wrangler d1 migrations apply "duitgee" --remote --env production  # Apply to production
+wrangler d1 migrations apply "duitgee-app"                    # Apply migrations locally
+wrangler d1 migrations apply "duitgee-ap" --remote --env production  # Apply to production
 ```
 
 **Auth Database (duitgee-auth)**
@@ -47,8 +47,8 @@ pnpm dlx @better-auth/cli@latest generate --config ./better-auth.config.ts --out
 
 # Generate and apply auth migrations
 pnpm drizzle-kit generate --config=auth-drizzle.config.ts
-wrangler d1 migrations apply "duitgee-auth"               # Local
-wrangler d1 migrations apply "duitgee-auth" --remote --env production  # Production
+wrangler d1 migrations apply "duitgee-app-auth"               # Local
+wrangler d1 migrations apply "duitgee-app-auth" --remote --env production  # Production
 ```
 
 **Seeding Data**
@@ -278,9 +278,10 @@ export const utcToLocalDatetimeString = (utcIsoString: string): string => {
  */
 export const localDatetimeToUtcIso = (localDatetime: string): string => {
     const date = new Date(localDatetime);
-    return formatISO(date);
+    return date.toISOString();
 };
 // Example: "2025-12-08T18:30" → "2025-12-08T10:30:00.000Z"
+// IMPORTANT: Uses toISOString() not formatISO() to ensure 'Z' suffix
 
 /**
  * Format Date object to local datetime-local format
@@ -335,9 +336,11 @@ if (!$form.date) {
 **Important Notes:**
 - **Always convert** when crossing client-server boundary
 - **datetime-local inputs** expect format: `YYYY-MM-DDTHH:mm` (no timezone)
-- **API expects** ISO 8601 format with timezone: `YYYY-MM-DDTHH:mm:ss.sssZ`
+- **API expects** ISO 8601 format with **'Z' suffix**: `YYYY-MM-DDTHH:mm:ss.sssZ`
+- **Storage format** must use UTC with 'Z' suffix for consistency
 - **Filter dates** for API queries also need conversion via `localDatetimeToUtcIso()`
-- Use `date-fns` functions for consistency with server-side schema defaults
+- Use `date-fns` for parsing/formatting, but use **`toISOString()`** for UTC conversion (not `formatISO()`)
+- **Critical**: `formatISO()` includes timezone offset (e.g., `+08:00`) while `toISOString()` always uses 'Z'
 
 ### Data Model
 
