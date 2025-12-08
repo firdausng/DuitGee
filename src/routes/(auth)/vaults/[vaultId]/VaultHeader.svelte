@@ -12,7 +12,7 @@
     let { vault, onSetDefaultVault, onToggleInviteForm, onCreateExpense }: Props = $props();
 </script>
 
-<div class="mb-6">
+<div class="mb-4">
     <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
             <div

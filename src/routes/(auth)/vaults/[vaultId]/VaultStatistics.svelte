@@ -49,7 +49,7 @@
         <div class="mb-4 pb-3 border-b">
             <div class="flex items-baseline gap-3">
                 <span class="text-xs text-muted-foreground">Total:</span>
-                <span class="text-2xl font-bold">{formatCurrency(statistics.total.amount)}</span>
+                <span class="text-xl font-bold">{formatCurrency(statistics.total.amount)}</span>
                 <span class="text-xs text-muted-foreground">({statistics.total.count} expense{statistics.total.count !== 1 ? 's' : ''})</span>
             </div>
         </div>

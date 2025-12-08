@@ -21,7 +21,6 @@
     let isLoading = $state(false)
 	let formElement: HTMLFormElement | undefined = $state();
 
-    console.log(data.form)
 	const { form, errors, enhance, delayed } = superForm(data.form, {
 		validators: valibotClient(createExpenseSchema),
         SPA: true,
@@ -120,7 +119,7 @@
 			<CardTitle>Expense Details</CardTitle>
 		</CardHeader>
 		<CardContent>
-			<form bind:this={formElement} method="POST" use:enhance class="space-y-6">
+			<form bind:this={formElement} method="POST" use:enhance class="space-y-6" >
 				<!-- Hidden fields -->
 				<input type="hidden" name="vaultId" bind:value={$form.vaultId} />
 				{#if $form.templateId}
@@ -136,7 +135,7 @@
                         {#if $delayed}
                             Creating...
                         {:else}
-                            Create Expense
+                            Done
                         {/if}
                     </Button>
                 </div>
@@ -224,25 +223,25 @@
 	</div>
 
 	<!-- Floating Action Button - Mobile only -->
-	<FloatingActionButton onclick={handleSubmit} disabled={$delayed || isLoading} class="sm:hidden">
-	{#snippet icon()}
-		{#if $delayed || isLoading}
-			<svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-				<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-				<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-			</svg>
-		{:else}
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-				<path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" />
-			</svg>
-		{/if}
-	{/snippet}
-	{#if $delayed || isLoading}
-		Creating...
-	{:else}
-		Create
-	{/if}
-</FloatingActionButton>
+<!--	<FloatingActionButton onclick={handleSubmit} disabled={$delayed || isLoading} class="sm:hidden">-->
+<!--	{#snippet icon()}-->
+<!--		{#if $delayed || isLoading}-->
+<!--			<svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">-->
+<!--				<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>-->
+<!--				<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>-->
+<!--			</svg>-->
+<!--		{:else}-->
+<!--			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">-->
+<!--				<path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" />-->
+<!--			</svg>-->
+<!--		{/if}-->
+<!--	{/snippet}-->
+<!--	{#if $delayed || isLoading}-->
+<!--		Creating...-->
+<!--	{:else}-->
+<!--		Create-->
+<!--	{/if}-->
+<!--</FloatingActionButton>-->
 </div>
 
 <Toaster />
