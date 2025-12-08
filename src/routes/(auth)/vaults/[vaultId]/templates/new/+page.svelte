@@ -9,7 +9,9 @@
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import { CategoryCombobox } from '$lib/components/ui/category-combobox';
 	import { MemberCombobox } from '$lib/components/ui/member-combobox';
+	import { IconCombobox } from '$lib/components/ui/icon-combobox';
 	import { categoryData } from '$lib/configurations/categories';
+	import { iconData } from '$lib/configurations/icons';
     import {fail, redirect} from "@sveltejs/kit";
     import {ofetch} from "ofetch";
     import {Spinner} from "$lib/components/ui/spinner";
@@ -65,8 +67,6 @@
 	function handleBack() {
 		goto(`/vaults/${data.vaultId}/expenses/new`);
 	}
-
-    const iconOptions = ['🏦', '💰', '💳', '💵', '🏢', '🏠', '🚗', '✈️', '🍔', '🎮', '📱', '🎯'];
 </script>
 
 <svelte:head>
@@ -124,48 +124,17 @@
                         {/if}
                     </div>
 
-                    <!-- Icon Picker -->
-                    <div class="space-y-2">
-                        <Label>Icon</Label>
-                        <div class="grid grid-cols-6 sm:grid-cols-12 gap-2">
-                            {#each iconOptions as iconOption}
-                                <button
-                                        type="button"
-                                        class="w-10 h-10 text-2xl rounded-md border-2 transition-all hover:scale-110 flex items-center justify-center"
-                                        class:ring-2={$form.icon === iconOption}
-                                        class:ring-ring={$form.icon === iconOption}
-                                        class:ring-offset-2={$form.icon === iconOption}
-                                        class:border-primary={$form.icon === iconOption}
-                                        onclick={() => $form.icon = iconOption}
-                                        disabled={isLoading}
-                                        aria-label={`Icon ${iconOption}`}
-                                >
-                                    {iconOption}
-                                </button>
-                            {/each}
-                        </div>
-                        {#if $errors.icon}
-                            <p class="text-sm text-destructive">{$errors.icon}</p>
-                        {/if}
-                    </div>
-
                     <!-- Icon -->
-<!--                    <div class="space-y-2">-->
-<!--                        <Label for="icon">Icon</Label>-->
-<!--                        <Input-->
-<!--                                id="icon"-->
-<!--                                name="icon"-->
-<!--                                type="text"-->
-<!--                                bind:value={$form.icon}-->
-<!--                                disabled={$delayed}-->
-<!--                                placeholder="📝"-->
-<!--                                class={$errors.icon ? 'border-destructive' : ''}-->
-<!--                        />-->
-<!--                        {#if $errors.icon}-->
-<!--                            <p class="text-sm text-destructive">{$errors.icon}</p>-->
-<!--                        {/if}-->
-<!--                        <p class="text-xs text-muted-foreground">Enter an emoji to represent this template</p>-->
-<!--                    </div>-->
+                    <IconCombobox
+                            name="icon"
+                            label="Icon"
+                            icons={iconData.icons}
+                            bind:value={$form.icon}
+                            disabled={$delayed}
+                            error={$errors.icon}
+                            required={false}
+                            placeholder="Search icons..."
+                    />
 
                     <div class="border-t pt-6">
                         <h3 class="font-semibold mb-4">Default Expense Values</h3>

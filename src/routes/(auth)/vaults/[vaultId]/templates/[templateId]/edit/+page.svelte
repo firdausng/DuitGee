@@ -9,7 +9,9 @@
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import { CategoryCombobox } from '$lib/components/ui/category-combobox';
 	import { MemberCombobox } from '$lib/components/ui/member-combobox';
+	import { IconCombobox } from '$lib/components/ui/icon-combobox';
 	import { categoryData } from '$lib/configurations/categories';
+	import { iconData } from '$lib/configurations/icons';
 	import { ofetch } from 'ofetch';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import { Toaster } from '$lib/components/ui/sonner';
@@ -195,22 +197,16 @@
 					</div>
 
 					<!-- Icon -->
-					<div class="space-y-2">
-						<Label for="icon">Icon</Label>
-						<Input
-							id="icon"
-							name="icon"
-							type="text"
-							bind:value={$form.icon}
-							disabled={$delayed}
-							placeholder="📝"
-							class={$errors.icon ? 'border-destructive' : ''}
-						/>
-						{#if $errors.icon}
-							<p class="text-sm text-destructive">{$errors.icon}</p>
-						{/if}
-						<p class="text-xs text-muted-foreground">Enter an emoji to represent this template</p>
-					</div>
+					<IconCombobox
+						name="icon"
+						label="Icon"
+						icons={iconData.icons}
+						bind:value={$form.icon}
+						disabled={$delayed}
+						error={$errors.icon}
+						required={false}
+						placeholder="Search icons..."
+					/>
 
 					<div class="border-t pt-6">
 						<h3 class="font-semibold mb-4">Default Expense Values</h3>
