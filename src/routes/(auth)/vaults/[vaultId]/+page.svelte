@@ -287,7 +287,6 @@
         // Navigate to statistics page with filter parameters
         const searchParams = new URLSearchParams();
         searchParams.set('filterType', type);
-        if (id) searchParams.set('filterId', id);
         searchParams.set('filterName', name);
 
         // Preserve current date filter if any

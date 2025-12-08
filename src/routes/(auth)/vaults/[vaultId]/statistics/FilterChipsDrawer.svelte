@@ -12,18 +12,18 @@
     type Props = {
         open: boolean;
         filterOptions: FilterOption[];
-        selectedId: string | undefined;
+        selectedName: string | undefined;
         allExpensesCount: number;
         filterType: 'template' | 'category' | 'member';
         onOpenChange: (open: boolean) => void;
         onSelectAll: () => void;
-        onSelectOption: (id: string) => void;
+        onSelectOption: (name: string) => void;
     };
 
     let {
         open = $bindable(),
         filterOptions,
-        selectedId,
+        selectedName,
         allExpensesCount,
         filterType,
         onOpenChange,
@@ -54,7 +54,7 @@
                     onclick={onSelectAll}
                     class={cn(
                         "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                        !selectedId
+                        !selectedName
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted hover:bg-muted/80"
                     )}
@@ -66,13 +66,13 @@
                     <button
                         type="button"
                         onclick={() => {
-                            if(option.id){
-                                onSelectOption(option.id);
+                            if(option.name){
+                                onSelectOption(option.name);
                             }
                         }}
                         class={cn(
                             "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer",
-                            selectedId === option.id
+                            selectedName === option.name
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-muted hover:bg-muted/80"
                         )}

@@ -18,16 +18,16 @@
     let {data} = $props();
     let {vaultId} = data;
 
-    // Schema for stats page query params
-    const statsParamsSchema = v.object({
-        filterType: v.optional(v.picklist(['template', 'category', 'member']), 'category'),
-        dateFilter: v.optional(v.picklist(['all', 'today', 'week', 'month', 'year']), 'month'),
+    // Schema for statistics page query params
+    const statisticsParamsSchema = v.object({
+        filterType: v.optional(v.picklist(['template', 'category', 'member']), 'template'),
+        dateFilter: v.optional(v.picklist(['all', 'today', 'week', 'month', 'year', 'custom']), 'all'),
+        filterName: v.optional(v.fallback(v.string(), ""), ""),
         startDate: v.optional(v.fallback(v.string(), ""), ""),
         endDate: v.optional(v.fallback(v.string(), ""), ""),
-        selectedId: v.optional(v.fallback(v.string(), ""), "")
     });
 
-    const params = useSearchParams(statsParamsSchema);
+    const params = useSearchParams(statisticsParamsSchema);
 
     // Refetch keys
     let refetchKey = $state(0);
@@ -36,14 +36,35 @@
     // Drawer state for filter selection
     let filterDrawerOpen = $state(false);
 
-    // Derived filter values - use $state to stabilize
-    let filterType = $derived(params.filterType || 'category');
-    let dateFilter = $state(params.dateFilter || 'month');
-    let selectedId = $derived(params.selectedId);
+    // Derived filter values
+    let filterType = $derived(params.filterType || 'template');
+    let dateFilter = $state(params.dateFilter || 'all');
+    let filterName = $derived(params.filterName);
 
     // Update dateFilter when params change
     $effect(() => {
-        dateFilter = params.dateFilter || 'month';
+        dateFilter = params.dateFilter || 'all';
+    });
+
+    // Derive filterId from filterName and statistics data
+    const filterId = $derived.by(() => {
+        if (!filterName || !statistics) return undefined;
+
+        switch (filterType) {
+            case 'template': {
+                const template = statistics.byTemplate.find(t => t.templateName === filterName);
+                return template?.templateId;
+            }
+            case 'member': {
+                const member = statistics.byMember.find(m => m.displayName === filterName);
+                return member?.userId;
+            }
+            case 'category':
+                // Categories use name directly, no ID needed
+                return undefined;
+            default:
+                return undefined;
+        }
     });
 
     function getDateRange(): { startDate?: string; endDate?: string } {
@@ -276,29 +297,28 @@
 
     // All tabs use date-grouped view
     const filteredExpenses = $derived.by(() => {
-        // Filter expenses based on filterType and selectedId
+        // Filter expenses based on filterType and filterName
         const currentFilterType = filterType;
-        const currentSelectedId = selectedId;
+        const currentFilterName = filterName;
+        const currentFilterId = filterId;
         let filtered = allExpenses;
 
-        if (currentSelectedId) {
+        if (currentFilterName) {
             switch (currentFilterType) {
                 case 'category':
-                    filtered = allExpenses.filter(expense => expense.category?.name === currentSelectedId);
+                    filtered = allExpenses.filter(expense => expense.category?.name === currentFilterName);
                     break;
                 case 'template':
-                    if (currentSelectedId === 'no-template') {
+                    if (currentFilterId) {
                         filtered = allExpenses.filter(expense =>
-                            expense.templateId === null || expense.templateId === undefined
-                        );
-                    } else {
-                        filtered = allExpenses.filter(expense =>
-                            String(expense.templateId) === String(currentSelectedId)
+                            String(expense.templateId) === String(currentFilterId)
                         );
                     }
                     break;
                 case 'member':
-                    filtered = allExpenses.filter(expense => expense.paidBy === currentSelectedId);
+                    if (currentFilterId) {
+                        filtered = allExpenses.filter(expense => expense.paidBy === currentFilterId);
+                    }
                     break;
             }
         }
@@ -470,11 +490,40 @@
                 </CardContent>
             </Card>
 
+            <!-- Current Filter Display -->
+            {#if filterName}
+                <div class="mb-4">
+                    <p class="text-xs text-muted-foreground mb-2">Filtered by:</p>
+                    <div class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
+                        <span class="text-sm">
+                            {#if filterType === 'template'}
+                                {filterOptions.find(opt => opt.name === filterName)?.icon || '📝'}
+                            {:else if filterType === 'category'}
+                                🏷️
+                            {:else if filterType === 'member'}
+                                👤
+                            {/if}
+                        </span>
+                        <span class="text-sm font-medium">{filterName}</span>
+                        <button
+                            type="button"
+                            onclick={() => params.filterName = ""}
+                            class="ml-1 p-0.5 rounded-full hover:bg-primary/20 transition-colors"
+                            aria-label="Clear filter"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            {/if}
+
             <!-- Filter Type Tabs -->
             <div class="flex gap-2 mb-2 border-b">
                 <button
                     type="button"
-                    onclick={() => { params.filterType = 'category'; params.selectedId = undefined; }}
+                    onclick={() => { params.filterType = 'category'; params.filterName = ""; }}
                     class={cn(
                         "px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px",
                         filterType === 'category'
@@ -491,7 +540,7 @@
                 </button>
                 <button
                     type="button"
-                    onclick={() => { params.filterType = 'template'; params.selectedId = undefined; }}
+                    onclick={() => { params.filterType = 'template'; params.filterName = ""; }}
                     class={cn(
                         "px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px",
                         filterType === 'template'
@@ -508,7 +557,7 @@
                 </button>
                 <button
                     type="button"
-                    onclick={() => { params.filterType = 'member'; params.selectedId = undefined; }}
+                    onclick={() => { params.filterType = 'member'; params.filterName = ""; }}
                     class={cn(
                         "px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px",
                         filterType === 'member'
@@ -650,11 +699,11 @@
     <FilterChipsDrawer
         bind:open={filterDrawerOpen}
         filterOptions={filterOptions}
-        selectedId={selectedId}
+        selectedName={filterName}
         allExpensesCount={allExpenses.length}
         filterType={filterType}
         onOpenChange={(open) => filterDrawerOpen = open}
-        onSelectAll={() => { params.selectedId = ""; filterDrawerOpen = false; }}
-        onSelectOption={(id) => { params.selectedId = id; filterDrawerOpen = false; }}
+        onSelectAll={() => { params.filterName = ""; filterDrawerOpen = false; }}
+        onSelectOption={(name) => { params.filterName = name; filterDrawerOpen = false; }}
     />
 {/if}
