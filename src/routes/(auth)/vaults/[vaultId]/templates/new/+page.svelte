@@ -13,6 +13,8 @@
     import {fail, redirect} from "@sveltejs/kit";
     import {ofetch} from "ofetch";
     import {Spinner} from "$lib/components/ui/spinner";
+	import { Toaster } from "$lib/components/ui/sonner";
+	import { toast } from "svelte-sonner";
 
 	let { data } = $props();
 
@@ -23,7 +25,8 @@
         SPA: true,
         async onUpdate({ form }) {
             if (!form.valid) {
-                throw new Error('Form is not valid');
+                toast.error('Please fill in all required fields correctly');
+                return;
             }
 
             isLoading = true;
@@ -38,10 +41,11 @@
                 });
 
                 if (response.success === false) {
-                    throw new Error('Failed to create template');
+                    toast.error(response.error || 'Failed to create template');
+                    return;
                 }
 
-                // console.log(response, params)
+                toast.success('Template created successfully');
 
                 // Redirect back to the expense creation flow
                 await goto(`/vaults/${data.vaultId}/expenses/new/form?templateId=${response.data.id}`);
@@ -50,6 +54,8 @@
                     ...error,
                     message: '[template:new:action] Failed to create template'
                 });
+                const errorMessage = error?.data?.error || error?.message || 'Failed to create template. Please try again.';
+                toast.error(errorMessage);
             }finally {
                 isLoading = false;
             }
@@ -67,31 +73,7 @@
 	<title>New Template - DuitGee</title>
 </svelte:head>
 
-<div class="container mx-auto py-8 px-4 max-w-2xl">
-	<!-- Header -->
-	<div class="mb-6">
-		<Button variant="ghost" onclick={handleBack} class="mb-4 -ml-2">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="h-4 w-4 mr-2"
-				viewBox="0 0 20 20"
-				fill="currentColor"
-			>
-				<path
-					fill-rule="evenodd"
-					d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-					clip-rule="evenodd"
-				/>
-			</svg>
-			Back
-		</Button>
-
-		<h1 class="text-2xl font-bold">Create Expense Template</h1>
-		<p class="text-sm text-muted-foreground mt-1">
-			Save time by creating templates for frequently used expenses
-		</p>
-	</div>
-
+<div class="container mx-auto py-2 px-4 max-w-2xl">
 	<!-- Template Form -->
     {#if isLoading}
         <Spinner />
@@ -236,7 +218,7 @@
                                     bind:value={$form.defaultCategoryName}
                                     disabled={$delayed}
                                     error={$errors.defaultCategoryName}
-                                    required={false}
+                                    required={true}
                             />
 
                             <!-- Default Paid By -->
@@ -273,6 +255,6 @@
             </CardContent>
         </Card>
     {/if}
-
-
 </div>
+
+<Toaster />

@@ -34,7 +34,10 @@ export const createExpenseTemplateSchema = v.object({
     iconType: v.optional(v.nullable(v.string()), 'emoji'),
     defaultNote: v.optional(v.nullable(v.string())),
     defaultAmount: v.optional(v.nullable(v.number())),
-    defaultCategoryName: v.optional(v.nullable(v.string())),
+    defaultCategoryName: v.pipe(
+        v.fallback(v.string(), ''),
+        v.minLength(1, 'Category is required')
+    ),
     defaultPaidBy: v.optional(v.nullable(v.string())),
 });
 
@@ -44,16 +47,17 @@ export type CreateExpenseTemplate = v.InferOutput<typeof createExpenseTemplateSc
 export const updateExpenseTemplateSchema = v.object({
     id: v.string(),
     vaultId: v.string(),
-    ...v.partial(v.pick(createExpenseTemplateSchema, [
-        'name',
-        'description',
-        'icon',
-        'iconType',
-        'defaultNote',
-        'defaultAmount',
-        'defaultCategoryName',
-        'defaultPaidBy'
-    ])).entries
+    name: v.optional(v.pipe(v.string(), v.minLength(1, 'Name is required'))),
+    description: v.optional(v.nullable(v.string())),
+    icon: v.optional(v.nullable(v.string())),
+    iconType: v.optional(v.nullable(v.string())),
+    defaultNote: v.optional(v.nullable(v.string())),
+    defaultAmount: v.optional(v.nullable(v.number())),
+    defaultCategoryName: v.optional(v.pipe(
+        v.fallback(v.string(), ''),
+        v.minLength(1, 'Category is required')
+    )),
+    defaultPaidBy: v.optional(v.nullable(v.string())),
 });
 
 export type UpdateExpenseTemplate = v.InferOutput<typeof updateExpenseTemplateSchema>;

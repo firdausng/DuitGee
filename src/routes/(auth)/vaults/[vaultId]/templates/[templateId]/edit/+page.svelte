@@ -12,6 +12,8 @@
 	import { categoryData } from '$lib/configurations/categories';
 	import { ofetch } from 'ofetch';
 	import { Spinner } from '$lib/components/ui/spinner';
+	import { Toaster } from '$lib/components/ui/sonner';
+	import { toast } from 'svelte-sonner';
 
 	let { data } = $props();
 
@@ -24,7 +26,8 @@
 		SPA: true,
 		async onUpdate({ form }) {
 			if (!form.valid) {
-				throw new Error('Form is not valid');
+				toast.error('Please fill in all required fields correctly');
+				return;
 			}
 
 			isLoading = true;
@@ -39,8 +42,11 @@
 				});
 
 				if (response.success === false) {
-					throw new Error('Failed to update template');
+					toast.error(response.error || 'Failed to update template');
+					return;
 				}
+
+				toast.success('Template updated successfully');
 
 				// Redirect back to template selection page
 				await goto(`/vaults/${data.vaultId}/expenses/new`);
@@ -49,6 +55,8 @@
 					...error,
 					message: '[template:edit:action] Failed to update template'
 				});
+				const errorMessage = error?.data?.error || error?.message || 'Failed to update template. Please try again.';
+				toast.error(errorMessage);
 			} finally {
 				isLoading = false;
 			}
@@ -80,8 +88,11 @@
 			});
 
 			if (response.success === false) {
-				throw new Error('Failed to delete template');
+				toast.error(response.error || 'Failed to delete template');
+				return;
 			}
+
+			toast.success('Template deleted successfully');
 
 			// Redirect back to template selection page
 			await goto(`/vaults/${data.vaultId}/expenses/new`);
@@ -90,6 +101,8 @@
 				...error,
 				message: '[template:edit:delete] Failed to delete template'
 			});
+			const errorMessage = error?.data?.error || error?.message || 'Failed to delete template. Please try again.';
+			toast.error(errorMessage);
 		} finally {
 			isDeleting = false;
 			showDeleteConfirm = false;
@@ -250,7 +263,7 @@
 								bind:value={$form.defaultCategoryName}
 								disabled={$delayed}
 								error={$errors.defaultCategoryName}
-								required={false}
+								required={true}
 							/>
 
 							<!-- Default Paid By -->
@@ -331,3 +344,5 @@
 		</Card>
 	{/if}
 </div>
+
+<Toaster />
