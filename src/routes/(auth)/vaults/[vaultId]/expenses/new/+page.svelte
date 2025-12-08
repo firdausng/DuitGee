@@ -82,17 +82,17 @@
 		<Card class="border-dashed my-2">
 			<CardContent class="flex items-center justify-between py-2">
 				<div>
-					<h3 class="font-semibold">Start from scratch</h3>
+					<h3 class="font-semibold text-xs">Start from scratch</h3>
 				</div>
-				<Button onclick={handleSkip} variant="outline">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+				<Button onclick={handleSkip} variant="outline" class="text-sm" size="sm">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-xs" viewBox="0 0 20 20" fill="currentColor">
 						<path
 							fill-rule="evenodd"
 							d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z"
 							clip-rule="evenodd"
 						/>
 					</svg>
-					Continue
+                    <p class="text-sm">Continue</p>
 				</Button>
 			</CardContent>
 		</Card>
@@ -100,7 +100,7 @@
 		{#if templates.length > 0}
 			<!-- Templates Grid -->
 			<div class="mb-4 flex items-center justify-between">
-				<h2 class="text-lg font-semibold">Or choose a template</h2>
+				<h2 class="text-sm font-semibold">Or choose a template</h2>
 				<Button variant="outline" onclick={handleCreateTemplate} size="sm">
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
 						<path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
@@ -109,7 +109,7 @@
 				</Button>
 			</div>
 
-			<div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
+			<div class="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-4 text-sm">
 				{#each templates as template (template.id)}
 					<Card
 						class="hover:shadow-md transition-shadow flex flex-col cursor-pointer"
@@ -140,7 +140,7 @@
 							<!-- Icon -->
 							<div class="flex justify-center">
 								<div
-									class="text-3xl w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10"
+									class="p-1 rounded-lg flex items-center justify-center bg-primary/10"
 								>
 									{template.icon || '📝'}
 								</div>
@@ -168,7 +168,7 @@
 							</div>
 
 							{#if template.usageCount > 0}
-								<p class="text-xs text-muted-foreground mb-3 text-center">
+								<p class="text-xs text-muted-foreground mb-1 text-center">
 									Used {template.usageCount} {template.usageCount === 1 ? 'time' : 'times'}
 								</p>
 							{/if}
