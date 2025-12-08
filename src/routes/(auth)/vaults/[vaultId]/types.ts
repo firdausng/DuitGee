@@ -14,6 +14,7 @@ export type Expense = {
     };
     paidBy: string | null;
     paidByName: string | null;
+    templateId: string | null;
     date: string;
     createdAt: string | null;
     createdBy: string;

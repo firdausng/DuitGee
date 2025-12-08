@@ -59,6 +59,7 @@ export const getExpenses = async (
             createdAt: parsedExpense.createdAt,
             paidBy: parsedExpense.paidBy || undefined,
             paidByName: row.paidByName,
+            templateId: parsedExpense.expenseTemplateId || null,
             vaultId: parsedExpense.vaultId || undefined,
             category: categoryData.categories.find(c => c.name === parsedExpense.categoryName) || null,
         }
