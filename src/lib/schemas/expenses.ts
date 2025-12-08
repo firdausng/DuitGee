@@ -28,11 +28,11 @@ export const createExpenseSchema = v.object({
         v.minValue(0.01, 'Amount must be greater than 0')
     ),
     categoryName: v.pipe(
-        v.string('Category is required'),
+        v.fallback(v.string(), ''),
         v.minLength(1, 'Category is required')
     ),
     date: v.pipe(
-        v.string('Date is required'),
+        v.fallback(v.string(), ''),
         v.minLength(1, 'Date is required')
     ),
     paidBy: v.optional(v.nullable(v.string())),
@@ -49,11 +49,11 @@ export const updateExpenseSchema = v.object({
         v.minValue(0.01, 'Amount must be greater than 0')
     ),
     categoryName: v.pipe(
-        v.string('Category is required'),
+        v.fallback(v.string(), ''),
         v.minLength(1, 'Category is required')
     ),
     date: v.pipe(
-        v.string('Date is required'),
+        v.fallback(v.string(), ''),
         v.minLength(1, 'Date is required')
     ),
     paidBy: v.optional(v.nullable(v.string())),
@@ -90,11 +90,11 @@ export const updateExpenseRequestSchema = v.object({
         v.minValue(0.01, 'Amount must be greater than 0')
     ),
     categoryName: v.pipe(
-        v.string('Category is required'),
+        v.fallback(v.string(), ''),
         v.minLength(1, 'Category is required')
     ),
     date: v.pipe(
-        v.string('Date is required'),
+        v.fallback(v.string(), ''),
         v.minLength(1, 'Date is required')
     ),
     paidBy: v.optional(v.nullable(v.string())),
