@@ -30,10 +30,15 @@
     let refetchKey = $state(0);
     let vaultRefetchKey = $state(0);
 
-    // Derived filter values
+    // Derived filter values - use $state to stabilize
     let filterType = $derived(params.filterType || 'category');
-    let dateFilter = $derived(params.dateFilter || 'month');
+    let dateFilter = $state(params.dateFilter || 'month');
     let selectedId = $derived(params.selectedId);
+
+    // Update dateFilter when params change
+    $effect(() => {
+        dateFilter = params.dateFilter || 'month';
+    });
 
     function getDateRange(): { startDate?: string; endDate?: string } {
         const now = new Date();
@@ -99,9 +104,9 @@
 
     // Resource for all expenses (filtered by date only)
     const expensesResource = resource(
-        () => [vaultId, params.dateFilter, params.startDate, params.endDate, refetchKey] as const,
-        async ([id, dateFilter, startDate, endDate]) => {
-            const dateF = dateFilter || 'month';
+        () => [vaultId, dateFilter, refetchKey] as const,
+        async ([id, dateFilterValue]) => {
+            const dateF = dateFilterValue || 'month';
             const now = new Date();
             let dateRange: { startDate?: string; endDate?: string } = {};
 
@@ -153,9 +158,9 @@
 
     // Resource for overall statistics
     const statisticsResource = resource(
-        () => [vaultId, params.dateFilter, params.startDate, params.endDate, refetchKey] as const,
-        async ([id, dateFilter, startDate, endDate]) => {
-            const dateF = dateFilter || 'month';
+        () => [vaultId, dateFilter, refetchKey] as const,
+        async ([id, dateFilterValue]) => {
+            const dateF = dateFilterValue || 'month';
             const now = new Date();
             let dateRange: { startDate?: string; endDate?: string } = {};
 
