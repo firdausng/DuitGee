@@ -7,7 +7,9 @@
     import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
     import { Input } from "$lib/components/ui/input";
     import { Label } from "$lib/components/ui/label";
+    import { IconCombobox } from '$lib/components/ui/icon-combobox';
     import {createVaultSchema} from "$lib/schemas/vaults";
+    import { iconData } from '$lib/configurations/icons';
 
 	let { data } = $props();
 
@@ -64,8 +66,6 @@
         { value: '#06B6D4', label: 'Cyan' },
         { value: '#6366F1', label: 'Indigo' },
     ];
-
-    const iconOptions = ['🏦', '💰', '💳', '💵', '🏢', '🏠', '🚗', '✈️', '🍔', '🎮', '📱', '🎯'];
 </script>
 
 <svelte:head>
@@ -147,30 +147,17 @@
 					{/if}
 				</div>
 
-				<!-- Icon Picker -->
-				<div class="space-y-2">
-					<Label>Vault Icon</Label>
-					<div class="grid grid-cols-6 sm:grid-cols-12 gap-2">
-						{#each iconOptions as iconOption}
-							<button
-								type="button"
-								class="w-10 h-10 text-2xl rounded-md border-2 transition-all hover:scale-110 flex items-center justify-center"
-								class:ring-2={$form.icon === iconOption}
-								class:ring-ring={$form.icon === iconOption}
-								class:ring-offset-2={$form.icon === iconOption}
-								class:border-primary={$form.icon === iconOption}
-								onclick={() => $form.icon = iconOption}
-								disabled={isSubmitting}
-								aria-label={`Icon ${iconOption}`}
-							>
-								{iconOption}
-							</button>
-						{/each}
-					</div>
-					{#if $errors.icon}
-						<p class="text-sm text-destructive">{$errors.icon}</p>
-					{/if}
-				</div>
+				<!-- Icon -->
+				<IconCombobox
+					name="icon"
+					label="Vault Icon"
+					icons={iconData.icons}
+					bind:value={$form.icon}
+					disabled={isSubmitting}
+					error={$errors.icon}
+					required={false}
+					placeholder="Search icons..."
+				/>
 
 <!--				&lt;!&ndash; Vault Type Toggle &ndash;&gt;-->
 <!--				<div class="space-y-2">-->
