@@ -89,6 +89,14 @@ export const categoryData: CategoryData = {
             icon: "shopping-cart",
             iconType: "phosphor",
             isPublic: true
+        },
+        {
+            name: "General",
+            description: "Miscellaneous and uncategorized expenses",
+            color: "#9CA3AF",
+            icon: "dots-three",
+            iconType: "phosphor",
+            isPublic: true
         }
     ],
     categories: [
@@ -154,7 +162,10 @@ export const categoryData: CategoryData = {
 
         // Shopping & Personal Care
         { name: "Clothing & Accessories", description: "", icon: "tshirt", iconType: "phosphor", color: "#DB2777", isPublic: true, group: "Shopping & Personal Care" },
-        { name: "Personal Care", description: "", icon: "drop-half-bottom", iconType: "phosphor", color: "#EC4899", isPublic: true, group: "Shopping & Personal Care" }
+        { name: "Personal Care", description: "", icon: "drop-half-bottom", iconType: "phosphor", color: "#EC4899", isPublic: true, group: "Shopping & Personal Care" },
+
+        // General
+        { name: "Others", description: "Miscellaneous expenses that don't fit into other categories", icon: "dots-three", iconType: "phosphor", color: "#9CA3AF", isPublic: true, group: "General" }
     ]
 };
 

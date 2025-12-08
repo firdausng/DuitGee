@@ -14,6 +14,8 @@
     import ExpenseList from "./ExpenseList.svelte";
     import InviteForm from "./InviteForm.svelte";
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
+    import {Toaster} from "$lib/components/ui/sonner";
+    import {toast} from "svelte-sonner";
     import {localDatetimeToUtcIso} from "$lib/utils";
 
     let {data} = $props();
@@ -147,6 +149,30 @@
     const isLoadingVault = $derived(vaultResource.loading);
     const isLoadingExpenses = $derived(expensesResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
+    const vaultError = $derived(vaultResource.error);
+    const expensesError = $derived(expensesResource.error);
+    const statisticsError = $derived(statisticsResource.error);
+
+    // Watch for non-critical errors and show toasts
+    $effect(() => {
+        if (expensesError) {
+            toast.error('Failed to load expenses. Please try again.');
+        }
+    });
+
+    $effect(() => {
+        if (statisticsError) {
+            toast.error('Failed to load statistics. Please try again.');
+        }
+    });
+
+    function handleRetryVault() {
+        vaultRefetchKey++;
+    }
+
+    function handleRetryExpenses() {
+        refetchKey++;
+    }
 
     function handleCreateExpense() {
         goto(`/vaults/${vaultId}/expenses/new`);
@@ -289,8 +315,39 @@
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             <p class="mt-4 text-muted-foreground">Loading vault...</p>
         </div>
+    {:else if vaultError}
+        <!-- API Error State -->
+        <Card class="border-destructive">
+            <CardContent class="flex flex-col items-center justify-center py-16 px-4">
+                <div class="rounded-full bg-destructive/10 p-6 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-destructive" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-semibold mb-2">Failed to load vault</h2>
+                <p class="text-muted-foreground text-center max-w-md mb-2">
+                    An error occurred while loading the vault data.
+                </p>
+                <p class="text-sm text-destructive text-center max-w-md mb-6">
+                    {vaultError?.message || 'Please check your connection and try again.'}
+                </p>
+                <div class="flex gap-3">
+                    <Button onclick={handleRetryVault}>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                        </svg>
+                        Retry
+                    </Button>
+                    <Button variant="outline" onclick={handleBack}>
+                        Back to Vaults
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
     {:else if !currentVault}
-        <!-- Error State -->
+        <!-- Not Found State -->
         <Card class="border-destructive">
             <CardContent class="flex flex-col items-center justify-center py-16 px-4">
                 <div class="rounded-full bg-destructive/10 p-6 mb-4">
@@ -364,3 +421,5 @@
         />
     {/if}
 </div>
+
+<Toaster />
