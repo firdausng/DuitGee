@@ -6,13 +6,11 @@
     import * as v from 'valibot';
     import type {VaultWithMember} from "$lib/schemas/read/vaultWithMember";
     import {Button} from "$lib/components/ui/button";
-    import {Card, CardContent, CardHeader, CardTitle} from "$lib/components/ui/card";
+    import {Card, CardContent} from "$lib/components/ui/card";
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
-    import {Accordion, AccordionItem, AccordionTrigger, AccordionContent} from "$lib/components/ui/accordion";
     import type {Expense, VaultStatistics} from "../types";
-    import {cn, localDatetimeToUtcIso} from "$lib/utils";
+    import {cn} from "$lib/utils";
     import {format, parseISO} from "date-fns";
-    import { page } from '$app/state';
 
     let {data} = $props();
     let {vaultId} = data;
@@ -211,78 +209,6 @@
     const isLoadingExpenses = $derived(expensesResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
 
-    // Group expenses by filter type and include filtered expenses
-    const groupedData = $derived.by(() => {
-        if (!statistics) return [];
-
-        // Force tracking of these dependencies
-        const currentFilterType = filterType;
-        const currentSelectedId = selectedId;
-
-        let result: any[] = [];
-
-        switch (filterType) {
-            case 'template':
-                result = statistics.byTemplate.map(item => {
-                    const filteredExpenses = allExpenses.filter(expense => {
-                        // Handle null/undefined for "No Template"
-                        if (item.templateId === null || item.templateId === undefined) {
-                            return expense.templateId === null || expense.templateId === undefined;
-                        }
-                        return expense.templateId === item.templateId;
-                    });
-                    return {
-                        id: item.templateId || 'no-template',
-                        name: item.name || item.templateName,
-                        icon: item.templateIcon || '📝',
-                        amount: item.amount,
-                        count: item.count,
-                        percentage: statistics.total.amount > 0 ? (item.amount / statistics.total.amount) * 100 : 0,
-                        expenses: filteredExpenses
-                    };
-                });
-                break;
-            case 'category':
-                result = statistics.byCategory.map(item => {
-                    const filteredExpenses = allExpenses.filter(expense => expense.category?.name === item.categoryName);
-                    return {
-                        id: item.categoryName,
-                        name: item.categoryName,
-                        icon: '🏷️',
-                        amount: item.amount,
-                        count: item.count,
-                        percentage: statistics.total.amount > 0 ? (item.amount / statistics.total.amount) * 100 : 0,
-                        expenses: filteredExpenses
-                    };
-                });
-                break;
-            case 'member':
-                result = statistics.byMember.map(item => {
-                    const filteredExpenses = allExpenses.filter(expense => expense.paidBy === item.userId);
-                    return {
-                        id: item.userId,
-                        name: item.displayName,
-                        icon: '👤',
-                        amount: item.amount,
-                        count: item.count,
-                        percentage: statistics.total.amount > 0 ? (item.amount / statistics.total.amount) * 100 : 0,
-                        expenses: filteredExpenses
-                    };
-                });
-                break;
-        }
-
-        // Filter out groups with no expenses
-        result = result.filter(item => item.expenses.length > 0);
-
-        // If a specific item is selected, show only that one
-        if (currentSelectedId) {
-            result = result.filter(item => String(item.id) === String(currentSelectedId));
-        }
-
-        return result;
-    });
-
     // Get all available filter options for chips
     const filterOptions = $derived.by(() => {
         if (!statistics) return [];
@@ -337,11 +263,36 @@
             }));
     }
 
-    // For category tab without selectedId, show all expenses grouped by date
-    const shouldShowDateGroupedView = $derived(filterType === 'category' && !selectedId);
+    // All tabs use date-grouped view
     const allExpensesByDate = $derived.by(() => {
-        if (!shouldShowDateGroupedView) return [];
-        return groupExpensesByDate(allExpenses);
+        // Filter expenses based on filterType and selectedId
+        const currentFilterType = filterType;
+        const currentSelectedId = selectedId;
+        let filteredExpenses = allExpenses;
+
+        if (currentSelectedId) {
+            switch (currentFilterType) {
+                case 'category':
+                    filteredExpenses = allExpenses.filter(expense => expense.category?.name === currentSelectedId);
+                    break;
+                case 'template':
+                    if (currentSelectedId === 'no-template') {
+                        filteredExpenses = allExpenses.filter(expense =>
+                            expense.templateId === null || expense.templateId === undefined
+                        );
+                    } else {
+                        filteredExpenses = allExpenses.filter(expense =>
+                            String(expense.templateId) === String(currentSelectedId)
+                        );
+                    }
+                    break;
+                case 'member':
+                    filteredExpenses = allExpenses.filter(expense => expense.paidBy === currentSelectedId);
+                    break;
+            }
+        }
+
+        return groupExpensesByDate(filteredExpenses);
     });
 
     function formatDate(dateString: string): string {
@@ -599,174 +550,74 @@
                 </div>
             {/if}
 
-            <!-- Breakdown Cards -->
-            {#if shouldShowDateGroupedView}
-                <!-- Date-grouped view for category tab -->
-                <div class="space-y-6">
-                    {#each allExpensesByDate as dateGroup (dateGroup.dateKey)}
-                        <div>
-                            <!-- Date Header -->
-                            <div class="flex justify-center mb-4">
-                                <div class="inline-block px-4 py-2 rounded-lg bg-primary/10 text-primary">
-                                    <span class="text-sm font-medium">{dateGroup.dateLabel}</span>
-                                </div>
-                            </div>
-
-                            <!-- Expenses for this date -->
-                            <div class="space-y-2">
-                                {#each dateGroup.expenses as expense (expense.id)}
-                                    <Card class="hover:shadow-md transition-shadow">
-                                        <CardContent class="p-4">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex-1 min-w-0">
-                                                    <p class="text-base font-medium truncate">
-                                                        {expense.note || 'No description'}
-                                                    </p>
-                                                    <div class="flex items-center gap-2 mt-1">
-                                                        {#if expense.category?.name}
-                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-primary/10 text-primary">
-                                                                {expense.category.name}
-                                                            </span>
-                                                        {/if}
-                                                        <span class="text-xs text-muted-foreground">
-                                                            {formatDate(expense.date)}
-                                                        </span>
-                                                        {#if expense.paidByName}
-                                                            <span class="text-xs text-muted-foreground">
-                                                                by {expense.paidByName}
-                                                            </span>
-                                                        {/if}
-                                                    </div>
-                                                </div>
-                                                <div class="text-right ml-4">
-                                                    <p class="text-lg font-bold whitespace-nowrap">
-                                                        {formatCurrency(expense.amount)}
-                                                    </p>
-                                                    <div class="flex gap-2 mt-1 justify-end">
-                                                        <button
-                                                            type="button"
-                                                            onclick={() => handleEditExpense(expense.id)}
-                                                            class="text-xs text-primary hover:underline"
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onclick={() => handleDeleteExpense(expense.id)}
-                                                            class="text-xs text-destructive hover:underline"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                {/each}
+            <!-- Expense List grouped by date -->
+            <div class="space-y-6">
+                {#each allExpensesByDate as dateGroup (dateGroup.dateKey)}
+                    <div>
+                        <!-- Date Header -->
+                        <div class="flex justify-center mb-4">
+                            <div class="inline-block px-4 py-2 rounded-lg bg-primary/10 text-primary">
+                                <span class="text-sm font-medium">{dateGroup.dateLabel}</span>
                             </div>
                         </div>
-                    {/each}
-                </div>
-            {:else}
-                <!-- Card-based view for template/member tabs or when specific item is selected -->
-                <div class="grid grid-cols-1 gap-4">
-                    {#each groupedData as item (item.id)}
-                        {@const expensesByDate = groupExpensesByDate(item.expenses)}
-                        <Card class="hover:shadow-lg transition-shadow">
-                            <CardContent class="pt-6">
-                                <!-- Summary -->
-                                <div class="flex items-start justify-between mb-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="text-3xl">{item.icon}</div>
-                                        <div>
-                                            <h3 class="font-semibold text-lg">{item.name}</h3>
-                                            <p class="text-sm text-muted-foreground">{item.count} transaction{item.count !== 1 ? 's' : ''}</p>
+
+                        <!-- Expenses for this date -->
+                        <div class="space-y-2">
+                            {#each dateGroup.expenses as expense (expense.id)}
+                                <Card class="hover:shadow-md transition-shadow">
+                                    <CardContent class="p-4">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-base font-medium truncate">
+                                                    {expense.note || 'No description'}
+                                                </p>
+                                                <div class="flex items-center gap-2 mt-1">
+                                                    {#if expense.category?.name}
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-primary/10 text-primary">
+                                                            {expense.category.name}
+                                                        </span>
+                                                    {/if}
+                                                    <span class="text-xs text-muted-foreground">
+                                                        {formatDate(expense.date)}
+                                                    </span>
+                                                    {#if expense.paidByName}
+                                                        <span class="text-xs text-muted-foreground">
+                                                            by {expense.paidByName}
+                                                        </span>
+                                                    {/if}
+                                                </div>
+                                            </div>
+                                            <div class="text-right ml-4">
+                                                <p class="text-lg font-bold whitespace-nowrap">
+                                                    {formatCurrency(expense.amount)}
+                                                </p>
+                                                <div class="flex gap-2 mt-1 justify-end">
+                                                    <button
+                                                        type="button"
+                                                        onclick={() => handleEditExpense(expense.id)}
+                                                        class="text-xs text-primary hover:underline"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onclick={() => handleDeleteExpense(expense.id)}
+                                                        class="text-xs text-destructive hover:underline"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="text-2xl font-bold">{formatCurrency(item.amount)}</p>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2 mb-4">
-                                    <div class="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                                        <div
-                                            class="bg-primary h-full transition-all duration-300"
-                                            style="width: {item.percentage}%"
-                                        ></div>
-                                    </div>
-                                    <span class="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                                        {item.percentage.toFixed(1)}%
-                                    </span>
-                                </div>
+                                    </CardContent>
+                                </Card>
+                            {/each}
+                        </div>
+                    </div>
+                {/each}
+            </div>
 
-                                <!-- Expense List Accordion -->
-                                {#if expensesByDate.length > 0}
-                                    <div class="border-t pt-4">
-                                        <Accordion type="multiple">
-                                            {#each expensesByDate as dateGroup (dateGroup.dateKey)}
-                                                <AccordionItem value={dateGroup.dateKey} class="border rounded-lg mb-2 px-3">
-                                                    <AccordionTrigger class="hover:no-underline py-2">
-                                                        <div class="flex items-center justify-between w-full pr-2">
-                                                            <span class="text-sm font-medium">{dateGroup.dateLabel}</span>
-                                                            <span class="text-sm text-muted-foreground">
-                                                                {dateGroup.expenses.length} item{dateGroup.expenses.length !== 1 ? 's' : ''}
-                                                            </span>
-                                                        </div>
-                                                    </AccordionTrigger>
-                                                    <AccordionContent>
-                                                        <div class="space-y-2 pb-2">
-                                                            {#each dateGroup.expenses as expense (expense.id)}
-                                                                <div class="flex items-center justify-between p-2 rounded hover:bg-muted/50 transition-colors">
-                                                                    <div class="flex-1 min-w-0">
-                                                                        <p class="text-sm font-medium truncate">
-                                                                            {expense.note || '-'}
-                                                                        </p>
-                                                                        <div class="flex items-center gap-2 mt-1">
-                                                                            <span class="text-xs text-muted-foreground">
-                                                                                {formatDate(expense.date)}
-                                                                            </span>
-                                                                            {#if expense.category?.name}
-                                                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-primary/10 text-primary">
-                                                                                    {expense.category.name}
-                                                                                </span>
-                                                                            {/if}
-                                                                            {#if expense.paidByName}
-                                                                                <span class="text-xs text-muted-foreground">
-                                                                                    by {expense.paidByName}
-                                                                                </span>
-                                                                            {/if}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="text-right ml-4">
-                                                                        <p class="text-sm font-bold whitespace-nowrap">
-                                                                            {formatCurrency(expense.amount)}
-                                                                        </p>
-                                                                        <div class="flex gap-1 mt-1">
-                                                                            <button
-                                                                                type="button"
-                                                                                onclick={() => handleEditExpense(expense.id)}
-                                                                                class="text-xs text-primary hover:underline"
-                                                                            >
-                                                                                Edit
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            {/each}
-                                                        </div>
-                                                    </AccordionContent>
-                                                </AccordionItem>
-                                            {/each}
-                                        </Accordion>
-                                    </div>
-                                {/if}
-                            </CardContent>
-                        </Card>
-                    {/each}
-                </div>
-            {/if}
-
-            {#if (shouldShowDateGroupedView && allExpensesByDate.length === 0) || (!shouldShowDateGroupedView && groupedData.length === 0)}
+            {#if allExpensesByDate.length === 0}
                 <div class="text-center py-12">
                     <div class="text-6xl mb-4">📊</div>
                     <h3 class="text-lg font-semibold mb-2">No data available</h3>
