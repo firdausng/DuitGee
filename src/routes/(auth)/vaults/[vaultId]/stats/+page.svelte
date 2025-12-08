@@ -9,7 +9,9 @@
     import {Card, CardContent} from "$lib/components/ui/card";
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
     import {Accordion, AccordionItem, AccordionTrigger, AccordionContent} from "$lib/components/ui/accordion";
+    import {FloatingActionButton} from "$lib/components/ui/floating-action-button";
     import type {Expense, VaultStatistics} from "../types";
+    import FilterChipsDrawer from "./FilterChipsDrawer.svelte";
     import {cn} from "$lib/utils";
     import {format, parseISO} from "date-fns";
 
@@ -30,6 +32,9 @@
     // Refetch keys
     let refetchKey = $state(0);
     let vaultRefetchKey = $state(0);
+
+    // Drawer state for filter selection
+    let filterDrawerOpen = $state(false);
 
     // Derived filter values - use $state to stabilize
     let filterType = $derived(params.filterType || 'category');
@@ -520,46 +525,6 @@
                 </button>
             </div>
 
-            <!-- Filter Chips -->
-            {#if filterOptions.length > 1}
-                <div class="mb-6">
-                    <div class="flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            onclick={() => params.selectedId = ""}
-                            class={cn(
-                                "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                                !selectedId
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted hover:bg-muted/80"
-                            )}
-                        >
-                            All
-                            <span class="text-xs opacity-75">({allExpenses.length})</span>
-                        </button>
-                        {#each filterOptions as option (option.id)}
-                            <button
-                                type="button"
-                                onclick={() => {
-                                    if(option.id){
-                                        params.selectedId = option.id;
-                                    }
-                                }}
-                                class={cn(
-                                    "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer",
-                                    selectedId === option.id
-                                        ? "bg-primary text-primary-foreground"
-                                        : "bg-muted hover:bg-muted/80"
-                                )}
-                            >
-                                <span>{option.icon}</span>
-                                <span>{option.name}</span>
-                                <span class="text-xs opacity-75">({option.count})</span>
-                            </button>
-                        {/each}
-                    </div>
-                </div>
-            {/if}
 
             <!-- Expense List grouped by date -->
             <div class="space-y-4">
@@ -667,3 +632,29 @@
         {/if}
     {/if}
 </div>
+
+<!-- Filter Selection FAB -->
+{#if statistics && filterOptions.length > 1}
+    <FloatingActionButton
+        onclick={() => filterDrawerOpen = true}
+    >
+        {#snippet icon()}
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
+            </svg>
+        {/snippet}
+        Filter
+    </FloatingActionButton>
+
+    <!-- Filter Selection Drawer -->
+    <FilterChipsDrawer
+        bind:open={filterDrawerOpen}
+        filterOptions={filterOptions}
+        selectedId={selectedId}
+        allExpensesCount={allExpenses.length}
+        filterType={filterType}
+        onOpenChange={(open) => filterDrawerOpen = open}
+        onSelectAll={() => { params.selectedId = ""; filterDrawerOpen = false; }}
+        onSelectOption={(id) => { params.selectedId = id; filterDrawerOpen = false; }}
+    />
+{/if}
