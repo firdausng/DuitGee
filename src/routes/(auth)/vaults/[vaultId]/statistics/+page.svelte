@@ -337,36 +337,39 @@
         }
     });
 
-    // Filter by type (template/category/member) after date filtering
-    const filteredExpenses = $derived.by(() => {
-        // Filter expenses based on filterType and filterName
+    // Helper function to filter expenses by category/template/member
+    function filterByType(expenses: Expense[]) {
         const currentFilterType = filterType;
         const currentFilterName = filterName;
         const currentFilterId = filterId;
-        let filtered = filteredExpensesList;
 
-        if (currentFilterName) {
-            switch (currentFilterType) {
-                case 'category':
-                    filtered = filteredExpensesList.filter(expense => expense.category?.name === currentFilterName);
-                    break;
-                case 'template':
-                    if (currentFilterId) {
-                        filtered = filteredExpensesList.filter(expense =>
-                            String(expense.templateId) === String(currentFilterId)
-                        );
-                    }
-                    break;
-                case 'member':
-                    if (currentFilterId) {
-                        filtered = filteredExpensesList.filter(expense => expense.paidBy === currentFilterId);
-                    }
-                    break;
-            }
+        if (!currentFilterName) return expenses;
+
+        switch (currentFilterType) {
+            case 'category':
+                return expenses.filter(expense => expense.category?.name === currentFilterName);
+            case 'template':
+                if (currentFilterId) {
+                    return expenses.filter(expense =>
+                        String(expense.templateId) === String(currentFilterId)
+                    );
+                }
+                return expenses;
+            case 'member':
+                if (currentFilterId) {
+                    return expenses.filter(expense => expense.paidBy === currentFilterId);
+                }
+                return expenses;
+            default:
+                return expenses;
         }
+    }
 
-        return filtered;
-    });
+    // Filter all expenses by category/template/member (for calendar totals)
+    const allExpensesFiltered = $derived.by(() => filterByType(allExpenses));
+
+    // Filter date-filtered expenses by category/template/member (for expense list)
+    const filteredExpenses = $derived.by(() => filterByType(filteredExpensesList));
 
     const allExpensesByDate = $derived(groupExpensesByDate(filteredExpenses));
 
@@ -442,7 +445,7 @@
         <!-- Calendar Section -->
         <CalendarSection
             bind:value={calendarValue}
-            allExpenses={allExpenses}
+            allExpenses={allExpensesFiltered}
             onValueChange={(value) => calendarValue = value}
         />
 
