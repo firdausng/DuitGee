@@ -13,7 +13,7 @@
     import type { Expense } from "../types";
     import type { VaultWithMember } from "$lib/schemas/read/vaultWithMember";
     import { format, parseISO } from "date-fns";
-    import { formatCurrency } from "$lib/utils";
+    import { formatCurrency, getDateRangeFromCalendar } from "$lib/utils";
 
     let { data } = $props();
     let { vaultId } = data;
@@ -28,19 +28,6 @@
         start: today,
         end: today,
     });
-
-    // Convert CalendarDate range to ISO date strings for API
-    function getDateRangeFromCalendar(): { startDate?: string; endDate?: string } {
-        if (!value?.start || !value?.end) return {};
-
-        const start = new Date(value.start.year, value.start.month - 1, value.start.day, 0, 0, 0);
-        const end = new Date(value.end.year, value.end.month - 1, value.end.day, 23, 59, 59, 999);
-
-        return {
-            startDate: start.toISOString(),
-            endDate: end.toISOString()
-        };
-    }
 
     // Resource for vault data
     const vaultResource = resource(
@@ -70,7 +57,7 @@
     const filteredExpensesResource = resource(
         () => [vaultId, value?.start, value?.end, refetchKey] as const,
         async ([id, start, end]) => {
-            const dateRange = getDateRangeFromCalendar();
+            const dateRange = getDateRangeFromCalendar(value);
             const urlParams = new URLSearchParams({
                 vaultId: id,
                 page: '1',

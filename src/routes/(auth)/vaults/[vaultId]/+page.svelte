@@ -16,7 +16,7 @@
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
     import {Toaster} from "$lib/components/ui/sonner";
     import {toast} from "svelte-sonner";
-    import {localDatetimeToUtcIso, formatCurrency} from "$lib/utils";
+    import {localDatetimeToUtcIso, formatCurrency, getDateRange, type DateFilter} from "$lib/utils";
 
     let {data} = $props();
     let {vaultId} = data;
@@ -34,69 +34,16 @@
     let isInviting = $state(false);
 
     // Filter state - derived from URL query params
-    let filterType = $derived(params.filter);
+    let filterType = $derived(params.filter as DateFilter);
 
-    function getDateRange(): { startDate?: string; endDate?: string } {
-        const now = new Date();
-
-        switch (filterType) {
-            case 'all':
-                return {};
-
-            case 'today': {
-                const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-                const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-                return {
-                    startDate: start.toISOString(),
-                    endDate: end.toISOString()
-                };
-            }
-
-            case 'week': {
-                const dayOfWeek = now.getDay();
-                const start = new Date(now);
-                start.setDate(now.getDate() - dayOfWeek);
-                start.setHours(0, 0, 0, 0);
-
-                const end = new Date(start);
-                end.setDate(start.getDate() + 6);
-                end.setHours(23, 59, 59, 999);
-
-                return {
-                    startDate: start.toISOString(),
-                    endDate: end.toISOString()
-                };
-            }
-
-            case 'month': {
-                const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-                const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-                return {
-                    startDate: start.toISOString(),
-                    endDate: end.toISOString()
-                };
-            }
-
-            case 'year': {
-                const start = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
-                const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-                return {
-                    startDate: start.toISOString(),
-                    endDate: end.toISOString()
-                };
-            }
-
-            case 'custom': {
-                if (!params.startDate || !params.endDate) return {};
-                return {
-                    startDate: localDatetimeToUtcIso(params.startDate),
-                    endDate: localDatetimeToUtcIso(params.endDate)
-                };
-            }
-
-            default:
-                return {};
+    function getDateRangeWithCustom(): { startDate?: string; endDate?: string } {
+        if (filterType === 'custom' && params.startDate && params.endDate) {
+            return {
+                startDate: localDatetimeToUtcIso(params.startDate),
+                endDate: localDatetimeToUtcIso(params.endDate)
+            };
         }
+        return getDateRange(filterType);
     }
 
     // Resource for vault data
@@ -112,7 +59,7 @@
     const expensesResource = resource(
         () => [vaultId, filterType, params.startDate, params.endDate, refetchKey] as const,
         async ([id, filter, startDate, endDate]) => {
-            const dateRange = getDateRange();
+            const dateRange = getDateRangeWithCustom();
             const urlParams = new URLSearchParams({
                 vaultId: id,
                 page: '1',
@@ -131,7 +78,7 @@
     const statisticsResource = resource(
         () => [vaultId, filterType, params.startDate, params.endDate, refetchKey] as const,
         async ([id, filter, startDate, endDate]) => {
-            const dateRange = getDateRange();
+            const dateRange = getDateRangeWithCustom();
             const urlParams = new URLSearchParams({vaultId: id});
 
             if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);

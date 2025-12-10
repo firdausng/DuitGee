@@ -20,9 +20,9 @@
         groupExpensesByDate,
         formatCurrency,
         formatDate,
-        getDateFilterLabel,
-        type DateFilter
+        getDateFilterLabel
     } from "./utils";
+    import {type DateFilter, getDateRangeFromCalendar} from "$lib/utils";
     import {now, getLocalTimeZone, CalendarDate} from "@internationalized/date";
     import type {DateRange} from "bits-ui";
 
@@ -58,19 +58,6 @@
     let filterType = $derived(params.filterType || 'template');
     let dateFilter = $state<DateFilter>(params.dateFilter || 'all');
     let filterName = $derived(params.filterName);
-
-    // Convert CalendarDate range to ISO date strings for API
-    function getDateRangeFromCalendar(): { startDate?: string; endDate?: string } {
-        if (!calendarValue?.start || !calendarValue?.end) return {};
-
-        const start = new Date(calendarValue.start.year, calendarValue.start.month - 1, calendarValue.start.day, 0, 0, 0);
-        const end = new Date(calendarValue.end.year, calendarValue.end.month - 1, calendarValue.end.day, 23, 59, 59, 999);
-
-        return {
-            startDate: start.toISOString(),
-            endDate: end.toISOString()
-        };
-    }
 
     // Update dateFilter when params change
     $effect(() => {
@@ -248,7 +235,7 @@
 
             // Use calendar value for date filtering (synced with date filter buttons)
             if (dateF !== 'all') {
-                const dateRange = getDateRangeFromCalendar();
+                const dateRange = getDateRangeFromCalendar(calendarValue);
                 if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
                 if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
             }
@@ -266,7 +253,7 @@
 
             // Use calendar value for date filtering (synced with date filter buttons)
             if (dateF !== 'all') {
-                const dateRange = getDateRangeFromCalendar();
+                const dateRange = getDateRangeFromCalendar(calendarValue);
                 if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
                 if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
             }

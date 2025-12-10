@@ -1,8 +1,13 @@
 import {format, parseISO} from "date-fns";
 import type {Expense} from "../types";
-import {formatCurrency as formatCurrencyUtil} from "$lib/utils";
+import {
+    formatCurrency as formatCurrencyUtil,
+    getDateRange as getDateRangeUtil,
+    type DateFilter as DateFilterType
+} from "$lib/utils";
 
-export type DateFilter = 'all' | 'today' | 'week' | 'month' | 'year';
+// Re-export types
+export type DateFilter = DateFilterType;
 
 export type DateGroup = {
     dateKey: string;
@@ -10,63 +15,8 @@ export type DateGroup = {
     expenses: Expense[];
 };
 
-export function getDateRange(dateFilter: DateFilter, startDate?: string, endDate?: string): { startDate?: string; endDate?: string } {
-    const now = new Date();
-
-    switch (dateFilter) {
-        case 'all':
-            return {};
-
-        case 'today': {
-            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-            return {
-                startDate: start.toISOString(),
-                endDate: end.toISOString()
-            };
-        }
-
-        case 'week': {
-            const dayOfWeek = now.getDay();
-            const start = new Date(now);
-            start.setDate(now.getDate() - dayOfWeek);
-            start.setHours(0, 0, 0, 0);
-            const end = new Date(start);
-            end.setDate(start.getDate() + 6);
-            end.setHours(23, 59, 59, 999);
-            return {
-                startDate: start.toISOString(),
-                endDate: end.toISOString()
-            };
-        }
-
-        case 'month': {
-            const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-            const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-            return {
-                startDate: start.toISOString(),
-                endDate: end.toISOString()
-            };
-        }
-
-        case 'year': {
-            const start = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
-            const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-            return {
-                startDate: start.toISOString(),
-                endDate: end.toISOString()
-            };
-        }
-
-        case 'custom': {
-            if (!startDate || !endDate) return {};
-            return {startDate, endDate};
-        }
-
-        default:
-            return {};
-    }
-}
+// Re-export shared function
+export const getDateRange = getDateRangeUtil;
 
 export function groupExpensesByDate(expenses: Expense[]): DateGroup[] {
     const grouped = new Map<string, Expense[]>();

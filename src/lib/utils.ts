@@ -83,3 +83,100 @@ export const formatCurrency = (amount: number, decimals = 2): string => {
         maximumFractionDigits: decimals,
     }).format(amount);
 };
+
+/**
+ * Date filter types for filtering expenses by time period
+ */
+export type DateFilter = 'all' | 'today' | 'week' | 'month' | 'year' | 'custom';
+
+/**
+ * Calculates date range based on filter type
+ *
+ * @param dateFilter - The type of date filter to apply
+ * @param startDate - Optional start date (ISO string) for 'custom' filter
+ * @param endDate - Optional end date (ISO string) for 'custom' filter
+ * @returns Object with optional startDate and endDate as ISO strings
+ */
+export function getDateRange(
+    dateFilter: DateFilter,
+    startDate?: string,
+    endDate?: string
+): { startDate?: string; endDate?: string } {
+    const now = new Date();
+
+    switch (dateFilter) {
+        case 'all':
+            return {};
+
+        case 'today': {
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            return {
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
+            };
+        }
+
+        case 'week': {
+            const dayOfWeek = now.getDay();
+            const start = new Date(now);
+            start.setDate(now.getDate() - dayOfWeek);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            end.setHours(23, 59, 59, 999);
+            return {
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
+            };
+        }
+
+        case 'month': {
+            const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+            const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            return {
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
+            };
+        }
+
+        case 'year': {
+            const start = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
+            const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+            return {
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
+            };
+        }
+
+        case 'custom': {
+            if (!startDate || !endDate) return {};
+            return { startDate, endDate };
+        }
+
+        default:
+            return {};
+    }
+}
+
+/**
+ * Converts CalendarDate range to ISO date strings for API calls
+ * Used with @internationalized/date CalendarDate objects
+ *
+ * @param calendarValue - DateRange object with start and end CalendarDate
+ * @returns Object with startDate and endDate as ISO strings, or empty object if invalid
+ */
+export function getDateRangeFromCalendar(calendarValue: {
+    start?: { year: number; month: number; day: number };
+    end?: { year: number; month: number; day: number };
+} | undefined): { startDate?: string; endDate?: string } {
+    if (!calendarValue?.start || !calendarValue?.end) return {};
+
+    const start = new Date(calendarValue.start.year, calendarValue.start.month - 1, calendarValue.start.day, 0, 0, 0);
+    const end = new Date(calendarValue.end.year, calendarValue.end.month - 1, calendarValue.end.day, 23, 59, 59, 999);
+
+    return {
+        startDate: start.toISOString(),
+        endDate: end.toISOString()
+    };
+}
