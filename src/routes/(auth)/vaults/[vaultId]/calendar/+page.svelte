@@ -13,6 +13,7 @@
     import type { Expense } from "../types";
     import type { VaultWithMember } from "$lib/schemas/read/vaultWithMember";
     import { format, parseISO } from "date-fns";
+    import { formatCurrency } from "$lib/utils";
 
     let { data } = $props();
     let { vaultId } = data;
@@ -144,15 +145,6 @@
         goto(`/vaults/${vaultId}`);
     }
 
-    function formatCurrency(amount: number): string {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(amount);
-    }
-
     function formatDate(dateString: string): string {
         return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -253,7 +245,7 @@
                                     <span>{day.day}</span>
                                     {#if !outsideMonth && dailyTotal > 0}
                                         <span class="text-xs font-semibold text-primary absolute -bottom-2.5 right-0 -mt-1 -mr-1 bg-card border border-border rounded-full px-1.5 py-0.5 shadow-sm">
-                                            {formatCurrency(dailyTotal)}
+                                            {formatCurrency(dailyTotal, 0)}
                                         </span>
                                     {/if}
                                 </RangeCalendarDay>
@@ -321,7 +313,7 @@
                                                     </p>
                                                 </div>
                                                 <div class="text-right ml-2">
-                                                    <p class="text-sm font-bold whitespace-nowrap">{formatCurrency(expense.amount)}</p>
+                                                    <p class="text-sm font-bold whitespace-nowrap">{formatCurrency(expense.amount, 0)}</p>
                                                 </div>
                                             </div>
                                         </AccordionTrigger>
@@ -416,7 +408,7 @@
                                                     </p>
                                                 </div>
                                                 <div class="text-right ml-4">
-                                                    <p class="text-base font-bold whitespace-nowrap">{formatCurrency(expense.amount)}</p>
+                                                    <p class="text-base font-bold whitespace-nowrap">{formatCurrency(expense.amount, 0)}</p>
                                                 </div>
                                             </div>
                                         </AccordionTrigger>

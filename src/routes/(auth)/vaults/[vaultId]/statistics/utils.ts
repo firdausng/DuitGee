@@ -1,5 +1,6 @@
 import {format, parseISO} from "date-fns";
 import type {Expense} from "../types";
+import {formatCurrency as formatCurrencyUtil} from "$lib/utils";
 
 export type DateFilter = 'all' | 'today' | 'week' | 'month' | 'year';
 
@@ -89,14 +90,8 @@ export function groupExpensesByDate(expenses: Expense[]): DateGroup[] {
         }));
 }
 
-export function formatCurrency(amount: number, decimals = 2): string {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-    }).format(amount);
-}
+// Re-export formatCurrency from global utils
+export const formatCurrency = formatCurrencyUtil;
 
 export function formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString('en-US', {

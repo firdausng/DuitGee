@@ -67,3 +67,19 @@ export const formatDatetimeLocal = (date: Date | string): string => {
     const dateObj = typeof date === 'string' ? parseISO(date) : date;
     return format(dateObj, "yyyy-MM-dd'T'HH:mm");
 };
+
+/**
+ * Formats a number as currency using US locale
+ *
+ * @param amount - The amount to format
+ * @param decimals - Number of decimal places (default: 2)
+ * @returns Formatted currency string (e.g., "$1,234.56")
+ */
+export const formatCurrency = (amount: number, decimals = 2): string => {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+    }).format(amount);
+};

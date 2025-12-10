@@ -16,7 +16,7 @@
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
     import {Toaster} from "$lib/components/ui/sonner";
     import {toast} from "svelte-sonner";
-    import {localDatetimeToUtcIso} from "$lib/utils";
+    import {localDatetimeToUtcIso, formatCurrency} from "$lib/utils";
 
     let {data} = $props();
     let {vaultId} = data;
@@ -202,13 +202,6 @@
 
     function handleBack() {
         goto('/vaults');
-    }
-
-    function formatCurrency(amount: number): string {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD'
-        }).format(amount);
     }
 
     function formatDate(dateString: string): string {

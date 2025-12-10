@@ -5,7 +5,7 @@
 	import { resource } from "runed";
 	import { Button } from "$lib/components/ui/button";
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "$lib/components/ui/card";
-	import { localDatetimeToUtcIso } from "$lib/utils";
+	import { localDatetimeToUtcIso, formatCurrency } from "$lib/utils";
 	import { scale } from "svelte/transition";
 	import { filterSchema } from "./schemas";
 
@@ -174,13 +174,6 @@
 			console.error('Failed to delete expense:', error);
 			alert('Failed to delete expense. Please try again.');
 		}
-	}
-
-	function formatCurrency(amount: number): string {
-		return new Intl.NumberFormat('en-US', {
-			style: 'currency',
-			currency: 'USD'
-		}).format(amount);
 	}
 
 	function formatDate(dateString: string): string {
