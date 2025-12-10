@@ -73,10 +73,11 @@ export const formatDatetimeLocal = (date: Date | string): string => {
  *
  * @param amount - The amount to format
  * @param decimals - Number of decimal places (default: 2)
+ * @param locales
  * @returns Formatted currency string (e.g., "$1,234.56")
  */
-export const formatCurrency = (amount: number, decimals = 2): string => {
-    return new Intl.NumberFormat('en-US', {
+export const formatCurrency = (amount: number, decimals = 2, locales: string = 'en-US'): string => {
+    return new Intl.NumberFormat(locales, {
         style: 'currency',
         currency: 'USD',
         minimumFractionDigits: decimals,
@@ -185,10 +186,11 @@ export function getDateRangeFromCalendar(calendarValue: {
  * Formats an ISO date string to a localized date (without time)
  *
  * @param dateString - ISO date string
+ * @param locales
  * @returns Formatted date string (e.g., "Dec 8, 2025")
  */
-export function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
+export function formatDate(dateString: string, locales: string = 'en-US'): string {
+    return new Date(dateString).toLocaleDateString(locales, {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
@@ -199,10 +201,11 @@ export function formatDate(dateString: string): string {
  * Formats an ISO date string to a localized date and time
  *
  * @param dateString - ISO date string
+ * @param locales
  * @returns Formatted date and time string (e.g., "Dec 8, 2025, 10:30 AM")
  */
-export function formatDateTime(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
+export function formatDateTime(dateString: string, locales: string = 'en-US'): string {
+    return new Date(dateString).toLocaleDateString(locales, {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
