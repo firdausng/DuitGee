@@ -50,7 +50,7 @@
     "CALLBACK_PATH": "/vaults",
     "ENVIRONMENT": "development",
     "EMAIL_FROM": "support@mail.duitgee.com",
-    "VAULT_LIMIT": 5
+    "VAULT_LIMIT": 1
   },
   "env": {
     "staging": {
@@ -61,7 +61,7 @@
         "CALLBACK_PATH": "/vaults",
         "ENVIRONMENT": "staging",
         "EMAIL_FROM": "support@mail.duitgee.com",
-        "VAULT_LIMIT": 5
+        "VAULT_LIMIT": 1
       }
     },
     "production": {
@@ -78,7 +78,7 @@
         "CALLBACK_PATH": "/vaults",
         "ENVIRONMENT": "production",
         "EMAIL_FROM": "support@mail.duitgee.com",
-        "VAULT_LIMIT": 5
+        "VAULT_LIMIT": 1
       },
       "d1_databases": [
         {

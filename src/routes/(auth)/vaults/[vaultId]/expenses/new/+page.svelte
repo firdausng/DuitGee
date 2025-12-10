@@ -144,13 +144,10 @@
 									<div class="text-xs font-medium break-words w-full">{template.name}</div>
 								</div>
 
-								<!-- Amount and Category -->
+								<!-- Amount -->
 								<div class="space-y-0.5 text-center">
 									{#if template.defaultAmount}
 										<div class="font-bold text-sm">${template.defaultAmount.toFixed(2)}</div>
-									{/if}
-									{#if template.defaultCategoryName}
-										<p class="text-xs text-muted-foreground">{template.defaultCategoryName}</p>
 									{/if}
 								</div>
 
