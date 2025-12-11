@@ -11,7 +11,7 @@
 		<div class="container flex h-14 max-w-screen-2xl items-center justify-between px-4">
 			<div class="flex items-center gap-6">
 				<a href="/" class="flex items-center space-x-2">
-					<span class="font-bold text-xl">DuitGee</span>
+					<img src="/favicon.svg" alt="DuitGee Logo" class="h-8 w-8" />
 				</a>
 			</div>
 			<div class="flex items-center gap-2">
