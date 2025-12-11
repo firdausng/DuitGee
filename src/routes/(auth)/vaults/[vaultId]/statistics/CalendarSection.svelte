@@ -10,11 +10,12 @@
 
     type Props = {
         value: DateRange | undefined;
+        placeholder: CalendarDate;
         allExpenses: Expense[];
         onValueChange: (value: DateRange | undefined) => void;
     };
 
-    let {value = $bindable(), allExpenses, onValueChange}: Props = $props();
+    let {value = $bindable(), placeholder = $bindable(), allExpenses, onValueChange}: Props = $props();
 
     // Format the date range for display
     const dateRangeLabel = $derived.by(() => {
@@ -77,6 +78,7 @@
             <div class="pb-4">
                 <RangeCalendar
                     bind:value
+                    bind:placeholder
                     class="rounded-lg border shadow-sm [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)]"
                     monthFormat="long"
                     captionLayout="dropdown"

@@ -54,6 +54,9 @@
         end: today,
     });
 
+    // Calendar placeholder - tracks the currently displayed month in the calendar
+    let calendarPlaceholder = $state<CalendarDate>(today);
+
     // Derived filter values
     let filterType = $derived(params.filterType || 'template');
     let dateFilter = $state<DateFilter>(params.dateFilter || 'all');
@@ -212,24 +215,22 @@
 
     // Resource for ALL expenses (for calendar daily totals - independent of filter)
     const allExpensesResource = resource(
-        () => [vaultId, refetchKey] as const,
-        async ([id]) => {
-            const now = new Date();
-
-            // Previous month (day = 1)
-            const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        () => [vaultId, calendarPlaceholder.year, calendarPlaceholder.month, refetchKey] as const,
+        async ([id, year, month]) => {
+            // Calculate 1 month before the currently displayed calendar month
+            const prevMonthDate = new Date(year, month - 2, 1); // month - 2 because months are 0-based and we want previous month
             const prev = {
-                year: prevDate.getFullYear(),
-                month: prevDate.getMonth() + 1, // +1 because months are 0-based
+                year: prevMonthDate.getFullYear(),
+                month: prevMonthDate.getMonth() + 1, // +1 because months are 0-based
                 day: 1
             };
 
-            // Next month (day = last day of next month)
-            const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-            const lastDayNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0);
+            // Calculate 1 month after the currently displayed calendar month (last day of that month)
+            const nextMonthDate = new Date(year, month, 1); // month is already 1-based, so this gives us next month
+            const lastDayNextMonth = new Date(nextMonthDate.getFullYear(), nextMonthDate.getMonth() + 1, 0);
             const next = {
-                year: nextMonth.getFullYear(),
-                month: nextMonth.getMonth() + 1,
+                year: lastDayNextMonth.getFullYear(),
+                month: lastDayNextMonth.getMonth() + 1,
                 day: lastDayNextMonth.getDate()
             };
 
@@ -464,6 +465,7 @@
         <!-- Calendar Section -->
         <CalendarSection
             bind:value={calendarValue}
+            bind:placeholder={calendarPlaceholder}
             allExpenses={allExpensesFiltered}
             onValueChange={(value) => calendarValue = value}
         />
