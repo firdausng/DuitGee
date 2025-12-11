@@ -227,6 +227,7 @@
     const expensesResource = resource(
         () => [vaultId, calendarValue?.start, calendarValue?.end, dateFilter, refetchKey] as const,
         async ([id, calStart, calEnd, dateF]) => {
+            if(calEnd === undefined) return [];
             const urlParams = new URLSearchParams({
                 vaultId: id,
                 page: '1',
@@ -249,6 +250,7 @@
     const statisticsResource = resource(
         () => [vaultId, calendarValue?.start, calendarValue?.end, dateFilter, refetchKey] as const,
         async ([id, calStart, calEnd, dateF]) => {
+            if(calEnd === undefined) return null;
             const urlParams = new URLSearchParams({vaultId: id});
 
             // Use calendar value for date filtering (synced with date filter buttons)

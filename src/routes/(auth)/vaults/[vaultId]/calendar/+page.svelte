@@ -57,6 +57,7 @@
     const filteredExpensesResource = resource(
         () => [vaultId, value?.start, value?.end, refetchKey] as const,
         async ([id, start, end]) => {
+            if (!end) return [];
             const dateRange = getDateRangeFromCalendar(value);
             const urlParams = new URLSearchParams({
                 vaultId: id,
