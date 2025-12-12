@@ -32,6 +32,7 @@ export const getExpense = async (
         id: expenseResult.id,
         note: expenseResult.note,
         amount: expenseResult.amount,
+        paymentType: expenseResult.paymentType,
         date: expenseResult.date,
         paidBy: expenseResult.paidBy,
         createdAt: expenseResult.createdAt,

@@ -57,6 +57,13 @@
       "when": 1765502138047,
       "tag": "0007_thick_thor_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1765520253955,
+      "tag": "0008_massive_wong",
+      "breakpoints": true
     }
   ]
 }

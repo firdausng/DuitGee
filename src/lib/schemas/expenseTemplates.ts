@@ -12,6 +12,7 @@ export const expenseTemplateSchema = v.object({
     defaultNote: v.nullable(v.string()),
     defaultAmount: v.nullable(v.number()),
     defaultCategoryName: v.nullable(v.string()),
+    defaultPaymentType: v.nullable(v.string()),
     defaultPaidBy: v.nullable(v.string()),
     usageCount: v.number(),
     lastUsedAt: v.nullable(v.string()),
@@ -38,6 +39,10 @@ export const createExpenseTemplateSchema = v.object({
         v.fallback(v.string(), ''),
         v.minLength(1, 'Category is required')
     ),
+    defaultPaymentType: v.optional(v.pipe(
+        v.fallback(v.string(), 'cash'),
+        v.minLength(1, 'Payment type is required')
+    ), 'cash'),
     defaultPaidBy: v.optional(v.nullable(v.string())),
 });
 
@@ -56,6 +61,10 @@ export const updateExpenseTemplateSchema = v.object({
     defaultCategoryName: v.optional(v.pipe(
         v.fallback(v.string(), ''),
         v.minLength(1, 'Category is required')
+    )),
+    defaultPaymentType: v.optional(v.pipe(
+        v.fallback(v.string(), 'cash'),
+        v.minLength(1, 'Payment type is required')
     )),
     defaultPaidBy: v.optional(v.nullable(v.string())),
 });

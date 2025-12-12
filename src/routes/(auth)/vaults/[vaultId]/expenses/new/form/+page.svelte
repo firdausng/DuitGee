@@ -11,6 +11,7 @@
 	import { MemberCombobox } from '$lib/components/ui/member-combobox';
 	import { FloatingActionButton } from '$lib/components/ui/floating-action-button';
 	import { categoryData } from '$lib/configurations/categories';
+	import { paymentTypes } from '$lib/configurations/paymentTypes';
     import { Toaster } from "$lib/components/ui/sonner";
 	import { toast } from "svelte-sonner";
 	import { ofetch } from 'ofetch';
@@ -185,6 +186,27 @@
 					error={$errors.categoryName}
 					required={true}
 				/>
+
+				<!-- Payment Type -->
+				<div class="space-y-2">
+					<Label for="paymentType">Payment Type *</Label>
+					<select
+						id="paymentType"
+						name="paymentType"
+						bind:value={$form.paymentType}
+						disabled={$delayed}
+						class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {$errors.paymentType ? 'border-destructive' : ''}"
+					>
+						{#each paymentTypes as paymentType}
+							<option value={paymentType.value}>
+								{paymentType.icon} {paymentType.label}
+							</option>
+						{/each}
+					</select>
+					{#if $errors.paymentType}
+						<p class="text-sm text-destructive">{$errors.paymentType}</p>
+					{/if}
+				</div>
 
 				<!-- Paid By -->
 				<MemberCombobox

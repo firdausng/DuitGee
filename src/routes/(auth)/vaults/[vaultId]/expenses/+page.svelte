@@ -24,6 +24,7 @@
 		vaultId: string;
 		note: string | null;
 		amount: number;
+		paymentType: string;
 		category: {
 			name: string;
 			description: string;

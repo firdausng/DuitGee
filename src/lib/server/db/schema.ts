@@ -61,6 +61,7 @@ export const expenseTemplates = sqliteTable('expense_templates', {
     defaultNote: text('note'),
     defaultAmount: real('default_amount'),
     defaultCategoryName: text('category_id'),
+    defaultPaymentType: text('default_payment_type').default('cash'), // Default payment method
     defaultPaidBy: text('default_user_id'), // Who the expense should be assigned to: "__creator__", null (vault), or specific user ID
     // Usage tracking
     usageCount: integer('usage_count').notNull().default(0),
@@ -79,6 +80,7 @@ export const expenses = sqliteTable('expenses', {
     note: text('description'),
     amount: real('amount').notNull(),
     categoryName: text('category_id').notNull(),
+    paymentType: text('payment_type').notNull().default('cash'), // Payment method: cash, debit, credit, transfer, ewallet, etc.
     date: text('date').notNull().$defaultFn(() => formatISO(new UTCDate())), // ISO string format like audit fields
     paidBy: text('user_id'), // Optional - null means vault-level expense (e.g., family/shared expense)
     // related fields

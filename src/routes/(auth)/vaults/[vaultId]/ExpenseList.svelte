@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Button } from "$lib/components/ui/button";
     import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
+    import { getPaymentTypeIcon, getPaymentTypeLabel } from "$lib/configurations/paymentTypes";
     import type { Expense } from "./types";
     import { scale } from "svelte/transition";
 
@@ -82,7 +83,7 @@
                                     {expense.note || 'No description'}
                                 </div>
 
-                                <!-- Category and Paid By -->
+                                <!-- Category, Payment Type, and Paid By -->
                                 <div class="flex flex-wrap items-center gap-2 text-xs">
                                     {#if expense.category?.name}
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
@@ -97,6 +98,12 @@
                                                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
                                             </svg>
                                             Invalid category
+                                        </span>
+                                    {/if}
+                                    {#if expense.paymentType}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent text-accent-foreground text-xs font-medium">
+                                            <span class="text-sm">{getPaymentTypeIcon(expense.paymentType)}</span>
+                                            <span>{getPaymentTypeLabel(expense.paymentType)}</span>
                                         </span>
                                     {/if}
                                     {#if expense.paidBy}

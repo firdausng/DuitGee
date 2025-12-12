@@ -55,6 +55,7 @@ export const getExpenses = async (
             id: parsedExpense.id,
             note: parsedExpense.note,
             amount: parsedExpense.amount,
+            paymentType: parsedExpense.paymentType,
             date: parsedExpense.date,
             createdAt: parsedExpense.createdAt,
             paidBy: parsedExpense.paidBy || undefined,

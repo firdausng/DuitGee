@@ -1,6 +1,7 @@
 <script lang="ts">
     import {Button} from "$lib/components/ui/button";
     import {Accordion, AccordionItem, AccordionTrigger, AccordionContent} from "$lib/components/ui/accordion";
+    import { getPaymentTypeIcon, getPaymentTypeLabel } from "$lib/configurations/paymentTypes";
     import type {Expense} from "../types";
 
     type DateGroup = {
@@ -76,6 +77,18 @@
                                             </span>
                                         {/if}
                                     </div>
+                                    {#if expense.paymentType}
+                                        <div class="flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                                                <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd" />
+                                            </svg>
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent text-accent-foreground text-xs font-semibold">
+                                                <span class="text-sm">{getPaymentTypeIcon(expense.paymentType)}</span>
+                                                <span>{getPaymentTypeLabel(expense.paymentType)}</span>
+                                            </span>
+                                        </div>
+                                    {/if}
                                     <div class="flex items-center gap-2 text-muted-foreground">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                             <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
@@ -171,6 +184,18 @@
                                             </span>
                                         {/if}
                                     </div>
+                                    {#if expense.paymentType}
+                                        <div class="flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                                                <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd" />
+                                            </svg>
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent text-accent-foreground text-xs font-semibold">
+                                                <span class="text-sm">{getPaymentTypeIcon(expense.paymentType)}</span>
+                                                <span>{getPaymentTypeLabel(expense.paymentType)}</span>
+                                            </span>
+                                        </div>
+                                    {/if}
                                     <div class="flex items-center gap-2 text-muted-foreground">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                             <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />

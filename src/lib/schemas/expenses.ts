@@ -5,6 +5,7 @@ export const expenseSchema = v.object({
     note: v.optional(v.string()), // nullable in DB
     amount: v.number(), // real, required
     categoryName: v.string(), // notNull
+    paymentType: v.string(), // payment method, default 'cash'
     date: v.string(), // ISO string date
     paidBy: v.optional(v.nullable(v.string())), // optional - vault-level expense
     vaultId: v.string(), // required, FK
@@ -31,6 +32,10 @@ export const createExpenseSchema = v.object({
         v.fallback(v.string(), ''),
         v.minLength(1, 'Category is required')
     ),
+    paymentType: v.pipe(
+        v.fallback(v.string(), 'cash'),
+        v.minLength(1, 'Payment type is required')
+    ),
     date: v.pipe(
         v.fallback(v.string(), ''),
         v.minLength(1, 'Date is required')
@@ -51,6 +56,10 @@ export const updateExpenseSchema = v.object({
     categoryName: v.pipe(
         v.fallback(v.string(), ''),
         v.minLength(1, 'Category is required')
+    ),
+    paymentType: v.pipe(
+        v.fallback(v.string(), 'cash'),
+        v.minLength(1, 'Payment type is required')
     ),
     date: v.pipe(
         v.fallback(v.string(), ''),
@@ -92,6 +101,10 @@ export const updateExpenseRequestSchema = v.object({
     categoryName: v.pipe(
         v.fallback(v.string(), ''),
         v.minLength(1, 'Category is required')
+    ),
+    paymentType: v.pipe(
+        v.fallback(v.string(), 'cash'),
+        v.minLength(1, 'Payment type is required')
     ),
     date: v.pipe(
         v.fallback(v.string(), ''),
