@@ -8,14 +8,12 @@ export const load = async ({ params, platform, fetch, locals }) => {
 
 	const form = await superValidate(
 		valibot(createBudgetSchema, {
-			defaults: {
-				vaultId,
-				amount: 0,
-				period: 'monthly',
-				alertThreshold: 80,
-				alertEnabled: true,
-				isActive: true
-			}
+			vaultId: vaultId,
+			amount: 0,
+			period: 'monthly',
+			alertThreshold: 80,
+			alertEnabled: true,
+			isActive: true
 		})
 	);
 

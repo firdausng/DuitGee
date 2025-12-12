@@ -40,9 +40,9 @@ export const authConfig = (env: Cloudflare.Env) => {
                 clientSecret: env.GOOGLE_CLIENT_SECRET,
             }
         },
-        trustedOrigins: [
-            env.BASE_PATH,
-        ],
+        // trustedOrigins: [
+        //     env.BASE_PATH,
+        // ],
         emailVerification: {
             sendOnSignUp: true,
             sendVerificationEmail: async ({user, url, token}, request) => {

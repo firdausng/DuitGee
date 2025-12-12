@@ -63,6 +63,7 @@ export const createBudgetSchema = v.object({
         80 // Default to 80%
     ),
     alertEnabled: v.optional(v.boolean(), true),
+    isActive: v.optional(v.boolean(), true),
 });
 
 export type CreateBudgetRequest = v.InferOutput<typeof createBudgetSchema>;

@@ -38,9 +38,9 @@ export const load: PageServerLoad = async ({ params, platform, fetch, locals }) 
 		period: budget.period,
 		startDate: utcToLocalDatetimeString(budget.startDate),
 		endDate: budget.endDate ? utcToLocalDatetimeString(budget.endDate) : null,
-		categoryName: budget.categoryName,
-		templateId: budget.templateId,
-		userId: budget.userId,
+		categoryNames: budget.categoryNames,
+		templateIds: budget.templateIds,
+		userIds: budget.userIds,
 		alertThreshold: budget.alertThreshold,
 		alertEnabled: budget.alertEnabled,
 		isActive: budget.isActive
