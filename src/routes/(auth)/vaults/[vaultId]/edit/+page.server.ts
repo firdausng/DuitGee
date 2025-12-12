@@ -30,6 +30,8 @@ export const load = async ({ params, fetch }) => {
             icon: vaultData.vaults.icon,
             iconType: vaultData.vaults.iconType,
             isDefault: vaultData.vaults.isDefault,
+            locale: vaultData.vaults.locale || 'en-US',
+            currency: vaultData.vaults.currency || 'USD',
         },
         valibot(updateVaultRequestSchema)
     );

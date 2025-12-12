@@ -50,6 +50,13 @@
       "when": 1764538639592,
       "tag": "0006_busy_gorgon",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1765502138047,
+      "tag": "0007_thick_thor_girl",
+      "breakpoints": true
     }
   ]
 }

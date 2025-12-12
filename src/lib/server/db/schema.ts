@@ -14,6 +14,9 @@ export const vaults = sqliteTable('vaults', {
     iconType: text('icon_type').default('emoji'),
     organizationId: text('organization_id'),
     isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
+    // Localization settings
+    locale: text('locale').notNull().default('en-US'), // BCP 47 language tag (e.g., en-US, ja-JP, id-ID)
+    currency: text('currency').default('USD'), // ISO 4217 currency code (e.g., USD, JPY, IDR)
     // Audit fields
     createdAt: text('created_at').$defaultFn(() => formatISO(new UTCDate())),
     createdBy: text('created_by').notNull(), // User ID as string, no FK constraint

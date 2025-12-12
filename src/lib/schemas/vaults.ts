@@ -10,6 +10,9 @@ export const vaultSchema = v.object({
     teamId: v.nullable(v.string()),
     organizationId: v.nullable(v.string()),
     isDefault: v.boolean(),
+    // Localization settings
+    locale: v.string(), // BCP 47 language tag, default "en-US"
+    currency: v.nullable(v.string()), // ISO 4217 currency code, default "USD"
     // Audit fields
     createdAt: v.string(),
     createdBy: v.string(),
@@ -41,7 +44,7 @@ export type ListVaultsRequest = v.InferOutput<typeof listVaultsRequestSchema>;
 
 export const updateVaultRequestSchema = v.object({
     id: v.string(),
-    ...v.partial(v.pick(createVaultSchema, ['name', 'description', 'color', 'icon', 'iconType', "isDefault"])).entries
+    ...v.partial(v.pick(createVaultSchema, ['name', 'description', 'color', 'icon', 'iconType', "isDefault", "locale", "currency"])).entries
 });
 export type UpdateVaultRequest = v.InferOutput<typeof updateVaultRequestSchema>;
 

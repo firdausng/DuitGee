@@ -5,12 +5,19 @@
 	import { resource } from "runed";
 	import { Button } from "$lib/components/ui/button";
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "$lib/components/ui/card";
-	import { localDatetimeToUtcIso, formatCurrency, getDateRange, type DateFilter, formatDate } from "$lib/utils";
+	import { localDatetimeToUtcIso, getDateRange, type DateFilter } from "$lib/utils";
+	import { createVaultFormatters } from "$lib/vaultFormatting";
 	import { scale } from "svelte/transition";
 	import { filterSchema } from "./schemas";
 
 	let { data } = $props();
-	let { vaultId } = data;
+	let { vaultId, vault } = data;
+
+	// Create vault-specific formatters
+	const fmt = createVaultFormatters({
+		locale: vault?.locale || 'en-US',
+		currency: vault?.currency || 'USD'
+	});
 
 	type Expense = {
 		id: string;
@@ -122,7 +129,7 @@
 	}
 
 	function formatTime(dateString: string): string {
-		return new Date(dateString).toLocaleTimeString('en-US', {
+		return new Date(dateString).toLocaleTimeString(fmt.getLocale(), {
 			hour: 'numeric',
 			minute: '2-digit'
 		});
@@ -245,10 +252,10 @@
 									<!-- Amount and Date - Mobile: Stacked, Desktop: Side by side -->
 									<div class="flex items-start justify-between gap-2 mb-2">
 										<div class="text-xl md:text-2xl font-bold text-primary">
-											{formatCurrency(expense.amount)}
+											{fmt.currency(expense.amount)}
 										</div>
 										<div class="text-xs md:text-sm text-muted-foreground text-right shrink-0">
-											<div>{formatDate(expense.date)}</div>
+											<div>{fmt.date(expense.date)}</div>
 											<div class="text-[10px] md:text-xs">{formatTime(expense.date)}</div>
 										</div>
 									</div>

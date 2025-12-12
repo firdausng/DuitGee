@@ -7,9 +7,10 @@
         onSetDefaultVault: () => void;
         onToggleInviteForm: () => void;
         onCreateExpense: () => void;
+        onEditVault: () => void;
     };
 
-    let { vault, onSetDefaultVault, onToggleInviteForm, onCreateExpense }: Props = $props();
+    let { vault, onSetDefaultVault, onToggleInviteForm, onCreateExpense, onEditVault }: Props = $props();
 </script>
 
 <div class="mb-4">
@@ -49,6 +50,13 @@
             </div>
         </div>
         <div class="flex flex-col gap-2">
+            <Button variant="outline" onclick={onEditVault}>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+                <span class="hidden sm:inline">Edit Vault</span>
+                <span class="sm:hidden">Edit</span>
+            </Button>
             <Button variant="outline" onclick={onToggleInviteForm}>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />

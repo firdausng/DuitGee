@@ -12,6 +12,7 @@
     import {updateVaultRequestSchema} from "$lib/schemas/vaults";
     import {Checkbox} from "$lib/components/ui/checkbox";
     import { iconData } from '$lib/configurations/icons';
+    import { localeOptions, currencyOptions, getDefaultCurrency } from '$lib/configurations/locales';
 
 	let { data } = $props();
 
@@ -233,6 +234,56 @@
                         required={false}
                         placeholder="Search icons..."
                     />
+
+					<!-- Locale Selection -->
+					<div class="space-y-2">
+						<Label for="locale">Language & Region</Label>
+						<select
+							id="locale"
+							name="locale"
+							bind:value={$form.locale}
+							disabled={isLoading}
+							class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							onchange={() => {
+								// Auto-update currency when locale changes
+								if ($form.locale) {
+									$form.currency = getDefaultCurrency($form.locale);
+								}
+							}}
+						>
+							{#each localeOptions as locale}
+								<option value={locale.value}>{locale.label}</option>
+							{/each}
+						</select>
+						<p class="text-xs text-muted-foreground">
+							Determines date, time, and number formatting in this vault
+						</p>
+						{#if $errors.locale}
+							<p class="text-sm text-destructive">{$errors.locale}</p>
+						{/if}
+					</div>
+
+					<!-- Currency Selection -->
+					<div class="space-y-2">
+						<Label for="currency">Currency</Label>
+						<select
+							id="currency"
+							name="currency"
+							bind:value={$form.currency}
+							disabled={isLoading}
+							class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+						>
+							{#each currencyOptions as currency}
+								<option value={currency.value}>{currency.label}</option>
+							{/each}
+						</select>
+						<p class="text-xs text-muted-foreground">
+							Currency used for expense amounts and reports
+						</p>
+						{#if $errors.currency}
+							<p class="text-sm text-destructive">{$errors.currency}</p>
+						{/if}
+					</div>
 
 					<!-- Actions -->
 					<div class="space-y-3 pt-4">

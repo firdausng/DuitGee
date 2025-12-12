@@ -69,17 +69,28 @@ export const formatDatetimeLocal = (date: Date | string): string => {
 };
 
 /**
- * Formats a number as currency using US locale
+ * Formats a number as currency using the specified locale and currency
  *
  * @param amount - The amount to format
  * @param decimals - Number of decimal places (default: 2)
- * @param locales
- * @returns Formatted currency string (e.g., "$1,234.56")
+ * @param locale - BCP 47 language tag (default: 'en-US')
+ * @param currency - ISO 4217 currency code (default: 'USD')
+ * @returns Formatted currency string (e.g., "$1,234.56", "Rp 1.234.567", "¥1,235")
+ *
+ * @example
+ * formatCurrency(1234.56) // "$1,234.56" (US Dollar)
+ * formatCurrency(1234567, 2, 'id-ID', 'IDR') // "Rp 1.234.567,00" (Indonesian Rupiah)
+ * formatCurrency(1234.56, 0, 'ja-JP', 'JPY') // "¥1,235" (Japanese Yen)
  */
-export const formatCurrency = (amount: number, decimals = 2, locales: string = 'en-US'): string => {
-    return new Intl.NumberFormat(locales, {
+export const formatCurrency = (
+    amount: number,
+    decimals = 2,
+    locale: string = 'en-US',
+    currency: string = 'USD'
+): string => {
+    return new Intl.NumberFormat(locale, {
         style: 'currency',
-        currency: 'USD',
+        currency: currency,
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
     }).format(amount);
@@ -186,11 +197,16 @@ export function getDateRangeFromCalendar(calendarValue: {
  * Formats an ISO date string to a localized date (without time)
  *
  * @param dateString - ISO date string
- * @param locales
- * @returns Formatted date string (e.g., "Dec 8, 2025")
+ * @param locale - BCP 47 language tag (default: 'en-US')
+ * @returns Formatted date string (e.g., "Dec 8, 2025" for en-US, "8 Des 2025" for id-ID)
+ *
+ * @example
+ * formatDate("2025-12-08T10:30:00.000Z") // "Dec 8, 2025" (en-US)
+ * formatDate("2025-12-08T10:30:00.000Z", "id-ID") // "8 Des 2025" (Indonesian)
+ * formatDate("2025-12-08T10:30:00.000Z", "ja-JP") // "2025/12/8" (Japanese)
  */
-export function formatDate(dateString: string, locales: string = 'en-US'): string {
-    return new Date(dateString).toLocaleDateString(locales, {
+export function formatDate(dateString: string, locale: string = 'en-US'): string {
+    return new Date(dateString).toLocaleDateString(locale, {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
@@ -201,11 +217,16 @@ export function formatDate(dateString: string, locales: string = 'en-US'): strin
  * Formats an ISO date string to a localized date and time
  *
  * @param dateString - ISO date string
- * @param locales
- * @returns Formatted date and time string (e.g., "Dec 8, 2025, 10:30 AM")
+ * @param locale - BCP 47 language tag (default: 'en-US')
+ * @returns Formatted date and time string (e.g., "Dec 8, 2025, 10:30 AM" for en-US)
+ *
+ * @example
+ * formatDateTime("2025-12-08T10:30:00.000Z") // "Dec 8, 2025, 10:30 AM" (en-US)
+ * formatDateTime("2025-12-08T10:30:00.000Z", "id-ID") // "8 Des 2025 10.30" (Indonesian)
+ * formatDateTime("2025-12-08T10:30:00.000Z", "ja-JP") // "2025/12/8 10:30" (Japanese)
  */
-export function formatDateTime(dateString: string, locales: string = 'en-US'): string {
-    return new Date(dateString).toLocaleDateString(locales, {
+export function formatDateTime(dateString: string, locale: string = 'en-US'): string {
+    return new Date(dateString).toLocaleDateString(locale, {
         year: 'numeric',
         month: 'short',
         day: 'numeric',

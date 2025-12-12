@@ -16,7 +16,8 @@
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
     import {Toaster} from "$lib/components/ui/sonner";
     import {toast} from "svelte-sonner";
-    import {localDatetimeToUtcIso, formatCurrency, getDateRange, type DateFilter, formatDate} from "$lib/utils";
+    import {localDatetimeToUtcIso, getDateRange, type DateFilter} from "$lib/utils";
+    import {createVaultFormatters} from "$lib/vaultFormatting";
 
     let {data} = $props();
     let {vaultId} = data;
@@ -100,6 +101,16 @@
     const expensesError = $derived(expensesResource.error);
     const statisticsError = $derived(statisticsResource.error);
 
+    // Create vault-specific formatters
+    const vaultFormatters = $derived(
+        currentVault
+            ? createVaultFormatters({
+                locale: currentVault.vaults.locale || 'en-US',
+                currency: currentVault.vaults.currency || 'USD'
+            })
+            : createVaultFormatters({ locale: 'en-US', currency: 'USD' })
+    );
+
     // Watch for non-critical errors and show toasts
     $effect(() => {
         if (expensesError) {
@@ -123,6 +134,10 @@
 
     function handleCreateExpense() {
         goto(`/vaults/${vaultId}/expenses/new`);
+    }
+
+    function handleEditVault() {
+        goto(`/vaults/${vaultId}/edit`);
     }
 
     function handleEditExpense(expenseId: string) {
@@ -305,6 +320,7 @@
                 onSetDefaultVault={handleSetDefaultVault}
                 onToggleInviteForm={toggleInviteForm}
                 onCreateExpense={handleCreateExpense}
+                onEditVault={handleEditVault}
         />
 
         <!-- Expense Filters -->
@@ -322,7 +338,7 @@
         <VaultStatisticsComponent
                 statistics={statistics}
                 isLoading={isLoadingStats}
-                formatCurrency={formatCurrency}
+                formatCurrency={vaultFormatters.currency}
                 vaultId={vaultId}
                 onCardClick={handleStatisticsCardClick}
         />
@@ -344,8 +360,8 @@
                 expenses={expenses}
                 isLoading={isLoadingExpenses}
                 filterType={filterType}
-                formatCurrency={formatCurrency}
-                formatDate={formatDate}
+                formatCurrency={vaultFormatters.currency}
+                formatDate={vaultFormatters.date}
                 onEditExpense={handleEditExpense}
                 onDeleteExpense={handleDeleteExpense}
                 onCreateExpense={handleCreateExpense}
