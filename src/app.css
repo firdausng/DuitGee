@@ -325,11 +325,11 @@
   flex-wrap: wrap;
 }
 
-/* Floating edit button */
-.cookieConsent__Edit {
+/* Floating edit/toggle button */
+.cookieConsentToggle {
   position: fixed;
   bottom: 1rem;
-  right: 1rem;
+  left: 1rem;
   z-index: 9998;
   background: var(--primary);
   color: var(--primary-foreground);
@@ -346,12 +346,12 @@
   justify-content: center;
 }
 
-.cookieConsent__Edit:hover {
+.cookieConsentToggle:hover {
   opacity: 0.9;
   transform: scale(1.05);
 }
 
-.cookieConsent__Edit svg {
+.cookieConsentToggle svg {
   width: 1.25rem;
   height: 1.25rem;
 }
