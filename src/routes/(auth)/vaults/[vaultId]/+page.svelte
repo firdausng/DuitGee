@@ -13,11 +13,13 @@
     import VaultStatisticsComponent from "./VaultStatistics.svelte";
     import ExpenseList from "./ExpenseList.svelte";
     import InviteForm from "./InviteForm.svelte";
+    import BudgetOverview from "./BudgetOverview.svelte";
     import {LoadingOverlay} from "$lib/components/ui/loading-overlay";
     import {Toaster} from "$lib/components/ui/sonner";
     import {toast} from "svelte-sonner";
     import {localDatetimeToUtcIso, getDateRange, type DateFilter} from "$lib/utils";
     import {createVaultFormatters} from "$lib/vaultFormatting";
+    import { calculateBudgetProgress, type Budget } from "./statistics/budgetUtils";
 
     let {data} = $props();
     let {vaultId} = data;
@@ -90,16 +92,52 @@
         }
     );
 
+    // Resource for budgets
+    const budgetsResource = resource(
+        () => [vaultId, refetchKey] as const,
+        async ([id]) => {
+            const urlParams = new URLSearchParams({
+                vaultId: id,
+                isActive: 'true'
+            });
+
+            const response = await ofetch<{ success: boolean; data: Budget[] }>(`/api/getBudgets?${urlParams.toString()}`);
+            return response.data || [];
+        }
+    );
+
+    // Resource for all expenses (for budget calculations)
+    const allExpensesResource = resource(
+        () => [vaultId, refetchKey] as const,
+        async ([id]) => {
+            const urlParams = new URLSearchParams({
+                vaultId: id,
+                page: '1',
+                limit: '1000'
+            });
+
+            const response = await ofetch<{ expenses: Expense[], pagination: any }>(`/api/getExpenses?${urlParams.toString()}`);
+            return response.expenses || [];
+        }
+    );
+
     // Derive data from resources
     const currentVault = $derived(vaultResource.current);
     const expenses = $derived(expensesResource.current || []);
     const statistics = $derived(statisticsResource.current || null);
+    const budgets = $derived(budgetsResource.current || []);
+    const allExpenses = $derived(allExpensesResource.current || []);
     const isLoadingVault = $derived(vaultResource.loading);
     const isLoadingExpenses = $derived(expensesResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
     const vaultError = $derived(vaultResource.error);
     const expensesError = $derived(expensesResource.error);
     const statisticsError = $derived(statisticsResource.error);
+
+    // Calculate budget progress for all active budgets
+    const budgetProgresses = $derived.by(() => {
+        return budgets.map(budget => calculateBudgetProgress(budget, allExpenses));
+    });
 
     // Create vault-specific formatters
     const vaultFormatters = $derived(
@@ -341,6 +379,13 @@
                 formatCurrency={vaultFormatters.currency}
                 vaultId={vaultId}
                 onCardClick={handleStatisticsCardClick}
+        />
+
+        <!-- Budget Overview -->
+        <BudgetOverview
+                budgetProgresses={budgetProgresses}
+                vaultId={vaultId}
+                formatCurrency={vaultFormatters.currency}
         />
 
         <!-- Invite User Form -->
