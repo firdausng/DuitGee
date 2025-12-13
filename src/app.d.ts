@@ -64,7 +64,29 @@ declare global {
     }
 
     namespace Client {
+        interface AppResponse<T> {
+            success: boolean,
+            data: T
+        }
 
+        interface ExpenseTemplateData {
+            templates: ExpenseTemplate[]
+        }
+
+        interface ExpenseTemplate {
+            id: string;
+            vaultId: string;
+            name: string;
+            description: string | null;
+            icon: string | null;
+            iconType: string | null;
+            defaultNote: string | null;
+            defaultAmount: number | null;
+            defaultCategoryName: string | null;
+            defaultPaidBy: string | null;
+            usageCount: number;
+            lastUsedAt: string | null;
+        }
     }
 
 }

@@ -35,12 +35,6 @@
 		updatedAt: string | null;
 	};
 
-	type ExpenseTemplate = {
-		id: string;
-		name: string;
-		icon?: string;
-	};
-
 	type VaultMember = {
 		userId: string;
 		displayName: string | null;
@@ -75,10 +69,10 @@
 	const templatesResource = resource(
 		() => [vaultId] as const,
 		async ([id]) => {
-			const response = await ofetch<{ success: boolean; data: ExpenseTemplate[] }>(
+			const response = await ofetch<Client.AppResponse<Client.ExpenseTemplateData>>(
 				`/api/getExpenseTemplates?vaultId=${id}`
 			);
-			return response.data || [];
+			return response.data.templates || [];
 		}
 	);
 
@@ -100,6 +94,7 @@
 
 	// Helper functions to get names
 	function getTemplateName(templateId: string): string {
+		console.log('templates', templates);
 		if (!Array.isArray(templates) || templates.length === 0 || typeof templates.find !== 'function') {
 			return 'Loading...';
 		}

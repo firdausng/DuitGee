@@ -9,27 +9,12 @@
 	let { data } = $props();
 	let { vaultId } = data;
 
-	type ExpenseTemplate = {
-		id: string;
-		vaultId: string;
-		name: string;
-		description: string | null;
-		icon: string | null;
-		iconType: string | null;
-		defaultNote: string | null;
-		defaultAmount: number | null;
-		defaultCategoryName: string | null;
-		defaultPaidBy: string | null;
-		usageCount: number;
-		lastUsedAt: string | null;
-	};
-
-	let templates = $state<ExpenseTemplate[]>([]);
+	let templates = $state<Client.ExpenseTemplate[]>([]);
 	let isLoading = $state(true);
 
 	onMount(async () => {
 		try {
-			const response = await ofetch<{ success: boolean; data: { templates: ExpenseTemplate[] } }>(
+			const response = await ofetch<Client.AppResponse<Client.ExpenseTemplateData>>(
 				`/api/getExpenseTemplates?vaultId=${vaultId}`
 			);
 			templates = response.data.templates || [];

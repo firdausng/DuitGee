@@ -384,6 +384,14 @@
                 onEndDateChange={(value) => params.endDate = value}
         />
 
+        <!-- Budget Overview -->
+        <BudgetOverview
+                budgetProgresses={budgetProgresses}
+                vaultId={vaultId}
+                formatCurrency={vaultFormatters.currency}
+        />
+
+
         <!-- Vault Statistics -->
         <VaultStatisticsComponent
                 statistics={statistics}
@@ -391,13 +399,6 @@
                 formatCurrency={vaultFormatters.currency}
                 vaultId={vaultId}
                 onCardClick={handleStatisticsCardClick}
-        />
-
-        <!-- Budget Overview -->
-        <BudgetOverview
-                budgetProgresses={budgetProgresses}
-                vaultId={vaultId}
-                formatCurrency={vaultFormatters.currency}
         />
 
         <!-- Expenses List -->
