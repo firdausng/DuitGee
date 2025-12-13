@@ -2,6 +2,7 @@
     import { Card } from "$lib/components/ui/card";
     import type { VaultStatistics } from "./types";
     import { scale } from "svelte/transition";
+    import AnimatedCurrency from "$lib/components/ui/animated-currency/AnimatedCurrency.svelte";
 
     type Props = {
         statistics: VaultStatistics;
@@ -49,7 +50,7 @@
         <div class="mb-4 pb-3 border-b">
             <div class="flex items-baseline gap-3">
                 <span class="text-xs text-muted-foreground">Total:</span>
-                <span class="text-xl font-bold">{formatCurrency(statistics.total.amount)}</span>
+                <AnimatedCurrency value={statistics.total.amount} />
                 <span class="text-xs text-muted-foreground">({statistics.total.count} expense{statistics.total.count !== 1 ? 's' : ''})</span>
             </div>
         </div>
