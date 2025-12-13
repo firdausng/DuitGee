@@ -60,13 +60,19 @@
 
     // Resource for statistics - auto-refetches when filter changes
     const statisticsResource = resource(
-        () => [vaultId, filterType, params.startDate, params.endDate, refetchKey] as const,
-        async ([id, filter, startDate, endDate]) => {
+        () => {
+            // Only include startDate/endDate in dependencies for custom filters
+            if (filterType === 'custom') {
+                return [vaultId, filterType, params.startDate, params.endDate, refetchKey] as const;
+            }
+            return [vaultId, filterType, refetchKey] as const;
+        },
+        async (deps) => {
             const dateRange = getDateRangeWithCustom();
-            const urlParams = new URLSearchParams({vaultId: id});
-
-            if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
-            if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
+            const urlParams = new URLSearchParams({
+                vaultId: deps[0],
+                    ...dateRange
+            });
 
             const response = await ofetch<{ success: boolean, data: VaultStatistics }>(`/api/getVaultStatistics?${urlParams.toString()}`);
             return response.data;
