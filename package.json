@@ -21,6 +21,7 @@
     "cf-typegen": "wrangler types ./src/worker-configuration.d.ts"
   },
   "devDependencies": {
+    "@beyonk/gdpr-cookie-consent-banner": "^16.0.2",
     "@internationalized/date": "^3.10.0",
     "@libsql/client": "^0.15.15",
     "@lucide/svelte": "^0.544.0",
