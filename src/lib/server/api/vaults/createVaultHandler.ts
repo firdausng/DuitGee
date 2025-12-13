@@ -15,16 +15,18 @@ export const createVault = async (
 ) => {
     const client = drizzle(env.DB, { schema });
 
-    const existingVaults = await client
-    .select()
-    .from(vaults)
-    .where(eq(vaults.createdBy, session.user.id));
+    if(session.user.role !== 'admin'){
+        const existingVaults = await client
+            .select()
+            .from(vaults)
+            .where(eq(vaults.createdBy, session.user.id));
 
-    if(existingVaults.length >= env.VAULT_LIMIT){
-        return {
-            vault: null,
-            member: null,
-            error: "Vault limit reached"
+        if(existingVaults.length >= env.VAULT_LIMIT){
+            return {
+                vault: null,
+                member: null,
+                error: "Vault limit reached"
+            }
         }
     }
 

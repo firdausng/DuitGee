@@ -1,9 +1,10 @@
 import {drizzle} from "drizzle-orm/d1";
 import * as schema from "$lib/server/db/schema";
 import type {CreateBudgetRequest} from "$lib/schemas/budgets";
-import {budgets} from "$lib/server/db/schema";
+import {budgets, vaults} from "$lib/server/db/schema";
 import {requireVaultPermission} from "$lib/server/utils/vaultPermissions";
 import {initialAuditFields} from "$lib/server/utils/audit";
+import {eq} from "drizzle-orm";
 
 export const createBudget = async (
     session: App.AuthSession,
@@ -13,6 +14,19 @@ export const createBudget = async (
     const client = drizzle(env.DB, { schema });
 
     if(session.user.role !== 'admin'){
+        const existingBudgets = await client
+            .select()
+            .from(budgets)
+            .where(eq(budgets.createdBy, session.user.id));
+
+        if(existingBudgets.length >= env.VAULT_LIMIT){
+            return {
+                vault: null,
+                member: null,
+                error: "budget limit reached"
+            }
+        }
+
         // Check permission - only owner/admin can create budgets
         await requireVaultPermission(session, data.vaultId, 'canEditVault', env);
     }
