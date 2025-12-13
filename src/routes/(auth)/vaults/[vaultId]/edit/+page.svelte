@@ -117,14 +117,6 @@
 </svelte:head>
 
 <div class="container mx-auto py-8 px-4 max-w-2xl">
-	<!-- Header -->
-	<div class="mb-6">
-		<h1 class="text-2xl font-bold">Edit Expense</h1>
-		<p class="text-sm text-muted-foreground mt-1">
-			Update your expense details or delete it
-		</p>
-	</div>
-
 	<!-- Expense Form -->
 	{#if isLoading || isDeleting}
 		<Spinner />

@@ -4,7 +4,7 @@
     import {authClientBase} from "$lib/client/auth-client-base";
     import {goto} from "$app/navigation";
 	import { Button } from "$lib/components/ui/button";
-	import { page } from "$app/stores";
+	import { page } from "$app/state";
     import * as Drawer from "$lib/components/ui/drawer/index.js";
 	import { Separator } from "$lib/components/ui/separator";
 
@@ -15,7 +15,7 @@
 
 	// Extract vaultId from URL if viewing a vault page
 	const vaultId = $derived(() => {
-		const match = $page.url.pathname.match(/\/vaults\/([^\/]+)/);
+		const match = page.url.pathname.match(/\/vaults\/([^\/]+)/);
 		return match ? match[1] : null;
 	});
 
@@ -28,7 +28,7 @@
 
 	// Check if current path matches the link
 	function isActive(href: string): boolean {
-		return $page.url.pathname === href || $page.url.pathname.startsWith(href + '/');
+		return page.url.pathname === href || page.url.pathname.startsWith(href + '/');
 	}
 
     async function signOut(){
@@ -52,9 +52,33 @@
 	<header class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
 		<div class="container flex h-14 max-w-screen-2xl items-center justify-between px-4">
 			<!-- Logo -->
-			<a href="/" class="flex items-center">
+			<a href="/vaults" class="flex items-center">
 				<img src="/favicon.svg" alt="DuitGee Logo" class="h-8 w-8" />
 			</a>
+
+			<!-- Vault Navigation Menu -->
+			{#if vaultId() && vaultId() !== 'new'}
+				<nav class="flex gap-4 flex-1 pl-2">
+					<a
+						href="/vaults/{vaultId()}"
+						class="relative py-2 text-xs font-medium transition-colors hover:text-primary whitespace-nowrap {page.url.pathname === `/vaults/${vaultId()}` ? 'text-primary' : 'text-muted-foreground'}"
+					>
+						Home
+						{#if page.url.pathname === `/vaults/${vaultId()}`}
+							<div class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+						{/if}
+					</a>
+					<a
+						href="/vaults/{vaultId()}/statistics"
+						class="relative py-2 text-xs font-medium transition-colors hover:text-primary whitespace-nowrap {isActive(`/vaults/${vaultId()}/statistics`) ? 'text-primary' : 'text-muted-foreground'}"
+					>
+						Statistics
+						{#if isActive(`/vaults/${vaultId()}/statistics`)}
+							<div class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+						{/if}
+					</a>
+				</nav>
+			{/if}
 
 			<!-- Actions - Available on all screen sizes -->
 			<div class="flex items-center gap-2">

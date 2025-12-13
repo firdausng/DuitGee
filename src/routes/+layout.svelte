@@ -52,7 +52,7 @@
 		closeLabel="Close"
 		editLabel="Edit settings"
 
-		showEditIcon={true}
+		showEditIcon={false}
 		canRejectCookies={true}
 
 		on:analytics={initAnalytics}

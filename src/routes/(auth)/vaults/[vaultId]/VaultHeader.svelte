@@ -14,17 +14,17 @@
 </script>
 
 <div class="mb-4">
-    <div class="flex flex-col justify-between gap-2 pb-2 rounded-lg shadow-lg">
+    <div class="flex justify-between gap-2 pb-2">
         <div class="flex items-center gap-3">
             <div
-                class="text-3xl w-14 h-14 rounded-lg flex items-center justify-center"
+                class="text-xl w-10 h-10 rounded-lg flex items-center justify-center"
                 style="background-color: {vault.vaults.color}20;"
             >
                 {vault.vaults.icon || '🏦'}
             </div>
             <div>
                 <div class="flex items-center gap-2">
-                    <h1 class="text-2xl font-bold">{vault.vaults.name}</h1>
+                    <h1 class="text-md font-bold">{vault.vaults.name}</h1>
                     <button
                         class="p-1 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-md transition-colors {vault.vaultMembers.isDefault ? 'text-yellow-500 dark:text-yellow-400' : 'text-gray-400 dark:text-gray-500'}"
                         onclick={onSetDefaultVault}
@@ -51,18 +51,14 @@
         </div>
         <div class="flex gap-2">
             <Button variant="outline" onclick={onEditVault}>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                 </svg>
-                <span class="hidden sm:inline">Edit Vault</span>
-                <span class="sm:hidden">Edit</span>
             </Button>
             <Button variant="outline" onclick={onToggleInviteForm}>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
                 </svg>
-                <span class="hidden sm:inline">Invite User</span>
-                <span class="sm:hidden">Invite</span>
             </Button>
         </div>
     </div>
