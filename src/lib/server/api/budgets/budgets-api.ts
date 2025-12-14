@@ -14,6 +14,7 @@ import {getBudgets} from "./getBudgetsHandler";
 import {getBudget} from "./getBudgetHandler";
 import {updateBudget} from "./updateBudgetHandler";
 import {deleteBudget} from "./deleteBudgetHandler";
+import {getBudgetsSummary} from "$lib/server/api/budgets/getBudgetsSummaryHandler";
 
 const BUDGET_TAG = ['Budget'];
 const commonBudgetConfig = {
@@ -100,6 +101,52 @@ export const budgetsApi = new Hono<App.Api>()
 
             try {
                 const budgetList = await getBudgets(session, query, c.env);
+                return c.json({
+                    success: true,
+                    data: budgetList
+                });
+            } catch (error) {
+                console.error({
+                    message: 'Error fetching budgets',
+                    error
+                });
+                const status = error instanceof Error && error.message.includes('not found') ? 404 : 500;
+                return c.json({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to fetch budgets'
+                }, status);
+            }
+        })
+    // Query: Get budgets for a vault (GET)
+    .get(
+        '/getBudgetsSummary',
+        describeRoute({
+            ...commonBudgetConfig,
+            description: 'Get all budgets for a vault',
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: {
+                        'application/json': {
+                            schema: resolver(v.object({
+                                success: v.boolean(),
+                                data: v.array(v.any())
+                            }))
+                        },
+                    },
+                },
+                404: {
+                    description: 'Vault not found or no access',
+                },
+            },
+        }),
+        vValidator('query', getBudgetsQuerySchema),
+        async (c) => {
+            const session = c.get('currentSession');
+            const query = c.req.valid('query');
+
+            try {
+                const budgetList = await getBudgetsSummary(session, query, c.env);
                 return c.json({
                     success: true,
                     data: budgetList

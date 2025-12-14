@@ -80,7 +80,7 @@
     );
 
     // Resource for budgets
-    const budgetsResource = resource(
+    const budgetsSummaryResource = resource(
         () => [vaultId, refetchKey] as const,
         async ([id]) => {
             const urlParams = new URLSearchParams({
@@ -88,31 +88,15 @@
                 isActive: 'true'
             });
 
-            const response = await ofetch<{ success: boolean; data: Budget[] }>(`/api/getBudgets?${urlParams.toString()}`);
+            const response = await ofetch<{ success: boolean; data: Budget[] }>(`/api/getBudgetsSummary?${urlParams.toString()}`);
             return response.data || [];
-        }
-    );
-
-    // Resource for all expenses (for budget calculations)
-    const allExpensesResource = resource(
-        () => [vaultId, refetchKey] as const,
-        async ([id]) => {
-            const urlParams = new URLSearchParams({
-                vaultId: id,
-                page: '1',
-                limit: '1000'
-            });
-
-            const response = await ofetch<{ expenses: Expense[], pagination: any }>(`/api/getExpenses?${urlParams.toString()}`);
-            return response.expenses || [];
         }
     );
 
     // Derive data from resources
     const currentVault = $derived(vaultResource.current);
     const statistics = $derived(statisticsResource.current || null);
-    const budgets = $derived(budgetsResource.current || []);
-    const allExpenses = $derived(allExpensesResource.current || []);
+    const budgets = $derived(budgetsSummaryResource.current || []);
     const isLoadingVault = $derived(vaultResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
     const vaultError = $derived(vaultResource.error);
@@ -120,7 +104,7 @@
 
     // Calculate budget progress for all active budgets
     const budgetProgresses = $derived.by(() => {
-        return budgets.map(budget => calculateBudgetProgress(budget, allExpenses));
+        return budgets.map(budget => calculateBudgetProgress(budget));
     });
 
     // Create vault-specific formatters

@@ -4,15 +4,18 @@ import type { Expense } from '../types';
 export type Budget = {
 	id: string;
 	name: string;
+	description: string | null;
 	amount: number;
 	period: 'weekly' | 'monthly' | 'custom';
-	startDate: string;
-	endDate: string | null;
+	isActive: boolean;
 	categoryNames: string[] | null;
 	templateIds: string[] | null;
 	userIds: string[] | null;
+	startDate: string;
+	endDate: string | null;
 	alertThreshold: number;
-	isActive: boolean;
+	alertEnabled: boolean;
+	spent: number;
 };
 
 export type BudgetProgress = {
@@ -113,23 +116,13 @@ export function filterExpensesForBudget(expenses: Expense[], budget: Budget): Ex
  */
 export function calculateBudgetProgress(
 	budget: Budget,
-	expenses: Expense[],
 	referenceDate: Date = new Date()
 ): BudgetProgress {
 	// Get the current budget period
 	const { start, end } = getBudgetDateRange(budget, referenceDate);
 
-	// Filter expenses within the budget period
-	const periodExpenses = expenses.filter(expense => {
-		const expenseDate = parseISO(expense.date);
-		return isWithinInterval(expenseDate, { start, end });
-	});
-
-	// Filter expenses by budget criteria
-	const budgetExpenses = filterExpensesForBudget(periodExpenses, budget);
-
 	// Calculate totals
-	const totalSpent = budgetExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+	const totalSpent = budget.spent;
 	const remaining = budget.amount - totalSpent;
 	const percentageUsed = (totalSpent / budget.amount) * 100;
 
