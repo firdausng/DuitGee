@@ -61,7 +61,8 @@
     });
 
     // Calendar placeholder - tracks the currently displayed month in the calendar
-    let calendarPlaceholder = $state<CalendarDate>(today);
+    // Start as undefined to prevent double-fetch on mount
+    let calendarPlaceholder = $state<CalendarDate | undefined>(undefined);
 
     // Derived filter values
     let filterType = $derived(params.filterType || 'template');
@@ -91,6 +92,8 @@
                     start: new CalendarDate(start.getFullYear(), start.getMonth() + 1, start.getDate()),
                     end: new CalendarDate(end.getFullYear(), end.getMonth() + 1, end.getDate())
                 };
+                // Set placeholder to the start date's month
+                calendarPlaceholder = new CalendarDate(start.getFullYear(), start.getMonth() + 1, 1);
             } catch (e) {
                 console.error('Failed to parse dates from params', e);
             }
@@ -100,6 +103,7 @@
                 case 'today': {
                     const todayDate = new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
                     calendarValue = { start: todayDate, end: todayDate };
+                    calendarPlaceholder = new CalendarDate(now.getFullYear(), now.getMonth() + 1, 1);
                     break;
                 }
                 case 'week': {
@@ -112,6 +116,7 @@
                         start: new CalendarDate(start.getFullYear(), start.getMonth() + 1, start.getDate()),
                         end: new CalendarDate(end.getFullYear(), end.getMonth() + 1, end.getDate())
                     };
+                    calendarPlaceholder = new CalendarDate(now.getFullYear(), now.getMonth() + 1, 1);
                     break;
                 }
                 case 'month': {
@@ -121,6 +126,7 @@
                         start: new CalendarDate(firstDay.getFullYear(), firstDay.getMonth() + 1, firstDay.getDate()),
                         end: new CalendarDate(lastDay.getFullYear(), lastDay.getMonth() + 1, lastDay.getDate())
                     };
+                    calendarPlaceholder = new CalendarDate(now.getFullYear(), now.getMonth() + 1, 1);
                     break;
                 }
                 case 'year': {
@@ -128,11 +134,13 @@
                         start: new CalendarDate(now.getFullYear(), 1, 1),
                         end: new CalendarDate(now.getFullYear(), 12, 31)
                     };
+                    calendarPlaceholder = new CalendarDate(now.getFullYear(), now.getMonth() + 1, 1);
                     break;
                 }
                 default: {
                     const todayDate = new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
                     calendarValue = { start: todayDate, end: todayDate };
+                    calendarPlaceholder = new CalendarDate(now.getFullYear(), now.getMonth() + 1, 1);
                 }
             }
         }
@@ -204,10 +212,12 @@
         const start = new Date(calendarValue.start.year, calendarValue.start.month - 1, calendarValue.start.day);
         const end = new Date(calendarValue.end.year, calendarValue.end.month - 1, calendarValue.end.day);
 
-        params.startDate = start.toISOString().split('T')[0];
-        params.endDate = end.toISOString().split('T')[0];
-        if(!params.filterName) params.filterName = "";
-        if(!params.filterType) params.filterType = "template";
+        params.update({
+            startDate: start.toISOString().split('T')[0],
+            endDate: end.toISOString().split('T')[0],
+            filterName: filterName || "",
+            filterType: filterType || "template"
+        })
     });
 
     // Resource for vault data
@@ -219,10 +229,28 @@
         }
     );
 
+    // Track last fetched month to prevent duplicate calls
+    let lastFetchedMonth = $state<string | null>(null);
+
     // Resource for ALL expenses (for calendar daily totals - independent of filter)
     const allExpensesResource = resource(
-        () => [vaultId, calendarPlaceholder.year, calendarPlaceholder.month, refetchKey] as const,
-        async ([id, year, month]) => {
+        () => {
+            if (!calendarPlaceholder?.year || !calendarPlaceholder?.month) return null;
+            return [vaultId, calendarPlaceholder.year, calendarPlaceholder.month, refetchKey] as const;
+        },
+        async (deps) => {
+            // Skip fetch if calendar placeholder is not initialized yet
+            if (!deps) return [];
+
+            const [id, year, month] = deps;
+
+            // Check if we've already fetched this month to prevent duplicates
+            const monthKey = `${year}-${month}`;
+            if (monthKey === lastFetchedMonth && refetchKey === 0) {
+                return allExpensesResource.current || [];
+            }
+            lastFetchedMonth = monthKey;
+
             // Calculate 1 month before the currently displayed calendar month
             const prevMonthDate = new Date(year, month - 2, 1); // month - 2 because months are 0-based and we want previous month
             const prev = {
