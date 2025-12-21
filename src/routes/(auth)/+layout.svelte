@@ -26,6 +26,12 @@
 		return data.vaults.length > 0 ? data.vaults[0].vaults?.id : null;
 	});
 
+	// Get current search params to preserve them during navigation
+	const searchParams = $derived(() => {
+		const search = page.url.search;
+		return search || '';
+	});
+
 	// Check if current path matches the link
 	function isActive(href: string): boolean {
 		return page.url.pathname === href || page.url.pathname.startsWith(href + '/');
@@ -60,7 +66,7 @@
 			{#if vaultId() && vaultId() !== 'new'}
 				<nav class="flex gap-4 flex-1 pl-2">
 					<a
-						href="/vaults/{vaultId()}"
+						href="/vaults/{vaultId()}{searchParams()}"
 						class="relative py-2 text-xs font-medium transition-colors hover:text-primary whitespace-nowrap {page.url.pathname === `/vaults/${vaultId()}` ? 'text-primary' : 'text-muted-foreground'}"
 					>
 						Home
@@ -69,7 +75,7 @@
 						{/if}
 					</a>
 					<a
-						href="/vaults/{vaultId()}/statistics"
+						href="/vaults/{vaultId()}/statistics{searchParams()}"
 						class="relative py-2 text-xs font-medium transition-colors hover:text-primary whitespace-nowrap {isActive(`/vaults/${vaultId()}/statistics`) ? 'text-primary' : 'text-muted-foreground'}"
 					>
 						Statistics
@@ -142,7 +148,7 @@
 										</button>
 										{#each data.vaults as vaultItem}
 											<button
-												onclick={() => navigateAndClose(`/vaults/${vaultItem.vaults.id}`)}
+												onclick={() => navigateAndClose(`/vaults/${vaultItem.vaults.id}${searchParams()}`)}
 												class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors {vaultId() === vaultItem.vaults.id ? 'bg-accent' : ''}"
 											>
 												<div
@@ -174,7 +180,7 @@
 
 									{#if navVaultId()}
 										<button
-											onclick={() => navigateAndClose(`/vaults/${navVaultId()}/templates`)}
+											onclick={() => navigateAndClose(`/vaults/${navVaultId()}/templates${searchParams()}`)}
 											class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors {isActive(`/vaults/${navVaultId()}/templates`) ? 'bg-accent' : ''}"
 										>
 											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -183,7 +189,7 @@
 											Templates
 										</button>
 										<button
-											onclick={() => navigateAndClose(`/vaults/${navVaultId()}/statistics`)}
+											onclick={() => navigateAndClose(`/vaults/${navVaultId()}/statistics${searchParams()}`)}
 											class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors {isActive(`/vaults/${navVaultId()}/statistics`) ? 'bg-accent' : ''}"
 										>
 											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -192,7 +198,7 @@
 											Statistics
 										</button>
 										<button
-											onclick={() => navigateAndClose(`/vaults/${navVaultId()}/members`)}
+											onclick={() => navigateAndClose(`/vaults/${navVaultId()}/members${searchParams()}`)}
 											class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors {isActive(`/vaults/${navVaultId()}/members`) ? 'bg-accent' : ''}"
 										>
 											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -201,7 +207,7 @@
 											Members
 										</button>
 										<button
-											onclick={() => navigateAndClose(`/vaults/${navVaultId()}/budgets`)}
+											onclick={() => navigateAndClose(`/vaults/${navVaultId()}/budgets${searchParams()}`)}
 											class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors {isActive(`/vaults/${navVaultId()}/budgets`) ? 'bg-accent' : ''}"
 										>
 											<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

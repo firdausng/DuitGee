@@ -21,6 +21,9 @@
     import {createVaultFormatters} from "$lib/vaultFormatting";
     import { calculateBudgetProgress, type Budget } from "./statistics/budgetUtils";
     import {page} from "$app/state";
+    import { groupExpensesByDate, formatDate } from "./statistics/utils";
+    import ExpenseListByDate from "./statistics/ExpenseListByDate.svelte";
+    import type { Expense } from "./types";
 
     let {vaultId} = page.params
 
@@ -99,14 +102,49 @@
         }
     );
 
+    // Resource for expenses - auto-refetches when filter changes
+    const expensesResource = resource(
+        () => {
+            // Include startDate/endDate in dependencies for custom filters
+            if (filterType === 'custom') {
+                return [vaultId, filterType, params.startDate, params.endDate, refetchKey] as const;
+            }
+            return [vaultId, filterType, refetchKey] as const;
+        },
+        async (deps) => {
+            const dateRange = getDateRangeWithCustom();
+            const urlParams = new URLSearchParams({
+                vaultId: deps[0],
+                page: '1',
+                limit: '100'
+            });
+
+            if (dateRange.startDate) urlParams.append('startDate', dateRange.startDate);
+            if (dateRange.endDate) urlParams.append('endDate', dateRange.endDate);
+
+            const response = await ofetch<{ expenses: Expense[]; pagination: any }>(
+                `/api/getExpenses?${urlParams.toString()}`
+            );
+            return response.expenses || [];
+        },
+        {
+            debounce: 300,
+        }
+    );
+
     // Derive data from resources
     const currentVault = $derived(vaultResource.current);
     const statistics = $derived(statisticsResource.current || null);
     const budgets = $derived(budgetsSummaryResource.current || []);
+    const expenses = $derived(expensesResource.current || []);
     const isLoadingVault = $derived(vaultResource.loading);
     const isLoadingStats = $derived(statisticsResource.loading);
+    const isLoadingExpenses = $derived(expensesResource.loading);
     const vaultError = $derived(vaultResource.error);
     const statisticsError = $derived(statisticsResource.error);
+
+    // Group expenses by date for display
+    const expensesByDate = $derived(groupExpensesByDate(expenses));
 
     // Calculate budget progress for all active budgets
     const budgetProgresses = $derived.by(() => {
@@ -308,7 +346,7 @@
             </CardContent>
         </Card>
     {:else}
-        <LoadingOverlay show={isLoadingStats} />
+        <LoadingOverlay show={isLoadingStats || isLoadingExpenses} />
         <!-- Vault Header -->
         <VaultHeader
                 vault={currentVault}
@@ -355,6 +393,23 @@
                         vaultId={vaultId}
                         onCardClick={handleStatisticsCardClick}
                 />
+
+                <!-- Expense List -->
+                <div class="mt-6">
+                    {#if isLoadingExpenses}
+                        <div class="flex justify-center py-12">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                        </div>
+                    {:else}
+                        <ExpenseListByDate
+                            expensesByDate={expensesByDate}
+                            onEdit={handleEditExpense}
+                            onDelete={handleDeleteExpense}
+                            formatCurrency={vaultFormatters.currency}
+                            formatDate={formatDate}
+                        />
+                    {/if}
+                </div>
             </Tabs.Content>
             <Tabs.Content value="budget">
                 <!-- Budget Overview -->
