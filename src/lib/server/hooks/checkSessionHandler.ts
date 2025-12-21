@@ -1,5 +1,4 @@
 import {type Handle, redirect} from "@sveltejs/kit";
-import {authConfig} from "$lib/server/better-auth";
 
 const publicRoutes = [
     '/login',

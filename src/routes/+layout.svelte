@@ -31,20 +31,18 @@
 		heading="Cookie Preferences"
 		description="We use cookies to enhance your experience. Essential cookies are required, while analytics cookies help us improve our
   service. Learn more in our <a href='/privacy'>privacy policy</a>."
-
 		choices={{
-      necessary: {
-        label: "Necessary cookies",
-        description: "Required for the site to function. Cannot be turned off.",
-        value: true
-      },
-      analytics: {
-        label: "Analytics cookies",
-        description: "Help us understand how you use our application (PostHog).",
-        value: false  // Default to unchecked - user must opt-in
-      }
-    }}
-
+		  necessary: {
+			label: "Necessary cookies",
+			description: "Required for the site to function. Cannot be turned off.",
+			value: true
+		  },
+		  analytics: {
+			label: "Analytics cookies",
+			description: "Help us understand how you use our application (PostHog).",
+			value: false  // Default to unchecked - user must opt-in
+		  }
+		}}
 		acceptAllLabel="Accept all"
 		acceptSelectedLabel="Accept selected"
 		rejectLabel="Reject all"

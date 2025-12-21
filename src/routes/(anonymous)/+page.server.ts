@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ locals, platform, url, cookies, fet
             const result = await response.json() as {success: boolean, data: VaultWithMember[]};
             const defaultVault = result.data.find(vault => vault.vaultMembers.isDefault);
             if(defaultVault){
-                redirect(302, `/vaults/${defaultVault.vaults.id}`);
+                redirect(302, `/vaults/${defaultVault.vaults.id}/expenses/new`);
             }
         }
     }

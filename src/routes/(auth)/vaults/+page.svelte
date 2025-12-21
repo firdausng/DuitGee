@@ -19,11 +19,6 @@
         try {
             const response = await ofetch<{success: boolean, data: VaultWithMember[]}>(`/api/getVaults`);
             vaultsList = response.data || [];
-
-            console.log({
-                vaultsList,
-                page: '/vaults'
-            });
         } catch (error) {
             console.error('Failed to fetch vaults:', error);
             vaultsList = [];
