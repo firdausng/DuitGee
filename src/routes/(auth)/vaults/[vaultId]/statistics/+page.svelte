@@ -35,7 +35,7 @@
     // Schema for statistics page query params
     const statisticsParamsSchema = v.object({
         filterType: v.optional(v.picklist(['template', 'category', 'member']), 'template'),
-        dateFilter: v.optional(v.picklist(['all', 'today', 'week', 'month', 'year']), 'today'),
+        filter: v.optional(v.picklist(['all', 'today', 'week', 'month', 'year']), 'today'),
         filterName: v.optional(v.fallback(v.string(), ""), ""),
         startDate: v.optional(v.fallback(v.string(), ""), ""),
         endDate: v.optional(v.fallback(v.string(), ""), ""),
@@ -66,12 +66,12 @@
 
     // Derived filter values
     let filterType = $derived(params.filterType || 'template');
-    let dateFilter = $state<DateFilter>(params.dateFilter || 'all');
+    let dateFilter = $state<DateFilter>(params.filter || 'all');
     let filterName = $derived(params.filterName);
 
     // Update dateFilter when params change
     $effect(() => {
-        dateFilter = (params.dateFilter as DateFilter) || 'all';
+        dateFilter = (params.filter as DateFilter) || 'all';
     });
 
     // Initialize calendar from URL params or preset filter on mount
