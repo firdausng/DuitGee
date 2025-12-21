@@ -532,7 +532,7 @@
         <!-- Date Filter Tabs -->
         <DateFilterTabs
             currentFilter={dateFilter}
-            onFilterChange={(filter) => params.dateFilter = filter}
+            onFilterChange={(filter) => params.filter = filter}
         />
 
         <!-- Budget Selector -->
