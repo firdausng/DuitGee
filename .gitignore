@@ -30,3 +30,4 @@ vite.config.ts.timestamp-*
 !.dev.vars.example
 .env*
 .idea
+backup

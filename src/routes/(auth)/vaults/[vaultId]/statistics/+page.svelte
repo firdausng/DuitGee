@@ -66,12 +66,12 @@
 
     // Derived filter values
     let filterType = $derived(params.filterType || 'template');
-    let dateFilter = $state<DateFilter>(params.filter || 'all');
+    let filter = $state<DateFilter>(params.filter || 'all');
     let filterName = $derived(params.filterName);
 
     // Update dateFilter when params change
     $effect(() => {
-        dateFilter = (params.filter as DateFilter) || 'all';
+        filter = (params.filter as DateFilter) || 'all';
     });
 
     // Initialize calendar from URL params or preset filter on mount
@@ -99,7 +99,7 @@
             }
         } else {
             // Otherwise use preset filter
-            switch (dateFilter) {
+            switch (filter) {
                 case 'today': {
                     const todayDate = new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
                     calendarValue = { start: todayDate, end: todayDate };
@@ -149,15 +149,15 @@
     });
 
     // When date filter button is clicked, update calendar
-    let lastDateFilter = $state(dateFilter);
+    let lastDateFilter = $state(filter);
     $effect(() => {
         if (!isInitialized) return;
-        if (dateFilter === lastDateFilter) return;
+        if (filter === lastDateFilter) return;
 
-        lastDateFilter = dateFilter;
+        lastDateFilter = filter;
         const now = new Date();
 
-        switch (dateFilter) {
+        switch (filter) {
             case 'today': {
                 const todayDate = new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
                 calendarValue = { start: todayDate, end: todayDate };
@@ -287,7 +287,7 @@
 
     // Resource for filtered expenses - reactive to calendar selection
     const expensesResource = resource(
-        () => [vaultId, calendarValue?.start, calendarValue?.end, dateFilter, refetchKey] as const,
+        () => [vaultId, calendarValue?.start, calendarValue?.end, filter, refetchKey] as const,
         async ([id, calStart, calEnd, dateF]) => {
             if(!calEnd || !calStart) return [];
             const urlParams = new URLSearchParams({
@@ -313,7 +313,7 @@
 
     // Resource for overall statistics - reactive to calendar selection
     const statisticsResource = resource(
-        () => [vaultId, calendarValue?.start, calendarValue?.end, dateFilter, refetchKey] as const,
+        () => [vaultId, calendarValue?.start, calendarValue?.end, filter, refetchKey] as const,
         async ([id, calStart, calEnd, dateF]) => {
             if(calEnd === undefined) return null;
             const urlParams = new URLSearchParams({vaultId: id});
@@ -526,12 +526,12 @@
 
         <!-- Header -->
         <div class="mb-4">
-            <p class="text-xs text-muted-foreground mt-1">Expense breakdown for {getDateFilterLabel(dateFilter)}</p>
+            <p class="text-xs text-muted-foreground mt-1">Expense breakdown for {getDateFilterLabel(filter)}</p>
         </div>
 
         <!-- Date Filter Tabs -->
         <DateFilterTabs
-            currentFilter={dateFilter}
+            currentFilter={filter}
             onFilterChange={(filter) => params.filter = filter}
         />
 

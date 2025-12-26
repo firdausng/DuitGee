@@ -27,3 +27,9 @@ Production
 ```sh
 npx wrangler d1 execute duitgee-app-auth --remote --file=./seed/auth/0001_add_admin.sql --env production
 ```
+
+## Restored Auth Data from production
+```bash
+npx wrangler d1 export duitgee-app-auth --env production --remote --output=./backup/auth-database.sql
+npx wrangler d1 execute duitgee-app-auth --local --file=backup/auth-database.sql
+```

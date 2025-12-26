@@ -277,7 +277,7 @@
 
         // Preserve current date filter if any
         if (filterType && filterType !== 'all') {
-            searchParams.set('dateFilter', filterType);
+            searchParams.set('filter', filterType);
             if (filterType === 'custom' && params.startDate && params.endDate) {
                 searchParams.set('startDate', params.startDate);
                 searchParams.set('endDate', params.endDate);

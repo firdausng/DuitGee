@@ -50,3 +50,9 @@ Production
 ```sh
 npx wrangler d1 execute duitgee--remote --env production --file=./seed/0001_setup_categories.sql
 ```
+
+## Restored Data from production
+```bash
+npx wrangler d1 export duitgee-app --env production --remote --output=./backup/database.sql
+npx wrangler d1 execute duitgee-app --local --file=backup/database.sql
+```
