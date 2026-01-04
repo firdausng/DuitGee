@@ -31,12 +31,12 @@ export const getBudgets = async (
 
     // Filter by category if specified
     if (query.categoryName) {
-        filters.push(eq(budgets.categoryName, query.categoryName));
+        filters.push(eq(budgets.categoryNames, [query.categoryName]));
     }
 
     // Filter by user if specified
     if (query.userId) {
-        filters.push(eq(budgets.userId, query.userId));
+        filters.push(eq(budgets.userIds, [query.userId]));
     }
 
     // Get budgets

@@ -44,6 +44,7 @@ export const vaultMembers = sqliteTable('vault_members', {
     updatedAt: text('updated_at').$defaultFn(() => formatISO(new Date())),
     deletedAt: text('updated_at'),
 }, (table) => ({
+    vaultIdIdx: index('idx_member_vault').on(table.vaultId),
     uniqueDefaultPerUser: index('idx_one_default_vault_per_user_member')
         .on(table.userId)
         .where(sql`${table.isDefault} = 1`),
@@ -73,7 +74,9 @@ export const expenseTemplates = sqliteTable('expense_templates', {
     updatedBy: text('updated_by'),
     deletedAt: text('deleted_at'),
     deletedBy: text('deleted_by'),
-});
+}, (table)=>({
+    vaultIdIdx: index('idx_expense_templates_vault').on(table.vaultId),
+}));
 
 export const expenses = sqliteTable('expenses', {
     id: text('id').primaryKey().$defaultFn(() => createId()),
@@ -93,7 +96,9 @@ export const expenses = sqliteTable('expenses', {
     updatedBy: text('updated_by'), // User ID as string, no FK constraint
     deletedAt: text('deleted_at'),
     deletedBy: text('deleted_by'), // User ID as string, no FK constraint
-});
+}, (table)=>({
+    vaultIdIdx: index('idx_expenses_vault').on(table.vaultId),
+}));
 
 export const budgets = sqliteTable('budgets', {
     id: text('id').primaryKey().$defaultFn(() => createId()),
@@ -144,4 +149,6 @@ export const invitation = sqliteTable("invitation", {
     status: text("status").default("pending").notNull(),
     inviterId: text('inviter_id'),
     inviteeId: text('invitee_id'),
-});
+}, (table)=>({
+    vaultIdIdx: index('idx_invitation_vault').on(table.vaultId),
+}));
