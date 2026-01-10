@@ -10,8 +10,11 @@
 	<header class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
 		<div class="container mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-4">
 			<div class="flex items-center gap-6">
-				<a href="/" class="flex items-center space-x-2">
-					<img src="/favicon.svg" alt="DuitGee Logo" class="h-8 w-8" />
+				<a href="/" class="flex items-center gap-3">
+					<div class="bg-primary/10 p-2 rounded-xl">
+						<img src="/favicon.svg" alt="DuitGee" class="w-8 h-8" />
+					</div>
+					<h1 class="text-2xl font-bold text-primary">DuitGee</h1>
 				</a>
 			</div>
 			<div class="flex items-center gap-2">

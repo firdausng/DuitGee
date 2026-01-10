@@ -7,23 +7,6 @@ import {Button} from "$lib/components/ui/button";
 </svelte:head>
 
 <div class="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-	<!-- Header -->
-	<header class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-		<div class="container mx-auto px-4 py-4">
-			<div class="flex items-center justify-between">
-				<a href="/" class="flex items-center gap-3">
-					<div class="bg-primary/10 p-2 rounded-xl">
-						<img src="/favicon.svg" alt="DuitGee" class="w-8 h-8" />
-					</div>
-					<h1 class="text-2xl font-bold text-primary">DuitGee</h1>
-				</a>
-				<a href="/login">
-					<Button variant="outline">Back to Login</Button>
-				</a>
-			</div>
-		</div>
-	</header>
-
 	<!-- Content -->
 	<main class="container mx-auto px-4 py-12 max-w-4xl">
 		<div class="bg-card border border-border rounded-lg shadow-lg p-8">
